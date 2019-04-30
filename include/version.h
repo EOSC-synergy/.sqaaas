@@ -14,6 +14,6 @@
 #ifndef VERSION_H
 #define VERSION_H
 
-#define openQCD_RELEASE "openQ*D-0.9a1"
+#define openQCD_RELEASE "openQ*D-0.9a2"
 
 #endif

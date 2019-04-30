@@ -17,7 +17,7 @@
 *
 *   void plaq_u1frc(void)
 *     Computes the force deriving from the compact U(1) plaquette action,
-*     omitting the prefactor 1/g0^2, and assigns the result to the MD
+*     omitting the prefactor 1/(qel*e0)^2, and assigns the result to the MD
 *     force field. In the case of open, SF or open-SF boundary conditions,
 *     the boundary improvement coefficients are set to their tree-level
 *     value independently of the values stored in the parameter data base.
@@ -198,17 +198,13 @@ static void set_staples(int n,int ix,int ia)
 void plaq_u1frc(void)
 {
    int bc,n,ix,t,ip[4];
-   double r,c;
+   double r;
    double *fdb;
    mdflds_t *mdfs;
-   u1lat_parms_t lat;
 
    error_root((gauge()&2)==0,1,
               "plaq_u1frc [force6.c]",
               "U(1) gauge field is not active");
-
-   lat=u1lat_parms();
-   c=lat.invqel*lat.invqel;
 
    if (query_flags(ADBUF_UP2DATE)!=1)
       copy_bnd_ad();
@@ -235,7 +231,6 @@ void plaq_u1frc(void)
             u1xu1dag(u1db+ip[1],u1db+ip[3],wd);
             u1dagxu1(u1db+ip[2],u1db+ip[0],wd+1);
             cm1x1_imtr(wd,wd+1,&X);
-            X*=c;
 
             if ((t<(N0-1))||(bc==3))
                *(fdb+ip[1])+=X;
@@ -261,7 +256,6 @@ void plaq_u1frc(void)
             u1xu1dag(u1db+ip[1],u1db+ip[3],wd);
             u1dagxu1(u1db+ip[2],u1db+ip[0],wd+1);
             cm1x1_imtr(wd,wd+1,&X);
-            X*=c;
             *(fdb+ip[1])+=r*X;
             *(fdb+ip[3])-=r*X;
             *(fdb+ip[0])+=r*X;

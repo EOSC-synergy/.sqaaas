@@ -89,7 +89,7 @@ int main(int argc,char *argv[])
    phi[1]=0.0;
    phi_prime[0]=0.0;
    phi_prime[1]=0.0;
-   set_bc_parms(bc,0,0,phi,phi_prime);
+   set_bc_parms(bc,0,1,phi,phi_prime);
    print_bc_parms();
 
    alpha=.013;
@@ -119,7 +119,7 @@ int main(int argc,char *argv[])
    set_flags(UPDATED_UD);
    
    fwd_su3_euler(n,eps);
-   fwd_u1_euler(n,eps*qel2);
+   fwd_u1_euler(n,eps);
    
    dmax=0.0;
    for(i=0;i<4*VOLUME;i++)
@@ -152,7 +152,7 @@ int main(int argc,char *argv[])
    set_flags(UPDATED_UD);
    
    fwd_su3_rk2(n,eps);
-   fwd_u1_rk2(n,eps*qel2);
+   fwd_u1_rk2(n,eps);
    
    dmax=0.0;
    for(i=0;i<4*VOLUME;i++)
@@ -185,7 +185,7 @@ int main(int argc,char *argv[])
    set_flags(UPDATED_UD);
    
    fwd_su3_rk3(n,eps);
-   fwd_u1_rk3(n,eps*qel2);
+   fwd_u1_rk3(n,eps);
    
    dmax=0.0;
    for(i=0;i<4*VOLUME;i++)

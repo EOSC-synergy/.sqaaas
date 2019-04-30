@@ -344,7 +344,6 @@ static void read_flds_bc_lat_parms(void)
 {
    int gg,ifl,bc,cs;
    double phi[2],phi_prime[2];
-   char line[NAME_SIZE];
 
    if (my_rank==0)
    {

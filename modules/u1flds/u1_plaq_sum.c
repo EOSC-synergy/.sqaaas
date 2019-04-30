@@ -29,7 +29,7 @@
 *   double u1_plaq_action_slices(double *asl)
 *     Computes the time-slice sums asl[x0] of the tree-level O(a)-improved
 *     plaquette action density of the double-precision U(1) gauge field. The
-*     factor 1/u1g0^2 is omitted and the time x0 runs from 0 to NPROC0*L0-1.
+*     factor 1/e0^2 is omitted and the time x0 runs from 0 to NPROC0*L0-1.
 *     The program returns the total action.
 *
 * Notes:
@@ -170,7 +170,11 @@ double u1_plaq_wsum_dble(int icom)
 double u1_plaq_action_slices(double *asl)
 {
    int bc,ix,t,t0,n;
-   double A,smE,smB;
+   double A,smE,smB,c;
+   u1lat_parms_t lat;
+
+   lat=u1lat_parms();
+   c=lat.invqel*lat.invqel;
 
    if (init<2)
    {
@@ -205,13 +209,13 @@ double u1_plaq_action_slices(double *asl)
       if ((t<(N0-1))||(bc!=0))
       {
          for (n=0;n<3;n++)
-            smE+=(1.0-u1_plaq_dble(n,ix));
+            smE+=c*(1.0-u1_plaq_dble(n,ix));
       }
 
       if ((t>0)||(bc!=1))
       {
          for (n=3;n<6;n++)
-            smB+=(1.0-u1_plaq_dble(n,ix));
+            smB+=c*(1.0-u1_plaq_dble(n,ix));
       }
 
       t-=t0;

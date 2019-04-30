@@ -349,7 +349,7 @@ static void setup_files(void)
 }
 
 
-static void read_fld_bc_lat_parms(void)
+static void read_flds_bc_lat_parms(void)
 {
    int bc,cs;
    double phi[2],phi_prime[2];
@@ -357,7 +357,20 @@ static void read_fld_bc_lat_parms(void)
    if (my_rank==0)
    {
       find_section("Boundary conditions");
-      read_line("type","%d",&bc);
+      read_line("type","%s",&line);
+      bc=4;
+      if ((strcmp(line,"open")==0)||(strcmp(line,"0")==0))
+         bc=0;
+      else if ((strcmp(line,"SF")==0)||(strcmp(line,"1")==0))
+         bc=1;
+      else if ((strcmp(line,"open-SF")==0)||(strcmp(line,"2")==0))
+         bc=2;
+      else if ((strcmp(line,"periodic")==0)||(strcmp(line,"3")==0))
+         bc=3;
+      else
+         error_root(1,1,"read_flds_bc_lat_parms [ms1.c]",
+                    "Unknown time boundary condition type %s",line);
+
       read_line("cstar","%d",&cs);
 
       phi[0]=0.0;
@@ -512,7 +525,7 @@ static void read_infile(int argc,char *argv[])
                  "Unable to open parameter file");
    }
 
-   read_fld_bc_lat_parms();
+   read_flds_bc_lat_parms();
    read_wflow_parms();
 
    if (my_rank==0)

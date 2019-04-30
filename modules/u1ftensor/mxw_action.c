@@ -16,12 +16,12 @@
 * The externally accessible functions are
 *
 *   double mxw_action(void)
-*     Returns the Maxwell action S (w/o prefactor 1/e^2) of the double-precision 
+*     Returns the Maxwell action S (w/o prefactor 1/e0^2) of the
 *     gauge field, using a symmetric expression for the gauge-field tensor.
 *
 *   double mxw_action_slices(double *asl)
-*     Computes the sum asl[t] of the Maxwell action density (w/o prefactor 1/e^2) 
-*     of the double-precision gauge field at time t=0,1,...,N0-1 
+*     Computes the sum asl[t] of the Maxwell action density
+*     (w/o prefactor 1/e0^2) of the gauge field at time t=0,1,...,N0-1 
 *     (where N0=NPROC0*L0). The program returns the total action.
 *
 * Notes:
