@@ -1,0 +1,47 @@
+
+MD force programs
+
+check1        Gauge and translation invariance of the SU(3) gauge action
+
+check2        SU(3)  gauge action of constant Abelian fields
+
+check3        Check of force0() and action0()
+
+check4        Check of sw_su3frc(), hop_su3frc(), sw_u1frc() and hop_u1frc()
+
+check5        Check and performance of the CG solver
+
+check6        Check of force1() and action1()
+
+check7        Check of force2() and action2()
+
+check8        Check and performance of the multi-shift CG solver
+
+check9        Check of force3() and action3()
+
+check10       Check of force4() and action4()
+
+check11       Check of force5() and action5()
+
+check12       Check of force6() and action6()
+
+check13       Gauge and translation invariance of the compact U(1) gauge action
+
+check14       Consistency between compact U(1) and SU(3) gauge forces and
+              actions
+
+time1         Timing of plaq_*frc(), sw_*frc() and hop_*frc()
+
+Except for check5 and check8, all programs accept the option -bc <type> that
+allows the type of boundary condition to be chosen at runtime. When the option
+is not set, open boundary conditions are assumed. The option may be set but has
+no effect in the case of check5 and check8 (the boundary conditions are selected
+through the input parameter file in these cases).
+
+The programs check1,2,3,12,13,14 accept the option -sf <SF_type> that
+allows the type of gauge SF-boundary action to be chosen at runtime. When the
+option is not set, the orbifold convention is assumed.
+
+The program time1 accepts the option -cs <cstar> that allows the number
+of spatial directions with C* boundary conditions to be chosen at runtime. When
+the option is not set, periodic boundary conditions in space are assumed.

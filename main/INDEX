@@ -1,0 +1,34 @@
+
+********************************************************************************
+
+                         Simulations of QCD+QED
+
+********************************************************************************
+
+Simulation programs
+
+iso1        HMC simulation program for QCD+QED.
+
+mxw1        HMC simulation program for the (pure) U(1) gauge theory.
+
+qcd1        HMC simulation program for QCD.
+
+ym1         HMC simulation program for the (pure) SU(3) gauge theory.
+
+
+Measurement programs
+
+ms1         Measurement of reweighting factors.
+
+ms2         Computation of the spectral range of the hermitian
+            Dirac operator.
+
+ms3         Computation of SU(3) Wilson-flow observables.
+
+ms4         Computation of quark propagators.
+
+ms5         Computation of U(1) Wilson-flow observables.
+
+
+Some examples of valid input parameter files can be found in the directory
+./examples.

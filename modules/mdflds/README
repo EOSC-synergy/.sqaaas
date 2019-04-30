@@ -1,0 +1,109 @@
+
+********************************************************************************
+
+                     Molecular-dynamics auxiliary fields
+
+********************************************************************************
+
+
+Files
+-----
+
+mdflds.c       Allocation and initialization of the MD auxiliary fields.
+
+su3fcom.c      Communication of the SU(3) force variables residing at the 
+               boundaries of the local lattices.
+
+u1fcom.c       Communication of the U(1) force variables residing at the 
+               boundaries of the local lattices.
+
+md_cstar.c     Apply C* boundary conditions to the MD auxiliary fields.
+
+
+Include file
+------------
+
+The file mdflds.h defines the prototypes for all externally accessible
+functions that are defined in the *.c files listed above.
+
+
+List of functions
+-----------------
+
+void copy_bnd_su3frc(void)
+  Copies the SU(3) force variables from the neighbouring MPI processes 
+  to the exterior boundaries of the local lattice. The field variables
+  on the spatial links at time NPROC0*L0 are fetched only in the case
+  of periodic boundary conditions.
+
+void add_bnd_su3frc(void)
+  Adds the SU(3) force variables on the exterior boundaries of the local 
+  lattice to the field variables on the neighbouring MPI processes.
+  The field variables on the spatial links at time NPROC0*L0 are
+  added only in the case of periodic boundary conditions.
+
+void copy_bnd_u1frc(void)
+  Copies the U(1) force variables from the neighbouring MPI processes 
+  to the exterior boundaries of the local lattice. The field variables
+  on the spatial links at time NPROC0*L0 are fetched only in the case
+  of periodic boundary conditions.
+
+void add_bnd_u1frc(void)
+  Adds the U(1) force variables on the exterior boundaries of the local 
+  lattice to the field variables on the neighbouring MPI processes.
+  The field variables on the spatial links at time NPROC0*L0 are
+  added only in the case of periodic boundary conditions.
+
+mdflds_t *mdflds(void)
+  Returns the pointer to a mdflds_t structure containing the force and
+  momentum field. The fields are automatically allocated if needed.
+
+void set_su3frc2zero(void)
+  Sets all SU(3) force variables, including those on the boundary,
+  to zero.
+
+void bnd_su3mom2zero(void)
+  Sets the components of the SU(3) momentum field on the static links
+  to zero (see the notes).
+
+void random_su3mom(void)
+  Sets the elements X of the SU(3) momentum field on the active links
+  to random values with distribution proportional to exp(tr{X^2}). On
+  the static links the field is set to zero (see the notes).
+
+double su3momentum_action(int icom)
+  Returns the action of the SU(3) momentum field. The action is summed
+  over all MPI processes if (and only if) icom=1.
+
+void set_u1frc2zero(void)
+  Sets all U(1) force variables, including those on the boundary,
+  to zero.
+
+void bnd_u1mom2zero(void)
+  Sets the components of the U(1) momentum field on the static links
+  to zero (see the notes).
+
+void random_u1mom(void)
+  Sets the elements X of the U(1) momentum field on the active links
+  to random values with distribution proportional to exp(1/2 X^2). On
+  the static links the field is set to zero (see the notes).
+
+double u1momentum_action(int icom)
+  Returns the action of the U(1) momentum field. The action is summed
+  over all MPI processes if (and only if) icom=1.
+
+void orbi_cpy_su3mom(void)
+  The SU(3) momentum field on each secondary process is set to be
+  equal to the cstar-transform of the field on the mirror process.
+
+void orbi_add_su3frc(void)
+  The SU(3) force field on each process is added to the cstar-transform of
+  the force field on the mirror process.
+
+void orbi_cpy_u1mom(void)
+  The U(1) momentum field on each secondary process is set to be
+  equal to the cstar-transform of the field on the mirror process.
+
+void orbi_add_u1frc(void)
+  The U(1) force field on each process is added to the cstar-transform of
+  the force field on the mirror process.

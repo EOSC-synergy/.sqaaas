@@ -1,0 +1,140 @@
+
+********************************************************************************
+
+            Allocation and initialization of the U(1) gauge fields
+
+********************************************************************************
+
+
+Files
+-----
+
+adflds.c       Allocation and initialization of the global non-compact U(1) 
+               gauge field.
+
+adcom.c        Communication of the non-compact U(1) double-precision link 
+               variables at the boundaries of the local lattice.
+
+ad_cstar.c     Apply C* boundary conditions to the global non-compact U(1) gauge
+               field.
+
+ad_shift.c     Translation of the global non-compact U(1) gauge field.
+
+ad_bcnds.c     Programs related to the boundary conditions in the time
+               direction for the non-compact U(1) gauge field.
+
+u1flds.c       Allocation and calculation of the global compact U(1) gauge 
+               field.
+
+u1_bstap.c     Allocation and calculation of the U(1) boundary staple field.
+
+u1_plaq_sum.c  Calculation of U(1) plaquette sums.
+
+u1fcts.c       Various functions for complex-number multiplication.
+
+
+Include file
+------------
+
+The file u1flds.h defines the prototypes for all externally accessible
+functions that are defined in the *.c files listed above.
+
+
+List of functions
+-----------------
+
+double *adfld(void)
+  Returns the base address of the non-compact U(1) gauge field. If it is not 
+  already allocated, the field is allocated and initialized to zero. Then
+  the boundary conditions are set according to the data base by calling
+  set_ad_bc() [ad_bcnds.c].
+
+void random_ad(void)
+  Initializes the active non-compact U(1) link variables to random numbers,
+  uniformly distributed in [-pi,pi). The static link variables are
+  left untouched.
+
+void renormalize_ad(void)
+  If the compact formulation is chosen, it adds a multiple of 2*pi to the
+  non-compact U(1) gauge field, in such a way that it takes values in the
+  [-pi,pi) interval. C* boundary conditions are imposed by means of the
+  orbifold constraint.
+
+void copy_bnd_ad(void)
+  Copies the non-compact U(1) link variables from the neighbouring MPI
+  processes to the exterior boundaries of the local lattice. The field
+  variables on the spatial links at time NPROC0*L0 are fetched only in
+  the case of periodic boundary conditions.
+
+int shift_ad(int *s)
+  Replaces the non-compact U(1) gauge field A(x,mu) by A(x-s,mu), where 
+  s[4] is any given shift vector. The program returns the number of 
+  elementary steps (translations by 1 lattice unit) that were performed.
+
+void orbi_cpy_ad(void)
+  ++ C* boundary conditions ++
+  The non-compact U(1) gauge field on each secondary process is set to be
+  equal to the cstar-transform of the field on the mirror process.
+
+void set_ad_bc(void)
+  Sets the non-compact U(1) link variables at time 0 and T to the
+  values required by the chosen boundary conditions (see the notes).
+
+int check_ad_bc(double tol)
+  Returns 1 if the non-compact U(1) gauge field has the proper boundary
+  values. Otherwise the program returns 0. The parameter tol>=0.0 sets an
+  upper bound on the tolerated difference of the boundary values of the
+  gauge field from the expected ones in the case of SF and open-SF
+  boundary conditions.
+
+complex_dble *u1dfld(u1lat_t lat)
+  Returns the base address of the compact U(1) gauge field. If it is not
+  allocated yet, the field is allocated and calculated by exponentiating
+  the non-compact U(1) field. If lat==LOC the compact field is calculated
+  only on the local lattice, if lat==EXT it is calculated also on the
+  communication buffers. The compact U(1) link variable are set to be 
+  on the inactive links in case of open boundary conditions.
+
+complex_dble *u1_bstap(void)
+  Returns the base address of the U(1) boundary staple field. If it is
+  not already allocated, the field is allocated and initialized to
+  unity.
+
+void set_u1_bstap(void)
+  Computes the U(1) boundary staples and copies them to the neighbouring
+  MPI processes.
+
+double u1_plaq_sum_dble(int icom)
+  Returns the sum of Re[U(p)] over all unoriented plaquettes p,
+  where U(p) is the product of the compact U(1) link variables
+  around p. If icom=1 the global sum of the local sums is returned
+  and otherwise just the local sum.
+
+double u1_plaq_wsum_dble(int icom)
+  Same as u1_plaq_sum_dble(), but giving weight 1/2 to the contribution
+  of the space-like plaquettes at the boundaries of the lattice if
+  boundary conditions of type 0,1 or 2 are chosen.
+
+double u1_plaq_action_slices(double *asl)
+  Computes the time-slice sums asl[x0] of the tree-level O(a)-improved
+  plaquette action density of the double-precision U(1) gauge field. The
+  factor 1/u1g0^2 is omitted and the time x0 runs from 0 to NPROC0*L0-1.
+  The program returns the total action.
+
+void u1xu1(complex_dble *u,complex_dble *v,complex_dble *w)
+  Computes w=u*v assuming that w is different from u.
+
+void u1dagxu1(complex_dble *u,complex_dble *v,complex_dble *w)
+  Computes w=u^dag*v assuming that w is different from u.
+
+void u1xu1dag(complex_dble *u,complex_dble *v,complex_dble *w)
+  Computes w=u*v^dag assuming that w is different from u.
+
+void u1dagxu1dag(complex_dble *u,complex_dble *v,complex_dble *w)
+  Computes w=u^dag*v^dag assuming that w is different from u.
+
+void cm1x1_retr(complex_dble *u,complex_dble *v,double *tr)
+  Assigns the real part of (*u)*(*v) to (*tr)
+
+void cm1x1_imtr(complex_dble *u,complex_dble *v,double *tr)
+  Assigns the imaginary part of (*u)*(*v) to (*tr)

@@ -1,0 +1,27 @@
+
+Saving/restoring field configurations to/from files.
+
+check1        Writing and reading of gauge configurations.
+
+check2        Exporting and importing gauge configurations.
+
+check3        Importing a previously exported configuration.
+
+check4        Writing and reading spinor fields.
+
+check5        Exporting and importing spinor fields.
+
+check6        Importing a previously exported spinor field.
+
+The programs check1,check2,check3 accept the option -bc <type> that allows the
+type of boundary condition to be chosen (open boundary conditions are assumed
+if the option is not set). All other programs are insensitive to the boundary
+conditions.
+
+The programs check[1-3] accept the option -gg <gauge> that allows the gauge
+group (0=QCD, 1=QED, 2=QCD+QED) to be chosen at runtime. When the option is not
+set, QCD is assumed.
+
+The programs check[1-3] accept the option -cs <cstar> that allows the number
+of spatial directions with C* boundary conditions to be chosen at runtime. When
+the option is not set, periodic boundary conditions in space are assumed.

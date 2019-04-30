@@ -1,0 +1,295 @@
+
+Main program ms6
+
+SYNTAX
+
+ms6 -i <filename> [-noexp] [-a]
+
+
+DESCRIPTION
+
+This program reads gauge field configurations from disk and computes, for a 
+number of gaussian random source fields at a specified time x0, the following
+correlators
+
+CA_mu(y0,x0)= 1/(N1*N2*N3) sum_{vec x, vec y} <A_mu(y0,vec y) P^dag(x0,vec x)>,
+CP(y0,x0)   = 1/(N1*N2*N3) sum_{vec x, vec y} <P(y0,vec y) P^dag(x0,vec x)>,
+
+where
+
+P(x)   = psi1bar(x) gamma_5 psi2(x),
+A_mu(x)= psi1bar(x) gamma_5 gamma_mu psi2(x),
+
+with psi1 and psi2 the quark fields of two different flavours having the same 
+electric charge.
+
+
+COMMAND-LINE OPTIONS
+
+The program has only few options since most of the parameters are passed
+through an input file. The options are
+
+-i <filename>    Specifies the name of the input file. The name can be
+                 a fully qualified name or be specified relative to the
+                 working directory.
+
+-noexp           Field configurations are normally read in exported
+                 file format from the specified configuration directory.
+                 If this option is set, the configurations are instead
+                 expected in the imported file format on the local disks.
+
+-a               This option specifies that the run is a continuation of
+                 a previous run. All output data are appended to the
+                 previous output files.
+
+
+INPUT PARAMETERS
+
+The lattice size and the process grid must be defined in the file global.h
+(see README.global). All other parameters are read from the input file. An
+example of a valid input file is ms6.in in this directory. The parameter
+values specified in this file are:
+
+
+[Run name]
+name         pedro                 # Run name = configuration base name
+
+[Directories]
+log_dir      ../data/ms6/log       # Log file directory
+dat_dir      ../data/ms6/dat       # Data file directory
+loc_dir      /ndata/iso1/cnfg      # Local configuration directory
+cnfg_dir     /data/iso1/cnfg       # Exported configuration directory
+
+[Configurations]
+first        1                     # No of the first configuration to consider
+last         4                     # No of the last configuration
+step         1                     # Configuration separation (last-first must
+                                   # be an integer multiple of step)
+
+[Random number generator]
+level        0                     # Ranlux level
+seed         73099                 # Ranlux seed
+
+[Gauge group]
+gauge        SU(3)xU(1)            # Gauge group: SU(3), U(1), SU(3)xU(1)
+
+[Boundary conditions]
+type         SF                    # Type of boundary condition:
+                                   #   0|open
+                                   #   1|SF
+                                   #   2|open-SF
+                                   #   3|periodic
+cstar        0                     # Number of spatial directions with
+                                   # C* boundary conditions:
+                                   #   0: periodic b.c.s in space
+                                   #   1: C* b.c.s in X
+                                   #   2: C* b.c.s in XY
+                                   #   3: C* b.c.s in XYZ
+phi          0.12 -0.56            # Boundary values of the SU(3) gauge field
+                                   # at time 0
+phi'         0.92 0.76             # Boundary values of the SU(3) gauge field
+
+[Correlators]
+nfl          2                     # Number of flavours having different
+                                   # parameters: nfl=1,2.
+                                   # nfl=1 means that the two quarks have
+                                   # the same parameters and differ only for
+                                   # the flavour label; in this case a single
+                                   # flavour section must be specified
+
+[Flavour 0]
+kappa        0.121                 # Hopping parameter of the flavour
+mu           0.0                   # Twisted mass of the flavour
+qhat         -2                    # Electric charge in units of the elementary
+                                   # electric charge used to generate the
+                                   # imported configuration
+su3csw       1.234                 # Coefficient of the SU(3) SW term
+u1csw        1.0                   # Coefficient of the U(1) SW term
+cF           0.5                   # Fermion action improvement coefficient
+                                   # at time 0
+cF'          0.6                   # Fermion action improvement coefficient
+                                   # at time NPROC0*L0
+theta        0.0 0.0 0.0           # Angles specifying the phase-periodic bc
+                                   # of the quark fields in space
+
+[Flavour 1]
+kappa        0.122
+mu           0.0
+qhat         4
+su3csw       1.234
+u1csw        1.0
+cF           0.5
+cF'          0.6
+theta        0.34 -1.25 0.58
+
+[Source fields]
+x0           1                     # Time at which the random source fields
+                                   # live (0<=x0<NPROC0*L0)
+nsrc         3                     # Number of U(1) random source fields
+                                   # to be generated per gauge configuration
+
+
+Then follows a description of the solver for the Dirac equation to be used (see
+doc/openQCD-1.6/parms.pdf, to be updated). The supported solvers are CGNE, 
+SAP_GCR and DFL_SAP_GCR.
+
+Setting the source time x0 to 0 or NPROC0*L0-1 is not permitted if the chosen
+boundary conditions require the quark fields to vanish there. Superfluous
+sections and parameters may be deleted or commented out. If present they are
+not read by the program and the specified values (if any) have no effect on
+the run. The solver index must be set to 0.
+
+
+FILES
+
+The program searches for exported field configurations
+
+  <run name>n<int>
+
+in the directory cnfg_dir, where <int> is the configuration number.
+Imported configurations
+
+  <run name>n<int>_0       (on process 0)
+  <run name>n<int>_1       (on process 1)
+  <run name>n<int>_2       (on process 2)
+        ...                     ...
+
+are searched in the directory loc_dir.
+
+
+The program writes the results of the computations to the files
+
+  <run name>.ms6.log   Log file
+  <run name>.ms6.log~  Backup log file
+
+  <run name>.ms6.dat   Measurement data file
+  <run name>.ms6.dat~  Backup data file
+
+  <run name>.ms6.par   Parameter data file
+  <run name>.ms6.par~  Backup parameter data file
+
+in the directories log_dir (log file) and dat_dir (data files). The parameter
+file is created at the beginning of the run and remains unchanged after that.
+The backup log and data files are updated each time a configuration is fully
+processed.
+
+The directories log_dir and dat_dir, as well as the directory cnfg_dir if the
+-noexp option is not set, must be accessible from process 0. If the -noexp
+option is set, the directory loc_dir must be accessible from all processes.
+
+
+RANDOM NUMBER GENERATOR
+
+Random numbers are generated using the ranlux generator. The generator is
+initialized using the values of the parameters "level" and "seed" specified in
+the input file. If the configurations are read in imported form, the state of
+the generator is *not* set to the one stored on the configuration file. The
+generated random numbers, and consequently the random source fields, are
+therefore independent of whether the configurations are read in imported or
+exported form.
+
+
+SOLVER PERFORMANCE
+
+The program prints the time required for the solution of the Dirac equation to
+the log file. When selecting the solver, one should take into account that the
+CGNE solver tends to be very slow at small quark masses. In the case of the
+GCR solvers, the performance may be poor when the twisted quark mass mu is
+larger than, say, 0.1 and much larger than the ordinary quark mass. The use of
+the deflated solver is recommended if both masses are small.
+
+The processing times per gauge field configuration quoted in the log file
+include the time required for the I/O operations.
+
+
+BINARY FILE FORMAT
+
+The *.log files are ASCII files that should be readable on any machine. Data
+and configuration files, on the other hand, are written in binary format using
+the fwrite() function. Integers are written as 4 byte signed integers and
+floating-point numbers according to the IEEE-754 standard for double-precision
+numbers.
+
+Binary data written to disk are converted to little endian byte order if the
+machine is big endian. Field configurations and measurement data stored on
+disk are thus always in little endian byte order independently of the machine
+that is used.
+
+
+OUTPUT DATA
+
+At the beginning of the measurement data file the program writes the data
+contained in the header structure
+
+static struct
+{
+   int tmax,x0,nsrc;
+   int nfl,qhat[2];
+   double kappa[2],mu[2];
+   double su3csw[2],u1csw[2];
+   double cF[2],cF_prime[2];
+   double th1[2],th2[2],th3[2];
+} file_head;
+
+where tmax=NPROC0*L0 and if the two flavours have identical parameters (nfl=1), 
+the parameters are written only once. See the function write_file_head() in the 
+program file ms6.c for further details.
+
+After the header data, the data file contains a sequence of data structures
+
+static struct
+{
+   int nc;
+   double *P,*A0,*A1,*A2,*A3;
+} data;
+
+labeled by the configuration number nc. The average over the number of stochastic
+sources per configurations (nsrc) of the correlators are stored into the
+arrays as follows
+
+P[y0]  = Re{ CP(y0,x0) }     (y0=0,...,tmax-1)
+A0[y0] = Re{ CA_0(y0,x0) }   
+A1[y0] = Im{ CA_1(y0,x0) }   
+A2[y0] = Im{ CA_2(y0,x0) }   
+A3[y0] = Im{ CA_3(y0,x0) }   
+
+and written to the file. See the function write_data() in the program file
+ms6.c for further details.
+
+
+SAFETY MEASURES AND ERROR REPORTING
+
+A number of safety measures have been implemented:
+
+- It is not possible to overwrite an existing log or data file; these
+  must first be deleted or renamed by hand if a run is to be repeated.
+
+- Appending a run to a previous measurement run is only possible if the run
+  name and all relevant parameters match. Moreover, the new configuration
+  sequence must extend the previous one with the same configuration spacing.
+
+- The accessibility of the various directories and the compatibility
+  of the chosen parameters is checked at the beginning of the program.
+
+Any attempt to force illegal operations leads to an abnormal termination of
+the program, with an informative message being written either to the log file
+or the file STARTUP_ERROR in the program directory (if the error occurs before
+the log file is opened).
+
+It should be noted that filenames may not be longer than 127 characters. The
+program checks at an early stage whether this is the case or not. Longer
+filenames can be accommodated by setting the macro NAME_SIZE in the header
+file global.h to a larger value.
+
+
+CHECKPOINTS AND EARLY TERMINATION
+
+The program can be stopped gracefully by touching a file in the log directory
+with the same name as the log file but with extension .end instead of .log. It
+may take a while until the program exits, because it will only do so when the
+current field configuration is fully processed.
+
+If the machine crashes, or if the program was stopped in the way described,
+the run can always be continued starting from the saved output files. However,
+after a crash, the log and data files may be corrupted, in which case they
+must first be restored from the backup files.

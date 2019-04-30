@@ -1,0 +1,35 @@
+
+********************************************************************************
+
+                Allocation and initialization of the gauge fields
+
+********************************************************************************
+
+
+Files
+-----
+
+hflds.c        Allocation and calculation of the global U(3) gauge fields.
+
+
+Include file
+------------
+
+The file hflds.h defines the prototypes for all externally accessible
+functions that are defined in the *.c files listed above.
+
+
+List of functions
+-----------------
+
+su3_dble *hdfld(void)
+  Computes the double-precision U(3) gauge field and returns its base
+  address. If it is not already allocated, the field is allocated first.
+  The SU(3) and U(1) gauge fields are assumed to have already the correct
+  boundary values.
+
+su3 *hfld(void)
+  Computes the single-precision U(3) gauge field and returns its base
+  address. If it is not already allocated, the field is allocated first.
+  The SU(3) and U(1) gauge fields are assumed to have already the correct
+  boundary values.

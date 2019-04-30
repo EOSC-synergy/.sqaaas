@@ -1,0 +1,24 @@
+
+Computation of the U(1) symmetric field tensor and the Maxwell action.
+
+check1         Check of the gauge and translation invariance of the Maxwell action.
+
+check2         Maxwell action of background fields with constant field tensor.
+
+check3         Check of the program mxw_action_slices().
+
+check4         Check of the gauge and translation invariance of the U(1) fluxes.
+
+check5         U(1) fluxes of background fields with constant field tensor.
+
+check6         Check of the program u1fluxes_slices().
+
+check7         Consistency checks between U(1) and SU(3) field tensors
+
+All programs accept the option -bc <type> that allows the type of boundary
+condition to be chosen. When the option is not set, open boundary conditions
+are assumed.
+
+The program check6 accepts the option -cs <cstar> that allows the number of
+spatial directions with C* boundary conditions to be chosen at runtime. When the
+option is not set, no C* boundary conditions are assumed.

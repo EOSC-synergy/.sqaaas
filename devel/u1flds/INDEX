@@ -1,0 +1,27 @@
+
+Allocation and initialization of the global U(1) gauge fields.
+
+check1        Initialization of the U(1) fields.
+
+check2        Calculation of the comm buffers of the compact U(1) field.
+
+check3        Consistency between U(1) and SU(3) shifts.
+
+check4        Consistency between U(1) and SU(3) plaquette sums.
+
+check5        Consistency between U(1) and SU(3) boundary staple field.
+
+check6        Check of the programs for the plaquette sums of the
+              double-precision U(1) gauge field.
+
+check7        Check of the program set_u1_bstap().
+
+check8        Renurmalization the noncompact U(1) field.
+
+All programs accept the option -bc <type> that allows the type of boundary
+condition to be chosen. When the option is not set, open boundary conditions
+are assumed.
+
+All programs accept the option -cs <cstar> that allows the number of spatial
+directions with C* boundary conditions to be chosen at runtime. When the option
+is not set, no C* boundary conditions are assumed.

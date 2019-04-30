@@ -1,0 +1,20 @@
+
+Simple analysis programs for the data files produced by the programs in the
+directory main
+
+read.qcd1     Reads the run data files <name>.dat produced by the
+              simulation programs qcd1, ym1 and mxw1.
+
+read.iso1     Reads the run data files <name>.dat produced by the
+              simulation programs iso1.
+
+read.ms1      Reads the data files produced by the measurement
+              program ms1.
+
+read.ms3      Reads the data files produced by the measurement
+              program ms3, and the measurement <name>.ms3.dat file
+              produced by the simulation programs qcd1, ym1 and iso1.
+
+read.ms5      Reads the data files produced by the measurement
+              program ms5, and the measurement <name>.ms5.dat file
+              produced by the simulation programs mxw1 and iso1.

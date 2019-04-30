@@ -1,0 +1,15 @@
+
+Integration of the Wilson flow
+
+check1        Basic checks on the implementation of the Wilson flow.
+
+check2        Gauge covariance of the Wilson flow.
+
+check3        Convergence of the numerical integration.
+
+check4        Consistency between U(1) and SU(3) Wilson flows.
+
+The programs check1, check2 and check4 accept the option -bc <type> that allows
+the type of boundary condition to be chosen (open boundary conditions are
+assumed if the option is not set). In the case of check3, the boundary 
+conditions are set through the input parameter file.
