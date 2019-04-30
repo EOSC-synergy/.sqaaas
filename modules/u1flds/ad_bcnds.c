@@ -44,9 +44,10 @@
 *  Open bc:         Set all link variables A(x,0) at time T to zero.
 *
 *  SF bc:           Set all link variables A(x,k) for k=1,2,3 at time 0 and T
-*                   to zero.
+*                   to the values specified in the parameter database.
 *
-*  Open-SF bc:      Set all link variables A(x,k) for k=1,2,3 at time T to zero.
+*  Open-SF bc:      Set all link variables A(x,k) for k=1,2,3 at time T to zero
+*                   to the values specified in the parameter database.
 *
 *  Periodic bc:     No action is performed.
 *
@@ -74,7 +75,8 @@
 
 static int init0=0,nlks,*lks;
 static int init1=0,npts,*pts;
-static double ubnd[2][3]={{0.0,0.0,0.0},{0.0,0.0,0.0}};
+static int init2=0;
+static double abnd[2][3];
 
 
 static void alloc_lks(void)
@@ -209,6 +211,30 @@ static int ad_check_zero(int bc)
 }
 
 
+static void set_abnd(void)
+{
+   int i,k;
+   double s[3];
+   bc_parms_t bcp;
+
+   bcp=bc_parms();
+   s[0]=(double)(NPROC1*L1);
+   s[1]=(double)(NPROC2*L2);
+   s[2]=(double)(NPROC3*L3);
+
+   for (i=0;i<2;i++)
+   {
+      for (k=0;k<3;k++)
+      {
+         abnd[i][k]=bcp.phi1[i]/s[k];
+         abnd[i][k]=bcp.phi1[i]/s[k];
+      }
+   }
+
+   init2=1;
+}
+
+
 static void open_bc(void)
 {
    int *lk,*lkm;
@@ -235,6 +261,8 @@ static void SF_bc(void)
 
    if (init1==0)
       alloc_pts();
+   if (init2==0)
+      set_abnd();
 
    ub=adfld();
 
@@ -249,8 +277,8 @@ static void SF_bc(void)
 
          for (k=0;k<3;k++)
          {
-            u[2+2*k]=ubnd[0][k];
-            u[3+2*k]=ubnd[0][k];
+            u[2+2*k]=abnd[0][k];
+            u[3+2*k]=abnd[0][k];
          }
       }
    }
@@ -260,7 +288,7 @@ static void SF_bc(void)
       u=ub+4*VOLUME+7*(BNDRY/4);
 
       for (k=0;k<3;k++)
-         u[k]=ubnd[1][k];
+         u[k]=abnd[1][k];
    }
 
    set_flags(UPDATED_AD);
@@ -272,6 +300,9 @@ static void openSF_bc(void)
    int k;
    double *ub,*u;
 
+   if (init2==0)
+      set_abnd();
+
    ub=adfld();
 
    if (cpr[0]==(NPROC0-1))
@@ -279,7 +310,7 @@ static void openSF_bc(void)
       u=ub+4*VOLUME+7*(BNDRY/4);
 
       for (k=0;k<3;k++)
-         u[k]=ubnd[1][k];
+         u[k]=abnd[1][k];
    }
 
    set_flags(UPDATED_AD);
@@ -312,6 +343,8 @@ static int check_SF(double tol)
 
    if (init1==0)
       alloc_pts();
+   if (init2==0)
+      set_abnd();
 
    it=1;
    ub=adfld();
@@ -327,8 +360,8 @@ static int check_SF(double tol)
 
          for (k=0;k<3;k++)
          {
-            it&=ad_is_equal(tol,u+2+2*k,ubnd[0]+k);
-            it&=ad_is_equal(tol,u+3+2*k,ubnd[0]+k);
+            it&=ad_is_equal(tol,u+2+2*k,abnd[0]+k);
+            it&=ad_is_equal(tol,u+3+2*k,abnd[0]+k);
          }
       }
    }
@@ -338,7 +371,7 @@ static int check_SF(double tol)
       u=ub+4*VOLUME+7*(BNDRY/4);
 
       for (k=0;k<3;k++)
-         it&=ad_is_equal(tol,u+k,ubnd[1]+k);
+         it&=ad_is_equal(tol,u+k,abnd[1]+k);
    }
 
    return it;
@@ -350,6 +383,9 @@ static int check_openSF(double tol)
    int it,k;
    double *ub,*u;
 
+   if (init2==0)
+      set_abnd();
+
    it=1;
    ub=adfld();
 
@@ -358,7 +394,7 @@ static int check_openSF(double tol)
       u=ub+4*VOLUME+7*(BNDRY/4);
 
       for (k=0;k<3;k++)
-         it&=ad_is_equal(tol,u+k,ubnd[1]+k);
+         it&=ad_is_equal(tol,u+k,abnd[1]+k);
    }
 
    return it;

@@ -38,8 +38,9 @@
 
 int main(int argc,char *argv[])
 {
-   int my_rank,t,bc,cs;
-   double phi[2],phi_prime[2];
+   int my_rank,t,bc,cs,size;
+   double su3phi[2],su3phi_prime[2];
+   double u1phi,u1phi_prime;
    complex_dble *u1d,*u1db,*u1dm;
    su3_dble *ud;
    double u1plaq,u3plaq,u1sl[N0],u3sl[N0];
@@ -79,19 +80,25 @@ int main(int argc,char *argv[])
 
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
-   phi[0]=0.0;
-   phi[1]=0.0;
-   phi_prime[0]=0.0;
-   phi_prime[1]=0.0;
-   set_bc_parms(bc,0,cs,phi,phi_prime);
+   su3phi[0]=0.0;
+   su3phi[1]=0.0;
+   su3phi_prime[0]=0.0;
+   su3phi_prime[1]=0.0;
+   u1phi=0.573;
+   u1phi_prime=-1.827;
+   set_bc_parms(bc,cs,su3phi,su3phi_prime,u1phi,u1phi_prime);
    print_bc_parms();
 
    start_ranlux(0,12345);
    geometry();
 
+   size=4*VOLUME+7*(BNDRY/4);
+   if ((cpr[0]==(NPROC0-1))&&((bc==1)||(bc==2)))
+      size+=3;
+
    random_ad();
-   u1db=u1dfld(LOC);
-   u1dm=u1db+4*VOLUME;
+   u1db=u1dfld(EXT);
+   u1dm=u1db+size;
    ud=udfld();
    cm3x3_zero(4*VOLUME,ud);
    for (u1d=u1db;u1d<u1dm;u1d++)

@@ -96,12 +96,12 @@ type         2                     # Type of boundary condition:
                                    #   1|SF
                                    #   2|open-SF
                                    #   3|periodic
-SFtype       0                     # Type of SF boundary (this affects the
-                                   # LW gauge action):
-                                   #   0|orbifold|openQCD-1.4
-                                   #   1|AFW-typeB|openQCD-1.2
 cstar        2                     # Number of spatial directions with
                                    # C* boundary conditions
+u1phi        0.43                  # Boundary values of the U(1) gauge field
+                                   # at time 0
+u1phi'       -1.32                 # Boundary values of the U(1) gauge field
+                                   # at time NPROC0*L0
 
 [U(1) action]
 type         0                     # Type of U(1) actions:
@@ -116,13 +116,20 @@ cG           1.10                  # U(1) gauge action improvement coefficient
                                    # at time 0
 cG'          1.05                  # U(1) gauge action improvement coefficient
                                    # at time NPROC0*L0
+SFtype       0                     # Type of SF boundary (this affects the
+                                   # LW gauge action):
+                                   #   0|orbifold|openQCD-1.4
+                                   #   1|AFW-typeB|openQCD-1.2
 
 [Random number generator]
 level        0                     # Ranlux level
 seed         73099                 # Ranlux seed
 
-[Trajectory length]
-tau          3.0                   # Molecular-dynamics (MD) trajectory length
+[HMC parameters]
+tau          0.5                   # MD trajectory length
+facc         0                     # Fourier acceleration for U(1) MD:
+                                   #   0: not used
+                                   #   1: used
 
 [MD integrator]
 integrator   OMF4                  # LPFR: leapfrog, OMF2: 2nd order OMF,

@@ -1,3 +1,49 @@
+30. April 2019
+
+Version 1.0: 3rd public release.
+
+- Integrated the MinMax program for the calculation of the relevant rational
+  approximations.
+
+- Updated documentation.
+
+- Added simple utilities in main/utils to compare solvers, and to merge SU(3)
+  and U(1) configurations into SU(3)xU(1) configurations.
+
+- Added the read.ms6 program in devel/nompi/main to read and analyze the dat
+  file produced by ms6.
+
+- In ms6, added the possibility to set the stochastic sources on randomly
+  chosen timeslices in case of periodic boundary conditions.
+
+- Implemented multiple deflation subspaces with independent parameters of the
+  Dirac operator.
+
+- Implemented Fourier acceleration for the U(1) gauge field. Described in detail
+  in docs/fourier.pdf.
+
+- Added the flag -unit to the command line of the main programs iso1, mxw1,
+  qcd1, ym1, to start simulations for the unit configuration.
+
+- Implemented generic boundary values for the U(1) gauge field at the SF
+  boundaries.
+
+- Restructured the parameter database. In particular the boundary conditions,
+  gauge action, quark parameters have been reorganized. This is reflected in a
+  substantial change of the input files. Several pieces of code have been moved
+  from the main programs to newly created utility functions in the module flags.
+
+- Implemented the reweighting factors for the RHMC. Generic powers of the
+  D^dag D operator are supporter, and also twisted mass reweighting for the
+  rational approximations. The reweighing factors are described in detail in
+  doc/rhmc.pdf.
+
+
+22. June 2017: 2nd public release (alpha).
+
+- Corrected an error in the normalization of the gradient flow for the U(1)
+  gauge field.
+ 
 1. June 2017
 
-Version 0.9a1: Initial public alpha-release.
+Version 0.9a1: Initial public release (alpha).

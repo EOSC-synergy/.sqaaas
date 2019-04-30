@@ -14,7 +14,7 @@
 * The externally accessible functions are
 *
 *   hmc_parms_t set_hmc_parms(int nact,int *iact,int npf,int nmu,
-*                             double *mu,int nlv,double tau)
+*                             double *mu,int nlv,double tau,int facc)
 *     Sets some basic parameters of the HMC algorithm. The parameters are
 *
 *       nact        Number of terms in the total action
@@ -32,6 +32,9 @@
 *       nlv         Number of levels of the molecular-dynamics integrator
 *
 *       tau         Molecular-dynamics trajectory length
+*
+*       facc        U(1) Fourier-acceleration flag (facc=0 inactive,
+*                   facc!=0 active); ignored if U(1) gauge field is not active.
 *
 *     The total action must include the gauge action, but pseudo-fermion
 *     actions are optional and the momentum action is treated separately.
@@ -72,11 +75,11 @@
 #include "flags.h"
 #include "global.h"
 
-static hmc_parms_t hmc={0,0,0,0,NULL,0.0,NULL};
+static hmc_parms_t hmc={0,0,0,0,0,NULL,0.0,NULL};
 
 
 hmc_parms_t set_hmc_parms(int nact,int *iact,int npf,int nmu,
-                          double *mu,int nlv,double tau)
+                          double *mu,int nlv,double tau,int facc)
 {
    int i;
 
@@ -90,6 +93,10 @@ hmc_parms_t set_hmc_parms(int nact,int *iact,int npf,int nmu,
 
    error_root((hmc.nlv>0)&&(npf!=hmc.npf),1,"set_hmc_parms [hmc_parms.c]",
               "Number of pseudo-fermion fields may be set only once");
+   
+   hmc.facc=0;
+   if (((gauge()&2)!=0)&&(facc!=0))
+      hmc.facc=1;
    
    if (nact!=hmc.nact)
    {
@@ -154,6 +161,8 @@ void print_hmc_parms(void)
    if (my_rank==0)
    {
       printf("HMC parameters:\n");
+      if (hmc.facc)
+         printf("U(1) Fourier acceleration is active\n");
       printf("actions =");
       for (i=0;i<hmc.nact;i++)
          printf(" %d",hmc.iact[i]);
@@ -178,17 +187,18 @@ void print_hmc_parms(void)
 
 void write_hmc_parms(FILE *fdat)
 {
-   write_little_int(fdat,4,hmc.nact,hmc.npf,hmc.nmu,hmc.nlv);
-   write_little_intarray(fdat,hmc.nact,hmc.iact);
-   write_little_dble(fdat,1,hmc.tau);
-   write_little_dblearray(fdat,hmc.nmu,hmc.mu);
+   write_little_int(1,fdat,5,hmc.facc,hmc.nact,hmc.npf,hmc.nmu,hmc.nlv);
+   write_little_intarray(1,fdat,hmc.nact,hmc.iact);
+   write_little_dble(1,fdat,1,hmc.tau);
+   write_little_dblearray(1,fdat,hmc.nmu,hmc.mu);
 }
 
 
 void check_hmc_parms(FILE *fdat)
 {
-   check_fpar_int("check_hmc_parms",fdat,4,hmc.nact,hmc.npf,hmc.nmu,hmc.nlv);
-   check_fpar_intarray("check_hmc_parms",fdat,hmc.nact,hmc.iact);
-   check_fpar_dble("check_hmc_parms",fdat,1,hmc.tau);
-   check_fpar_dblearray("check_hmc_parms",fdat,hmc.nmu,hmc.mu);
+   check_little_int("check_hmc_parms",fdat,5,hmc.facc,hmc.nact,hmc.npf,
+                                      hmc.nmu,hmc.nlv);
+   check_little_intarray("check_hmc_parms",fdat,hmc.nact,hmc.iact);
+   check_little_dble("check_hmc_parms",fdat,1,hmc.tau);
+   check_little_dblearray("check_hmc_parms",fdat,hmc.nmu,hmc.mu);
 }

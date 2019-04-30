@@ -4,7 +4,7 @@
 * File flags.h
 *
 * Copyright (C) 2009-2014, 2016 Martin Luescher, Isabel Campos
-*               2017 Agostino Patella
+*               2017, 2019 Agostino Patella, Nazario Tantalo
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -71,7 +71,7 @@ typedef enum
 
 typedef enum
 {
-   RWTM1,RWTM1_EO,RWTM2,RWTM2_EO,RWRAT,
+   RWTM1,RWTM1_EO,RWTM2,RWTM2_EO,RWRAT,RWRTM,
    RWFACTS
 } rwfact_t;
 
@@ -81,10 +81,21 @@ typedef enum
    SOLVERS
 } solver_t;
 
+typedef enum
+{
+   DFL_UNDEF,DFL_DEF,DFL_OUTOFRANGE
+} dflst_t;
+
+typedef enum
+{
+   EXP,SIN,COS,
+   DFT_TYPES
+} dft_type_t;
+
 typedef struct
 {
    action_t action;
-   int ipf,im0;
+   int ipf,ifl;
    int irat[3],imu[4];
    int isp[4];
 } action_parms_t;
@@ -92,10 +103,9 @@ typedef struct
 typedef struct
 {
    int type;
-   int SFtype;
    int cstar;
-   double phi[2][3];
-   double ad[2];
+   double phi3[2][3];
+   double phi1[2];
 } bc_parms_t;
 
 typedef struct
@@ -118,6 +128,7 @@ typedef struct
 
 typedef struct
 {
+   dflst_t status;
    int ninv,nmr,ncy;
    double kappa,mu;
    dirac_parms_t dp;
@@ -138,7 +149,7 @@ typedef struct
 typedef struct
 {
    force_t force;
-   int ipf,im0;
+   int ipf,ifl;
    int irat[3],imu[4];
    int isp[4];
    int ncr[4],icr[4];
@@ -146,6 +157,7 @@ typedef struct
 
 typedef struct
 {
+   int facc;
    int npf,nlv;
    int nact,nmu;
    int *iact;
@@ -172,8 +184,8 @@ typedef struct
 typedef struct
 {
    rwfact_t rwfact;
-   int im0,nsrc;
-   int irp,nfct;
+   int ifl,nsrc;
+   int irp[2],nfct;
    double *mu;
    int *np,*isp;
 } rw_parms_t;
@@ -189,12 +201,13 @@ typedef struct
 {
    solver_t solver;
    int nmx,nkv;
-   int isolv,nmr,ncy;
+   int isolv,nmr,ncy,idfl;
    double res;
 } solver_parms_t;
 
 typedef struct
 {
+   int SFtype;
    double beta,c0,c1,cG[2];
 } su3lat_parms_t;
 
@@ -205,15 +218,25 @@ typedef struct
 
 typedef struct
 {
-   int type;
+   int type,SFtype;
    double alpha,invqel,beta,lambda,c0,c1,cG[2];
 } u1lat_parms_t;
 
 typedef struct
 {
-   int n;
-   double eps;
-} wflow_parms_t;
+   dft_type_t type;
+   int n,b,c,*r;
+   complex_dble *w;
+   complex_dble *wb,*wc,*iwb,*iwc;
+} dft_parms_t;
+
+typedef struct
+{
+   int csize;
+   int ny[4],nf[4];
+   int *nx[4],*mf[4];
+   dft_parms_t *dp[4];
+} dft4d_parms_t;
 
 /* FLAGS_C */
 extern void set_flags(event_t event);
@@ -225,7 +248,7 @@ extern void print_grid_flags(blk_grid_t grid);
 
 /* ACTION_PARMS_C */
 extern action_parms_t set_action_parms(int iact,action_t action,int ipf,
-                                       int im0,int *irat,int *imu,int *isp);
+                                       int ifl,int *irat,int *imu,int *isp);
 extern action_parms_t action_parms(int iact);
 extern void read_action_parms(int iact);
 extern void print_action_parms(void);
@@ -248,20 +271,21 @@ extern dfl_parms_t set_dfl_parms(int *bs,int Ns);
 extern dfl_parms_t dfl_parms(void);
 extern dfl_pro_parms_t set_dfl_pro_parms(int nkv,int nmx,double res);
 extern dfl_pro_parms_t dfl_pro_parms(void);
-extern dfl_gen_parms_t set_dfl_gen_parms(double kappa,double mu,
+extern dfl_gen_parms_t set_dfl_gen_parms(int idfl,double kappa,double mu,
                                     int qhat,double su3csw,double u1csw,
                                     double cF,double cF_prime,
                                     double th1,double th2,double th3,
                                     int ninv,int nmr,int ncy);
-extern dfl_gen_parms_t dfl_gen_parms(void);
+extern dfl_gen_parms_t dfl_gen_parms(int idfl);
 extern dfl_upd_parms_t set_dfl_upd_parms(double dtau,int nsm);
 extern dfl_upd_parms_t dfl_upd_parms(void);
+extern void read_dfl_parms(int update);
 extern void print_dfl_parms(int ipr);
 extern void write_dfl_parms(FILE *fdat);
 extern void check_dfl_parms(FILE *fdat);
 
 /* FORCE_PARMS_C */
-extern force_parms_t set_force_parms(int ifr,force_t force,int ipf,int im0,
+extern force_parms_t set_force_parms(int ifr,force_t force,int ipf,int ifl,
                                      int *irat,int *imu,int *isp,int *ncr);
 extern force_parms_t force_parms(int ifr);
 extern void read_force_parms(int ifr);
@@ -272,8 +296,8 @@ extern void write_force_parms(FILE *fdat);
 extern void check_force_parms(FILE *fdat);
 
 /* HMC_PARMS_C */
-extern hmc_parms_t set_hmc_parms(int nact,int *iact,int npf,
-                                 int nmu,double *mu,int nlv,double tau);
+extern hmc_parms_t set_hmc_parms(int nact,int *iact,int npf,int nmu,double *mu,
+                                 int nlv,double tau,int facc);
 extern hmc_parms_t hmc_parms(void);
 extern void print_hmc_parms(void);
 extern void write_hmc_parms(FILE *fdat);
@@ -281,12 +305,14 @@ extern void check_hmc_parms(FILE *fdat);
 
 /* LAT_PARMS_C */
 extern flds_parms_t set_flds_parms(int gauge,int nfl);
-extern bc_parms_t set_bc_parms(int type,int SFtype,int cstar,
-                               double *phi,double *phi_prime);
+extern bc_parms_t set_bc_parms(int type,int cstar,
+                               double *phi3,double *phi3_prime,
+                               double phi1, double phi1_prime);
 extern su3lat_parms_t set_su3lat_parms(double beta,double c0,
-                      double cG,double cG_prime);
+                      double cG,double cG_prime,int SFtype);
 extern u1lat_parms_t set_u1lat_parms(int type,double alpha,double invqel,
-                           double lambda,double c0,double cG,double cG_prime);
+                           double lambda,double c0,double cG,double cG_prime,
+                           int SFtype);
 extern dirac_parms_t set_qlat_parms(int ifl,double kappa,int qhat,
                      double su3csw,double u1csw,double cF,double cF_prime,
                      double th1,double th2,double th3);
@@ -298,6 +324,9 @@ extern int bc_cstar(void);
 extern su3lat_parms_t su3lat_parms(void);
 extern u1lat_parms_t u1lat_parms(void);
 extern dirac_parms_t qlat_parms(int ifl);
+extern void read_bc_parms(void);
+extern void read_glat_parms(void);
+extern void read_qlat_parms(void);
 extern void print_flds_parms(void);
 extern void print_bc_parms(void);
 extern void print_lat_parms(void);
@@ -326,8 +355,9 @@ extern void write_rat_parms(FILE *fdat);
 extern void check_rat_parms(FILE *fdat);
 
 /* RW_PARMS_C */
-extern rw_parms_t set_rw_parms(int irw,rwfact_t rwfact,int im0,int nsrc,
-                               int irp,int nfct,double *mu,int *np,int *isp);
+extern rw_parms_t set_rw_parms(int irw,rwfact_t rwfact,int ifl,int nsrc,
+                               int irp1,int irp2,int nfct,double *mu,
+                               int *np,int *isp);
 extern rw_parms_t rw_parms(int irw);
 extern void read_rw_parms(int irw);
 extern void print_rw_parms(void);
@@ -337,6 +367,7 @@ extern void check_rw_parms(FILE *fdat);
 /* SAP_PARMS_C */
 extern sap_parms_t set_sap_parms(int *bs,int isolv,int nmr,int ncy);
 extern sap_parms_t sap_parms(void);
+extern void read_sap_parms(void);
 extern void print_sap_parms(int ipr);
 extern void write_sap_parms(FILE *fdat);
 extern void check_sap_parms(FILE *fdat);
@@ -344,30 +375,19 @@ extern void check_sap_parms(FILE *fdat);
 /* SOLVER_PARMS_C */
 extern solver_parms_t set_solver_parms(int isp,solver_t solver,
                                        int nkv,int isolv,int nmr,int ncy,
-                                       int nmx,double res);
+                                       int nmx,int idfl,double res);
 extern solver_parms_t solver_parms(int isp);
 extern void read_solver_parms(int isp);
 extern void print_solver_parms(int *isap,int *idfl);
 extern void write_solver_parms(FILE *fdat);
 extern void check_solver_parms(FILE *fdat);
 
-/* WFLOW_PARMS_C */
-extern wflow_parms_t set_wflow_parms(int n,double eps);
-extern wflow_parms_t wflow_parms(void);
+/* DFT_PARMS_C */
+extern int set_dft_parms(dft_type_t type,int n,int b,int c);
+extern dft_parms_t *dft_parms(int id);
 
-/* PARMS_UTILS */
-extern void check_global_dble(const char fnm[256],int nargs,...);
-extern void check_global_dblearray(const char fnm[256],int size,double *data);
-extern void check_global_int(const char fnm[256],int nargs,...);
-extern void check_global_intarray(const char fnm[256],int size,int *data);
-extern void write_little_dble(FILE *fdat,int nargs,...);
-extern void write_little_int(FILE *fdat,int nargs,...);
-extern void write_little_dblearray(FILE *fdat,int size,double *data);
-extern void write_little_intarray(FILE *fdat,int size,int *data);
-extern void check_fpar_dble(const char fnm[256],FILE *fdat,int nargs,...);
-extern void check_fpar_int(const char fnm[256],FILE *fdat,int nargs,...);
-extern void check_fpar_dblearray(const char fnm[256],FILE *fdat,int size,double *data);
-extern void check_fpar_intarray(const char fnm[256],FILE *fdat,int size,int *data);
-
+/* DFT4D_PARMS_C */
+extern int set_dft4d_parms(int *idp,int *nx,int csize);
+extern dft4d_parms_t *dft4d_parms(int id);
 
 #endif

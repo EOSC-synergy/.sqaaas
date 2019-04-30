@@ -284,7 +284,6 @@ void force6(double c)
 
    bcp=bc_parms();
    bc=bcp.type;
-   is_typeB=bcp.SFtype;
 
    lat=u1lat_parms();
    c*=lat.beta;
@@ -292,6 +291,7 @@ void force6(double c)
    c0=lat.c0;
    c1=lat.c1;
    cG=lat.cG;
+   is_typeB=lat.SFtype;
 
    error_root(lat.type==1,1,
               "force6 [force6.c]",
@@ -572,7 +572,6 @@ double action6(int icom)
 
    bcp=bc_parms();
    bc=bcp.type;
-   is_typeB=bcp.SFtype;
 
    lat=u1lat_parms();
    beta=lat.beta;
@@ -580,6 +579,7 @@ double action6(int icom)
    c0=lat.c0;
    c1=lat.c1;
    cG=lat.cG;
+   is_typeB=lat.SFtype;
 
    error_root(lat.type==1,1,
               "action6 [force6.c]",

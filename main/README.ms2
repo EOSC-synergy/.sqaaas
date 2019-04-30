@@ -65,9 +65,13 @@ cstar        0                     # Number of spatial directions with
                                    #   1: C* b.c.s in X
                                    #   2: C* b.c.s in XY
                                    #   3: C* b.c.s in XYZ
-phi          0.12 -0.56            # Boundary values of the SU(3) gauge field
+su3phi       0.12 -0.56            # Boundary values of the SU(3) gauge field
                                    # at time 0
-phi'         0.92 0.76             # Boundary values of the SU(3) gauge field
+su3phi'      0.92 0.76             # Boundary values of the SU(3) gauge field
+                                   # at time NPROC0*L0
+u1phi        0.43                  # Boundary values of the U(1) gauge field
+                                   # at time 0
+u1phi'       -1.32                 # Boundary values of the U(1) gauge field
                                    # at time NPROC0*L0
 
 [Dirac operator]
@@ -91,8 +95,8 @@ np_rb        100                   # Number of power iterations to be
                                    # applied when estimating rb
 
 Then follows a description of the solver for the Dirac equation to be used in
-the course of the inverse power iterations (see doc/openQCD-1.6/parms.pdf, to
-be updated). The supported solvers are CGNE, SAP_GCR and DFL_SAP_GCR.
+the course of the inverse power iterations (see doc/parms.pdf). The supported
+solvers are CGNE, SAP_GCR and DFL_SAP_GCR.
 
 Superfluous sections and parameters may be deleted or commented out. If
 present they are not read by the program and the specified values (if any)

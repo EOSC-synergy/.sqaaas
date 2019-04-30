@@ -21,7 +21,7 @@ all: rmxeq mkdep mkxeq
 
 MAIN = check1 check2 check3 time1
 
-FLAGS = flags dirac_parms lat_parms dfl_parms parms_utils
+FLAGS = flags dirac_parms lat_parms dfl_parms
 
 LATTICE = bcnds uidx ftidx geometry cstar
 
@@ -39,7 +39,7 @@ TCHARGE = ftcom ftensor
 
 UFLDS = plaq_sum shift uflds udcom ud_cstar
 
-UTILS = endian error hsum mutils utils wspace
+UTILS = endian error hsum ioutils mutils utils wspace
 
 U1FLDS = adflds adcom u1flds ad_shift u1_plaq_sum u1fcts u1_bstap ad_bcnds \
          ad_cstar

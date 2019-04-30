@@ -23,7 +23,7 @@ MAIN = check1 check2 check3 check4
 
 ARCHIVE = archive
 
-FLAGS = flags lat_parms hmc_parms dfl_parms parms_utils
+FLAGS = flags lat_parms hmc_parms dfl_parms
 
 FORCES = force0 force6
 
@@ -46,7 +46,7 @@ UFLDS = plaq_sum shift uflds udcom bstap ud_cstar
 U1FLDS = adflds adcom u1flds ad_shift u1_plaq_sum u1fcts u1_bstap ad_bcnds\
          ad_cstar
 
-UTILS = endian error hsum mutils utils wspace
+UTILS = endian error hsum ioutils mutils utils wspace
 
 WFLOW = wflow wflow_u1
 

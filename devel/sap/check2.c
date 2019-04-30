@@ -86,11 +86,12 @@ int main(int argc,char *argv[])
    MPI_Bcast(bs,4,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&nmr,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
+   MPI_Bcast(&mu,1,MPI_FLOAT,0,MPI_COMM_WORLD);
    phi[0]=0.123;
    phi[1]=-0.534;
    phi_prime[0]=0.912;
    phi_prime[1]=0.078;
-   set_bc_parms(bc,0,0,phi,phi_prime);
+   set_bc_parms(bc,0,phi,phi_prime,0.573,-1.827);
    print_bc_parms();
 
    start_ranlux(0,12345);

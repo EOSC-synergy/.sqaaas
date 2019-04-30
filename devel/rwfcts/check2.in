@@ -1,0 +1,46 @@
+[Random number generator]
+level        0
+seed         70949
+
+[Reweighting factor 0]
+rwfact       RWRTM
+ifl          0
+irp          0 1
+np           5 3 4
+isp          2 1 0
+nsrc         20
+
+[Rational 0]
+power        -1 2
+degree       12
+range        0.02 6.05
+mu           0.02
+
+[Rational 1]
+power        -1 2
+degree       12
+range        0.02 6.05
+mu           0.00
+
+[Solver 0]
+solver       MSCG
+nmx          1024
+res          1.0e-14
+
+[Solver 1]
+solver       SAP_GCR
+nkv          16
+isolv        1
+nmr          4
+ncy          5
+nmx          24
+res          1.0e-14
+
+[Solver 2]
+solver       DFL_SAP_GCR
+nkv          16
+isolv        1
+nmr          4
+ncy          5
+nmx          24
+res          1.0e-14

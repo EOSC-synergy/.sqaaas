@@ -4,6 +4,7 @@
 * File uidx.c
 *
 * Copyright (C) 2010, 2011, 2012, 2013 Martin Luescher
+* Copyright (C) 2017, Nazario Tantalo
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -20,6 +21,10 @@
 *     Calculates the offsets ip[4] of the links in the (mu,nu)-plaquette at
 *     the point on the local lattice with label ix. The indices (mu,nu) are
 *     determined by the parameter n=0,..,5.
+*
+*   int link_offset(int ix,int mu)
+*     Returns ip[0], i.e. the memory offset of the link variable at (x,mu)
+*     (see notes).
 *
 * Notes:
 *
@@ -259,4 +264,13 @@ void plaq_uidx(int n,int ix,int *ip)
 
       ip[3]=4*VOLUME+(BNDRY/4)+3*ic+mu-(mu>nu);
    }
+}
+
+
+int link_offset(int ix,int mu)
+{
+   if (init==0)
+      set_idx();
+
+   return offset(ix,mu);
 }

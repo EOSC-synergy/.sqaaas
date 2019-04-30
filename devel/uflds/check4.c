@@ -328,7 +328,7 @@ int main(int argc,char *argv[])
       phi_prime[0]=0.912;
       phi_prime[1]=0.078;
    }
-   set_bc_parms(bc,0,cs,phi,phi_prime);
+   set_bc_parms(bc,cs,phi,phi_prime,0.0,0.0);
    print_bc_parms();
 
    start_ranlux(0,12345);

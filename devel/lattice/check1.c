@@ -57,7 +57,7 @@ int main(int argc,char *argv[])
    int mu,ix,x0,x1,x2,x3;
    int iy0,iy1,iy2,iy3,iz0,iz1,iz2,iz3;
    int g[4],gx[VOLUME+BNDRY][4],iy;
-   int rbuf[5*BNDRY],sbuf[5*BNDRY],rlen,slen;
+   int rbuf[5*BNDRY+5],sbuf[5*BNDRY+5],rlen,slen;
    int pc[NPROC][4];
    int tag;
    MPI_Status stat;
@@ -105,7 +105,7 @@ int main(int argc,char *argv[])
    MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
    phi[0]=0.0;
    phi[1]=0.0;
-   set_bc_parms(3,0,cs,phi,phi);
+   set_bc_parms(3,cs,phi,phi,0.0,0.0);
    print_bc_parms();
 
    geometry();
@@ -613,7 +613,7 @@ int main(int argc,char *argv[])
    if (my_rank==0)
       printf("Global coordinates are assigned to all points ... OK\n");
    
-   if(NPROC>0)
+   if(NPROC>1)
    {
       for (mu=0;mu<4;mu++)
       {

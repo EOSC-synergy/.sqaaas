@@ -83,7 +83,7 @@ int main(int argc,char *argv[])
    phi[1]=0.0;
    phi_prime[0]=0.0;
    phi_prime[1]=0.0;
-   set_bc_parms(bc,0,cs,phi,phi_prime);
+   set_bc_parms(bc,cs,phi,phi_prime,0.573,-1.827);
    print_bc_parms();
 
    start_ranlux(0,12345);
@@ -101,9 +101,13 @@ int main(int argc,char *argv[])
       exit(0);
    }
 
+   size=4*VOLUME+7*(BNDRY/4);
+   if ((cpr[0]==(NPROC0-1))&&((bc==1)||(bc==2)))
+      size+=3;
+
    random_ad();
-   u1db=u1dfld(LOC);
-   u1dm=u1db+4*VOLUME;
+   u1db=u1dfld(EXT);
+   u1dm=u1db+size;
    ud=udfld();
    cm3x3_zero(4*VOLUME,ud);
    for (u1d=u1db;u1d<u1dm;u1d++)

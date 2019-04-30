@@ -18,8 +18,10 @@ theta        0.38 -1.25 0.54
 [Boundary conditions]
 type         0
 cstar        2
-phi          0.12 -0.56
-phi'         0.92 0.76
+su3phi       0.12 -0.56
+su3phi'      0.92 0.76
+u1phi        1.32
+u1phi'       -0.92
 
 [CG]
 mu           0.1 0.5 1.0

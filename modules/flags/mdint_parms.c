@@ -339,9 +339,9 @@ void write_mdint_parms(FILE *fdat)
       {
          if (mdp[i].integrator!=INTEGRATORS)
          {
-            write_little_int(fdat,4,i,mdp[i].integrator,mdp[i].nstep,mdp[i].nfr);
-            write_little_intarray(fdat,mdp[i].nfr,mdp[i].ifr);
-            write_little_dble(fdat,1,mdp[i].lambda);
+            write_little_int(1,fdat,4,i,mdp[i].integrator,mdp[i].nstep,mdp[i].nfr);
+            write_little_intarray(1,fdat,mdp[i].nfr,mdp[i].ifr);
+            write_little_dble(1,fdat,1,mdp[i].lambda);
          }
       }
    }
@@ -358,10 +358,10 @@ void check_mdint_parms(FILE *fdat)
       {
          if (mdp[i].integrator!=INTEGRATORS)
          {
-            check_fpar_int("check_mdint_parms",fdat,4,
+            check_little_int("check_mdint_parms",fdat,4,
                            i,mdp[i].integrator,mdp[i].nstep,mdp[i].nfr);
-            check_fpar_intarray("check_mdint_parms",fdat,mdp[i].nfr,mdp[i].ifr);
-            check_fpar_dble("check_mdint_parms",fdat,1,mdp[i].lambda);
+            check_little_intarray("check_mdint_parms",fdat,mdp[i].nfr,mdp[i].ifr);
+            check_little_dble("check_mdint_parms",fdat,1,mdp[i].lambda);
          }
       }
    }

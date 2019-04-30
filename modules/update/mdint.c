@@ -4,7 +4,7 @@
 * File mdint.c
 *
 * Copyright (C) 2011-2013 Stefan Schaefer, Martin Luescher, John Bulava
-*               2017      Agostino Patella
+*               2017, 2019 Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -81,9 +81,9 @@ static void chk_mode_regen(int isp,int *status)
       status[4]=is;
 
       if (status[4]>0)
-         add2counter("modes",2,status+4);
+         add2counter("modes",2+3*sp.idfl,status+4);
       if (status[5]>0)
-         add2counter("modes",2,status+5);
+         add2counter("modes",2+3*sp.idfl,status+5);
    }
 }
 
@@ -499,11 +499,20 @@ static void update_ad(double eps)
    double *a;
    double *mom;
    mdflds_t *mdfs;
+   hmc_parms_t hmc;
 
    bc=bc_type();
    mdfs=mdflds();
+   hmc=hmc_parms();
+   
    mom=(*mdfs).u1mom;
    a=adfld();
+   
+   if (hmc.facc)
+   {
+      u1mom_Delta_no0(1,(*mdfs).u1mom,(*mdfs).u1frc);
+      mom=(*mdfs).u1frc;
+   }
 
    for (ix=(VOLUME/2);ix<VOLUME;ix++)
    {
@@ -579,15 +588,15 @@ static void dfl_upd(int isp)
 
       if (sp.solver==DFL_SAP_GCR)
       {
-         dfl_update2(nsm,status);
+         dfl_update2(sp.idfl,nsm,status);
          error_root((status[1]<0)||((status[1]==0)&&(status[0]<0)),1,
                     "dfl_upd [mdint.c]","Deflation subspace update "
                     "failed (status = %d;%d)",status[0],status[1]);
 
          if (status[1]==0)
-            add2counter("modes",1,status);
+            add2counter("modes",1+3*sp.idfl,status);
          else
-            add2counter("modes",2,status+1);
+            add2counter("modes",2+3*sp.idfl,status+1);
 
          rtau=0.0;
       }
@@ -654,7 +663,7 @@ void run_mdint(void)
          {
             isym=1;
             dfl_upd(fp.isp[0]);
-            dp=qlat_parms(fp.im0);
+            dp=qlat_parms(fp.ifl);
             set_dirac_parms1(&dp);
             set_su3frc2zero();
             set_u1frc2zero();
@@ -820,7 +829,7 @@ void run_mdint(void)
          {
             isym3=isym1=1;
             dfl_upd(fp.isp[0]);
-            dp=qlat_parms(fp.im0);
+            dp=qlat_parms(fp.ifl);
             set_dirac_parms1(&dp);
             status[2]=0;
             status[5]=0;

@@ -25,12 +25,15 @@ ARCHIVE = archive
 
 BLOCK = block blk_grid map_u2blk map_sw2blk map_s2blk
 
-DFL = dfl_geometry dfl_subspace ltl_gcr dfl_sap_gcr dfl_modes
+DFL = dfl_geometry dfl_multiple dfl_subspace ltl_gcr dfl_sap_gcr dfl_modes
+
+DFT = dft4d dft_com dft_shuf fft small_dft
 
 DIRAC = Dw_dble Dw Dw_bnd
 
 FLAGS = flags action_parms dfl_parms dirac_parms force_parms hmc_parms \
-        lat_parms mdint_parms rat_parms sap_parms solver_parms parms_utils
+        lat_parms mdint_parms rat_parms sap_parms solver_parms dft4d_parms \
+		  dft_parms
 
 FORCES = force0 force1 force2 force3 force4 force5 force6 \
          frcfcts genfrc tmcg tmcgm xtensor
@@ -45,7 +48,7 @@ LINSOLV = cgne fgcr fgcr4vd mscg
 
 LITTLE = Aw_gen Aw_com Aw_ops Aw_dble Aw ltl_modes
 
-MDFLDS = mdflds su3fcom u1fcom md_cstar
+MDFLDS = mdflds su3fcom u1fcom md_cstar u1mom_map u1mom_facc
 
 RANDOM = ranlux ranlxs ranlxd gauss
 
@@ -65,7 +68,7 @@ UFLDS = plaq_sum uflds udcom bstap ud_cstar
 
 UPDATE = chrono mdsteps counters mdint hmc rwrat rwtm rwtmeo
 
-UTILS = endian error hsum mutils utils wspace
+UTILS = endian error hsum ioutils mutils utils wspace
 
 U1FLDS = adflds adcom u1flds ad_shift u1_plaq_sum u1fcts u1_bstap ad_bcnds\
          ad_cstar
@@ -78,7 +81,7 @@ MODULES = $(ARCHIVE) $(BLOCK) $(DFL) $(DIRAC) $(FLAGS) $(FORCES) \
           $(LATTICE) $(LINALG) $(LINSOLV) $(LITTLE) $(MDFLDS) $(RANDOM) \
           $(RATFCTS) $(SAP) $(SFLDS) $(SU3FCTS) $(SW_TERM) $(TCHARGE) \
           $(UFLDS) $(UPDATE) $(UTILS) $(U1FLDS) $(U1FTENSOR) $(VFLDS) \
-			 $(HFLDS)
+			 $(HFLDS) $(DFT)
 
 
 # Logging option (-mpilog or -mpitrace or -mpianim)
@@ -96,7 +99,7 @@ VPATH = .:$(MDIR)/flags:$(MDIR)/lattice:$(MDIR)/archive:$(MDIR)/linalg:\
           $(MDIR)/sw_term:$(MDIR)/tcharge:$(MDIR)/block:$(MDIR)/sap:\
           $(MDIR)/linsolv:$(MDIR)/dfl:$(MDIR)/vflds:$(MDIR)/little:\
           $(MDIR)/update:$(MDIR)/ratfcts:$(MDIR)/u1flds:$(MDIR)/u1ftensor:\
-			 $(MDIR)/hflds
+			 $(MDIR)/hflds:$(MDIR)/dft
 
 
 # additional include directories

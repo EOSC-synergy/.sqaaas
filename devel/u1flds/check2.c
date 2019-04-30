@@ -42,7 +42,8 @@ int main(int argc,char *argv[])
    int my_rank,bc,cs,ie;
    size_t size;
    double d,dmax,dmax_all;
-   double phi[2],phi_prime[2];
+   double su3phi[2],su3phi_prime[2];
+   double u1phi,u1phi_prime;
    complex_dble *u1d,*u1db,*u1dm;
    su3_dble *ud;
    FILE *flog=NULL;
@@ -75,16 +76,18 @@ int main(int argc,char *argv[])
                     "Syntax: check2 [-bc <type>] [-cs <cstar>]");
    }
    
-   set_flds_parms(2,0);
+   set_flds_parms(3,0);
    print_flds_parms();
 
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
-   phi[0]=0.0;
-   phi[1]=0.0;
-   phi_prime[0]=0.0;
-   phi_prime[1]=0.0;
-   set_bc_parms(bc,0,cs,phi,phi_prime);
+   su3phi[0]=0.573;
+   su3phi[1]=-0.573;
+   su3phi_prime[0]=-1.827;
+   su3phi_prime[1]=1.827;
+   u1phi=0.573;
+   u1phi_prime=-1.827;
+   set_bc_parms(bc,cs,su3phi,su3phi_prime,u1phi,u1phi_prime);
    print_bc_parms();
 
    start_ranlux(0,123456);
@@ -99,8 +102,10 @@ int main(int argc,char *argv[])
    for (u1d=u1db;u1d<u1dm;u1d++)
    {
       (*ud).c11=(*u1d);
-      (*ud).c22=(*u1d);
-      (*ud).c33=(*u1d);
+      (*ud).c22.re=(*u1d).re;
+      (*ud).c22.im=-(*u1d).im;
+      if(((*u1d).re!=0)||((*u1d).im!=0.0))
+         (*ud).c33.re=1.0;
       ud++;
    }
    set_flags(UPDATED_UD);
@@ -136,7 +141,7 @@ int main(int argc,char *argv[])
 
    print_flags();
 
-   ie=check_bc(0.0);
+   ie=check_bc(1.0e-15);
    error_root(ie==0,1,"main [check2.c]","U(1) boundary conditions are not consistent with SU(3) boundary conditions");
 
 

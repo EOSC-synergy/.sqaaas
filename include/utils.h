@@ -71,6 +71,20 @@ extern void add_to_hsum(int id,double *x);
 extern void local_hsum(int id,double *sx);
 extern void global_hsum(int id,double *sx);
 
+/* IOUTILS_C */
+extern int write_little_dble(int blocking,FILE *fdat,int nargs,...);
+extern int write_little_int(int blocking,FILE *fdat,int nargs,...);
+extern int write_little_dblearray(int blocking,FILE *fdat,int size,double *data);
+extern int write_little_intarray(int blocking,FILE *fdat,int size,int *data);
+extern int read_little_dble(int blocking,FILE *fdat,int nargs,...);
+extern int read_little_int(int blocking,FILE *fdat,int nargs,...);
+extern int read_little_dblearray(int blocking,FILE *fdat,int size,double *data);
+extern int read_little_intarray(int blocking,FILE *fdat,int size,int *data);
+extern void check_little_dble(const char fnm[256],FILE *fdat,int nargs,...);
+extern void check_little_int(const char fnm[256],FILE *fdat,int nargs,...);
+extern void check_little_dblearray(const char fnm[256],FILE *fdat,int size,double *data);
+extern void check_little_intarray(const char fnm[256],FILE *fdat,int size,int *data);
+
 /* MUTILS_C */
 extern int find_opt(int argc,char *argv[],char *opt);
 extern int fdigits(double x);
@@ -91,6 +105,10 @@ extern void afree(void *addr);
 extern int mpi_permanent_tag(void);
 extern int mpi_tag(void);
 extern void message(char *format,...);
+extern void check_global_dble(const char fnm[256],int nargs,...);
+extern void check_global_dblearray(const char fnm[256],int size,double *data);
+extern void check_global_int(const char fnm[256],int nargs,...);
+extern void check_global_intarray(const char fnm[256],int size,int *data);
 
 /* WSPACE_C */
 extern void alloc_wud(int n);

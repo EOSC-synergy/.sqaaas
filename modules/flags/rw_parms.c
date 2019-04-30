@@ -13,8 +13,9 @@
 *
 * The externally accessible functions are
 *
-*   rw_parms_t set_rw_parms(int irw,rwfact_t rwfact,int im0,int nsrc,
-*                           int irp,int nfct,double *mu,int *np,int *isp)
+*   rw_parms_t set_rw_parms(int irw,rwfact_t rwfact,int ifl,int nsrc,
+*                           int irp1,int irp2,int nfct,double *mu,int *np,
+*                           int *isp)
 *     Sets the parameters in the reweighting factor parameter set number
 *     irw and returns a structure containing them (see the notes).
 *
@@ -29,9 +30,9 @@
 *     if no such line or more than one is found. The lines
 *
 *       rwfact   <rwfact_t>
-*       im0      <int>
+*       ifl      <int>
 *       nsrc     <int>
-*       irp      <int>
+*       irp      <int> [<int>]
 *       mu       <double> [<double>]
 *       np       <int> [<int>]
 *       isp      <int> [<int>]
@@ -39,7 +40,7 @@
 *     are then read using read_line() [utils/mutils.c] and the data are
 *     added to the data base by calling set_rw_parms(irw,...). Depending
 *     on the value of "rwfact", some lines are not read and can be omitted
-*     in the input file. The number of items on the lines with tag "mu",
+*     in the input file. The number of items on the lines with tag "irp", "mu",
 *     "np" and "isp" depends on the reweighting factor too (see the notes).
 *
 *   void print_rw_parms(void)
@@ -72,7 +73,9 @@
 *
 *            RWRAT       (program rwrat() [update/rwrat.c]).
 *
-*   im0     Index of the bare sea quark mass in the parameter data base
+*            RWRTM       (program rwrtm() [update/rwrtm.c]).
+*
+*   ifl     Index of the quark flavour in the parameter data base
 *           (see flags/lat_parms.c).
 *
 *   nsrc    Number N of random source fields to be used for the stochastic
@@ -80,12 +83,12 @@
 *           into a product factors, N random fields are used for each of
 *           them.
 *
-*   irp     Rational function parameter set index. Only relevant if
-*           rwfact=RWRAT.
+*   irp     If rwfact=RWRAT: Index of the rational function parameter set.
+*           If rwfact=RWRTM: Indices of two rational function parameter sets.
 *
 *   nfct    If rwfact=RWTM*: Number of Hasenbusch factors into which the
 *           reweighting factor is decomposed;
-*           If rwfact=RWRAT: Number of rational factors into which the
+*           If rwfact=RWRAT,RWRTM: Number of rational factors into which the
 *           rational function is decomposed.
 *
 *   mu      Array of twisted masses that define the Hasenbusch factors
@@ -99,7 +102,7 @@
 *   isp     Array of solver parameter set indices describing the solvers
 *           for the Dirac equation to be used. The array must have nfct
 *           elements that correspond to the factors of the reweighting
-*           factor if rwfact=RWTM* or, if rwfact=RWRAT, to the rational
+*           factor if rwfact=RWTM* or, if rwfact=RWRAT,RWRTM, to the rational
 *           functions into which the rational function is decomposed.
 *
 * Valid examples of parameter sections that can be read by read_rw_parms()
@@ -107,16 +110,26 @@
 *
 *   [Reweighting factor 1]
 *    rwfact   RWTM1           # Or RWTM1_EO, RWTM2, RWTM2_EO
-*    im0      0
+*    ifl      0
 *    nsrc     12
 *    mu       0.001 0.003     # Implies a decomposition in 2 factors
 *    isp      3               # Solver no 3 will be used for all factors
 *
 *   [Reweighting factor 4]
 *    rwfact   RWRAT
-*    im0      1
+*    ifl      1
 *    nsrc     4
 *    irp      0
+*    np       6 2 2           # Implies a decomposition in 3 rational parts
+*    isp      3 5 6           # For each part, a separate solver is used
+*
+*   [Reweighting factor 6]
+*    rwfact   RWRTM
+*    ifl      1
+*    nsrc     4
+*    irp      0 1             # Rational approximations for
+*                             # (Dwhat^dag*Dwhat+muhat^2)^a
+*                             # and (Dwhat^dag*Dwhat)^a
 *    np       6 2 2           # Implies a decomposition in 3 rational parts
 *    isp      3 5 6           # For each part, a separate solver is used
 *
@@ -148,8 +161,7 @@
 #define IRWMAX 32
 
 static int init=0;
-static rwfact_t rwfact[]={RWTM1,RWTM1_EO,RWTM2,RWTM2_EO,RWRAT};
-static rw_parms_t rw[IRWMAX+1]={{RWFACTS,0,0,0,0,NULL,NULL,NULL}};
+static rw_parms_t rw[IRWMAX+1]={{RWFACTS,0,0,{0,0},0,NULL,NULL,NULL}};
 
 
 static void init_rw(void)
@@ -163,41 +175,46 @@ static void init_rw(void)
 }
 
 
-rw_parms_t set_rw_parms(int irw,rwfact_t rwfact,int im0,int nsrc,
-                        int irp,int nfct,double *mu,int *np,int *isp)
+rw_parms_t set_rw_parms(int irw,rwfact_t rwfact,int ifl,int nsrc,
+                        int irp1,int irp2,int nfct,double *mu,int *np,int *isp)
 {
    int ie,i;
 
    if (init==0)
       init_rw();
 
-   error_root((rwfact!=RWTM1)&&(rwfact!=RWTM1_EO)&&
-              (rwfact!=RWTM2)&&(rwfact!=RWTM2_EO)&&(rwfact!=RWRAT),1,
+   error_root(rwfact>=RWFACTS,1,
               "set_rw_parms [rw_parms.c]","Unknown type of reweighting factor");
 
-   if (rwfact!=RWRAT)
-      irp=0;
+   if (rwfact==RWRAT)
+      irp2=0;
+   else if (rwfact!=RWRTM)
+   {
+      irp1=0;
+      irp2=0;
+   }
 
-   check_global_int("set_rw_parms",6,irw,(int)(rwfact),im0,nsrc,irp,nfct);
+   check_global_int("set_rw_parms",7,irw,(int)(rwfact),ifl,nsrc,irp1,irp2,nfct);
 
    ie=0;
    ie|=((irw<0)||(irw>=IRWMAX));
-   ie|=(im0<0);
+   ie|=(ifl<0);
    ie|=(nsrc<1);
-   ie|=(irp<0);
+   ie|=(irp1<0);
+   ie|=(irp2<0);
    ie|=(nfct<1);
 
    error_root(ie!=0,1,"set_rw_parms [rw_parms.c]",
               "Parameters are out of range");
 
-   if (rwfact!=RWRAT)
+   if ((rwfact==RWRAT)||(rwfact==RWRTM))
    {
-      check_global_dblearray("set_rw_parms",nfct,mu);
+      check_global_intarray("set_rw_parms",nfct,np);
       check_global_intarray("set_rw_parms",nfct,isp);
    }
    else
    {
-      check_global_intarray("set_rw_parms",nfct,np);
+      check_global_dblearray("set_rw_parms",nfct,mu);
       check_global_intarray("set_rw_parms",nfct,isp);
    }
 
@@ -205,12 +222,28 @@ rw_parms_t set_rw_parms(int irw,rwfact_t rwfact,int im0,int nsrc,
               "Attempt to reset an already specified parameter set");
 
    rw[irw].rwfact=rwfact;
-   rw[irw].im0=im0;
+   rw[irw].ifl=ifl;
    rw[irw].nsrc=nsrc;
-   rw[irw].irp=irp;
+   rw[irw].irp[0]=irp1;
+   rw[irw].irp[1]=irp2;
    rw[irw].nfct=nfct;
 
-   if (rwfact!=RWRAT)
+   if ((rwfact==RWRAT)||(rwfact==RWRTM))
+   {
+      rw[irw].np=malloc(2*nfct*sizeof(*np));
+      rw[irw].isp=rw[irw].np+nfct;
+      rw[irw].mu=NULL;
+
+      error_root(rw[irw].np==NULL,1,"set_rw_parms [rw_parms.c]",
+                 "Unable to allocate parameter arrays");
+
+      for (i=0;i<nfct;i++)
+      {
+         rw[irw].np[i]=np[i];
+         rw[irw].isp[i]=isp[i];
+      }
+   }
+   else
    {
       rw[irw].mu=malloc(nfct*sizeof(*mu));
       rw[irw].np=NULL;
@@ -233,21 +266,6 @@ rw_parms_t set_rw_parms(int irw,rwfact_t rwfact,int im0,int nsrc,
 
       error_root(ie!=0,1,"set_rw_parms [rw_parms.c]",
                  "The twisted masses must be in ascending order");
-   }
-   else
-   {
-      rw[irw].np=malloc(2*nfct*sizeof(*np));
-      rw[irw].isp=rw[irw].np+nfct;
-      rw[irw].mu=NULL;
-
-      error_root(rw[irw].np==NULL,1,"set_rw_parms [rw_parms.c]",
-                 "Unable to allocate parameter arrays");
-
-      for (i=0;i<nfct;i++)
-      {
-         rw[irw].np[i]=np[i];
-         rw[irw].isp[i]=isp[i];
-      }
    }
 
    return rw[irw];
@@ -273,7 +291,7 @@ rw_parms_t rw_parms(int irw)
 void read_rw_parms(int irw)
 {
    int my_rank,n,i;
-   int idr,im0,nsrc,irp,nfct;
+   int idr,ifl,nsrc,irp[2],nfct,rwfact;
    int *np,*isp;
    double *mu;
    char line[NAME_SIZE];
@@ -287,36 +305,54 @@ void read_rw_parms(int irw)
 
       read_line("rwfact","%s",line);
 
+      idr=0;
       if (strcmp(line,"RWTM1")==0)
-         idr=0;
+         rwfact=RWTM1;
       else if (strcmp(line,"RWTM1_EO")==0)
-         idr=1;
+         rwfact=RWTM1_EO;
       else if (strcmp(line,"RWTM2")==0)
-         idr=2;
+         rwfact=RWTM2;
       else if (strcmp(line,"RWTM2_EO")==0)
-         idr=3;
+         rwfact=RWTM2_EO;
       else if (strcmp(line,"RWRAT")==0)
-         idr=4;
+      {
+         idr=1;
+         rwfact=RWRAT;
+      }
+      else if (strcmp(line,"RWRTM")==0)
+      {
+         idr=2;
+         rwfact=RWRTM;
+      }
       else
       {
-         idr=5;
+         rwfact=RWFACTS;
          error_root(1,1,"read_rw_parms [rw_parms.c]",
                     "Unknown reweighting factor %s",line);
       }
 
-      read_line("im0","%d",&im0);
+      read_line("ifl","%d",&ifl);
       read_line("nsrc","%d",&nsrc);
 
-      if (idr<4)
+      if (idr==0)
       {
-         irp=0;
+         irp[0]=0;
+         irp[1]=0;
          nfct=count_tokens("mu");
          error_root(nfct<1,1,"read_rw_parms [rw_parms.c]",
                     "No data on line with tag mu");
       }
+      else if (idr==1)
+      {
+         irp[1]=0;
+         read_line("irp","%d",irp);
+         nfct=count_tokens("np");
+         error_root(nfct<1,1,"read_rw_parms [rw_parms.c]",
+                    "No data on line with tag np");
+      }
       else
       {
-         read_line("irp","%d",&irp);
+         read_iprms("irp",2,irp);
          nfct=count_tokens("np");
          error_root(nfct<1,1,"read_rw_parms [rw_parms.c]",
                     "No data on line with tag np");
@@ -324,23 +360,26 @@ void read_rw_parms(int irw)
    }
    else
    {
+      rwfact=RWFACTS;
       idr=0;
-      im0=0;
+      ifl=0;
       nsrc=0;
-      irp=0;
+      irp[0]=0;
+      irp[1]=0;
       nfct=0;
    }
 
    if (NPROC>1)
    {
+      MPI_Bcast(&rwfact,1,MPI_INT,0,MPI_COMM_WORLD);
       MPI_Bcast(&idr,1,MPI_INT,0,MPI_COMM_WORLD);
-      MPI_Bcast(&im0,1,MPI_INT,0,MPI_COMM_WORLD);
+      MPI_Bcast(&ifl,1,MPI_INT,0,MPI_COMM_WORLD);
       MPI_Bcast(&nsrc,1,MPI_INT,0,MPI_COMM_WORLD);
-      MPI_Bcast(&irp,1,MPI_INT,0,MPI_COMM_WORLD);
+      MPI_Bcast(irp,2,MPI_INT,0,MPI_COMM_WORLD);
       MPI_Bcast(&nfct,1,MPI_INT,0,MPI_COMM_WORLD);
    }
 
-   if (idr<4)
+   if (idr==0)
    {
       mu=malloc(nfct*sizeof(*mu));
       np=NULL;
@@ -359,7 +398,7 @@ void read_rw_parms(int irw)
 
    if (my_rank==0)
    {
-      if (idr<4)
+      if (idr==0)
          read_dprms("mu",nfct,mu);
       else
          read_iprms("np",nfct,np);
@@ -378,7 +417,7 @@ void read_rw_parms(int irw)
 
    if (NPROC>1)
    {
-      if (idr<4)
+      if (idr==0)
          MPI_Bcast(mu,nfct,MPI_DOUBLE,0,MPI_COMM_WORLD);
       else
          MPI_Bcast(np,nfct,MPI_INT,0,MPI_COMM_WORLD);
@@ -386,9 +425,9 @@ void read_rw_parms(int irw)
       MPI_Bcast(isp,nfct,MPI_INT,0,MPI_COMM_WORLD);
    }
 
-   set_rw_parms(irw,rwfact[idr],im0,nsrc,irp,nfct,mu,np,isp);
+   set_rw_parms(irw,rwfact,ifl,nsrc,irp[0],irp[1],nfct,mu,np,isp);
 
-   if (idr<4)
+   if (idr==0)
    {
       free(mu);
       free(isp);
@@ -426,8 +465,13 @@ void print_rw_parms(void)
                idr=1;
                printf("RWRAT factor\n");
             }
+            else if (rw[irw].rwfact==RWRTM)
+            {
+               idr=2;
+               printf("RWRTM factor\n");
+            }
 
-            printf("im0 = %d\n",rw[irw].im0);
+            printf("ifl = %d\n",rw[irw].ifl);
             printf("nsrc = %d\n",rw[irw].nsrc);
             nfct=rw[irw].nfct;
 
@@ -443,9 +487,19 @@ void print_rw_parms(void)
 
                printf("\n");
             }
-            else
+            else if (idr==1)
             {
-               printf("irp = %d\n",rw[irw].irp);
+               printf("irp = %d\n",rw[irw].irp[0]);
+               printf("np =");
+
+               for (i=0;i<nfct;i++)
+                  printf(" %d",rw[irw].np[i]);
+
+               printf("\n");
+            }
+            else if (idr==2)
+            {
+               printf("irp = %d %d\n",rw[irw].irp[0],rw[irw].irp[1]);
                printf("np =");
 
                for (i=0;i<nfct;i++)
@@ -476,19 +530,25 @@ void write_rw_parms(FILE *fdat)
       {
          if (rw[irw].rwfact!=RWFACTS)
          {
-            write_little_int(fdat,6,irw,rw[irw].rwfact,rw[irw].im0,
-                             rw[irw].nsrc,rw[irw].irp,rw[irw].nfct);
+            write_little_int(1,fdat,5,irw,rw[irw].rwfact,rw[irw].ifl,
+                             rw[irw].nsrc,rw[irw].nfct);
 
             if (rw[irw].rwfact==RWRAT)
             {
-               write_little_intarray(fdat,rw[irw].nfct,rw[irw].np);
+               write_little_int(1,fdat,1,rw[irw].irp[0]);
+               write_little_intarray(1,fdat,rw[irw].nfct,rw[irw].np);
+            }
+            else if (rw[irw].rwfact==RWRTM)
+            {
+               write_little_int(1,fdat,2,rw[irw].irp[0],rw[irw].irp[1]);
+               write_little_intarray(1,fdat,rw[irw].nfct,rw[irw].np);
             }
             else
             {
-               write_little_dblearray(fdat,rw[irw].nfct,rw[irw].mu);
+               write_little_dblearray(1,fdat,rw[irw].nfct,rw[irw].mu);
             }
 
-            write_little_intarray(fdat,rw[irw].nfct,rw[irw].isp);
+            write_little_intarray(1,fdat,rw[irw].nfct,rw[irw].isp);
          }
       }
    }
@@ -505,22 +565,30 @@ void check_rw_parms(FILE *fdat)
       {
          if (rw[irw].rwfact!=RWFACTS)
          {
-            check_fpar_int("check_rw_parms",fdat,6,
-                           irw,rw[irw].rwfact,rw[irw].im0,
-                           rw[irw].nsrc,rw[irw].irp,rw[irw].nfct);
+            check_little_int("check_rw_parms",fdat,5,
+                           irw,rw[irw].rwfact,rw[irw].ifl,
+                           rw[irw].nsrc,rw[irw].nfct);
 
             if (rw[irw].rwfact==RWRAT)
             {
-               check_fpar_intarray("check_rw_parms",fdat,
+               check_little_int("check_rw_parms",fdat,1,rw[irw].irp[0]);
+               check_little_intarray("check_rw_parms",fdat,
+                                   rw[irw].nfct,rw[irw].np);
+            }
+            else if (rw[irw].rwfact==RWRTM)
+            {
+               check_little_int("check_rw_parms",fdat,2,
+                              rw[irw].irp[0],rw[irw].irp[1]);
+               check_little_intarray("check_rw_parms",fdat,
                                    rw[irw].nfct,rw[irw].np);
             }
             else
             {
-               check_fpar_dblearray("check_rw_parms",fdat,
+               check_little_dblearray("check_rw_parms",fdat,
                                     rw[irw].nfct,rw[irw].mu);
             }
 
-            check_fpar_intarray("check_rw_parms",fdat,rw[irw].nfct,rw[irw].isp);
+            check_little_intarray("check_rw_parms",fdat,rw[irw].nfct,rw[irw].isp);
          }
       }
    }

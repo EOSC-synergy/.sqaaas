@@ -4,7 +4,7 @@
 * File check6.c
 *
 * Copyright (C) 2011-2013, 2016 Martin Luescher
-*               2016 Agostino Patella
+*               2016, 2019 Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -82,11 +82,11 @@ static double u1dSdt(double mu,int ipf,int isp,int *status)
 int main(int argc,char *argv[])
 {
    int my_rank,bc,cs,isp,status[6],mnkv;
-   int bs[4],Ns,nmx,nkv,nmr,ncy,ninv,qhat;
+   int Ns,nkv;
    int isap,idfl;
    double chi[2],chi_prime[2];
    double su3csw,u1csw,cF[2],theta[3];
-   double kappa,mu,res;
+   double mu;
    double eps,act0,act1,dact,dsdt;
    double dev_act[2],dev_frc,sig_loss,rdmy;
    solver_parms_t sp;
@@ -130,68 +130,18 @@ int main(int argc,char *argv[])
    chi[1]=-0.534;
    chi_prime[0]=0.912;
    chi_prime[1]=0.078;
-   set_bc_parms(bc,0,cs,chi,chi_prime);
+   set_bc_parms(bc,cs,chi,chi_prime,0.573,-1.827);
    print_bc_parms();
 
-   set_su3lat_parms(3.50,0.95,0.82,1.32);
-   set_u1lat_parms(0,1.5,1.2,0.0,0.482,0.87,0.57);
+   set_su3lat_parms(3.50,0.95,0.82,1.32,0);
+   set_u1lat_parms(0,1.5,1.2,0.0,0.482,0.87,0.57,0);
    print_lat_parms();
 
-   if (my_rank==0)
-   {
-      find_section("SAP");
-      read_iprms("bs",4,bs);
-   }
+   set_hmc_parms(0,NULL,1,0,NULL,1,1.0,0);
 
-   MPI_Bcast(bs,4,MPI_INT,0,MPI_COMM_WORLD);
-   set_sap_parms(bs,1,4,5);
-
-   if (my_rank==0)
-   {
-      find_section("Deflation subspace");
-      read_iprms("bs",4,bs);
-      read_line("Ns","%d",&Ns);
-   }
-
-   MPI_Bcast(bs,4,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&Ns,1,MPI_INT,0,MPI_COMM_WORLD);
-   set_dfl_parms(bs,Ns);
-
-   if (my_rank==0)
-   {
-      find_section("Deflation subspace generation");
-      read_line("qhat","%d",&qhat);
-      read_line("kappa","%lf",&kappa);
-      read_line("mu","%lf",&mu);
-      read_line("ninv","%d",&ninv);
-      read_line("nmr","%d",&nmr);
-      read_line("ncy","%d",&ncy);
-   }
-
-   MPI_Bcast(&qhat,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&kappa,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&mu,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&ninv,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&nmr,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&ncy,1,MPI_INT,0,MPI_COMM_WORLD);
-   set_dfl_gen_parms(kappa,mu,qhat,0.95,0.8,1.301,0.789,0.38,-1.25,0.54,ninv,nmr,ncy);
-
-   if (my_rank==0)
-   {
-      find_section("Deflation projection");
-      read_line("nkv","%d",&nkv);
-      read_line("nmx","%d",&nmx);
-      read_line("res","%lf",&res);
-   }
-
-   MPI_Bcast(&nkv,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&nmx,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   set_dfl_pro_parms(nkv,nmx,res);
-
-   set_hmc_parms(0,NULL,1,0,NULL,1,1.0);
    mnkv=0;
-
+   isap=0;
+   idfl=0;
    for (isp=0;isp<3;isp++)
    {
       read_solver_parms(isp);
@@ -199,7 +149,24 @@ int main(int argc,char *argv[])
 
       if (sp.nkv>mnkv)
          mnkv=sp.nkv;
+
+      if (sp.solver==SAP_GCR)
+         isap=1;
+      else if (sp.solver==DFL_SAP_GCR)
+      {
+         isap=1;
+         idfl=1;
+         
+         if (dfl_gen_parms(sp.idfl).status!=DFL_DEF)
+            read_dfl_parms(sp.idfl);
+      }
    }
+
+   if (isap)
+      read_sap_parms();
+
+   if (idfl)
+      read_dfl_parms(-1);
 
    if (my_rank==0)
       fclose(fin);
@@ -231,6 +198,8 @@ int main(int argc,char *argv[])
    start_ranlux(0,1245);
    geometry();
 
+   nkv=dfl_pro_parms().nkv;
+   Ns=dfl_parms().Ns;
    mnkv=2*mnkv+2;
    if (mnkv<(Ns+2))
       mnkv=Ns+2;
@@ -266,9 +235,10 @@ int main(int argc,char *argv[])
       random_gflds();
       unconstrained_random_su3mom();
 
-      if (isp==2)
+      sp=solver_parms(isp);
+      if (sp.solver==DFL_SAP_GCR)
       {
-         dfl_modes(status);
+         dfl_modes(sp.idfl,status);
          error_root(status[0]<0,1,"main [check6.c]",
                     "dfl_modes failed");
       }
@@ -372,9 +342,10 @@ int main(int argc,char *argv[])
       random_gflds();
       unconstrained_random_u1mom();
 
-      if (isp==2)
+      sp=solver_parms(isp);
+      if (sp.solver==DFL_SAP_GCR)
       {
-         dfl_modes(status);
+         dfl_modes(sp.idfl,status);
          error_root(status[0]<0,1,"main [check6.c]",
                     "dfl_modes failed");
       }

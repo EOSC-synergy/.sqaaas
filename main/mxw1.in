@@ -10,22 +10,26 @@ cnfg_dir     /data/mxw1/cnfg
 
 [Boundary conditions]
 type         open
-SFtype       orbifold
 cstar        0
+u1phi        1.43
+u1phi'       -0.83
 
 [U(1) action]
 type         compact
 alpha        0.1
+invqel       1.0
 c0           1.6667
 cG           1.10
 cG'          1.05
+SFtype       orbifold
 
 [Random number generator]
 level        0
 seed         73099
 
-[Trajectory length]
+[HMC parameters]
 tau          3.0
+facc         1
 
 [MD integrator]
 integrator   OMF4

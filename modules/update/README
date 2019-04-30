@@ -21,7 +21,9 @@ mdsteps.c      Molecular-dynamics integrator
 
 rwrat.c        Rational function reweighting factor
 
-rwtm.c         Twisted-mass reweighting factors
+rwrtm.c        RHMC twisted-mass reweighting factors
+
+rwtm.c         HMC twisted-mass reweighting factors
 
 rwtmeo.c       Twisted-mass reweighting factors (even-odd preconditioned
                version)
@@ -146,6 +148,11 @@ void print_mdsteps(int ipr)
   The full information is thus printed if ipr=0x7.
 
 double rwrat(int irp,int n,int *np,int *isp,double *sqn,int **status)
+  Generates a random pseudo-fermion field with normal distribution,
+  assigns its square norm to sqn and returns -ln(r) (see the notes).
+
+double rwrtm(int irp1,int irp2,int np1,int np2,int isp,
+             double *sqn,int *status)
   Generates a random pseudo-fermion field with normal distribution,
   assigns its square norm to sqn and returns -ln(r) (see the notes).
 

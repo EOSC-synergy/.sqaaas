@@ -35,77 +35,43 @@
 
 #define N0 (NPROC0*L0)
 
-static int isx[L0],init=0;
 static double **u1ft;
 static u3_alg_dble **ft;
 
 
-void compare(double *diff)
+double compare(void)
 {
-   int bc,tmx;
-   int ix,t,munu;
-   double tdiff,iqel;
+   int ix,munu;
+   double d,diff,iqel;
    u1lat_parms_t u1lp;
    
    u1lp=u1lat_parms();
    iqel=u1lp.invqel;
 
-   if (init==0)
-   {
-      for (t=0;t<L0;t++)
-	 isx[t]=init_hsum(1);
-      
-      init=1;
-   }
-   
-   bc=bc_type();
-   if (bc==0)
-      tmx=N0-1;
-   else
-      tmx=N0;
-
+   diff=0.0;
    for (munu=0;munu<6;munu++)
    {
-      reset_hsum(isx[0]);
-      reset_hsum(isx[1]);
-
       for (ix=0;ix<VOLUME;ix++)
       {
-         t=global_time(ix);
-
-         if (((t>0)&&(t<tmx))||(bc==3))
-         {
-            tdiff=fabs(u1ft[munu][ix]/iqel-ft[munu][ix].c1);
-            add_to_hsum(isx[0],&tdiff);
-
-            tdiff=fabs(u1ft[munu][ix]/iqel);
-            add_to_hsum(isx[1],&tdiff);
-         }
+         d=fabs(u1ft[munu][ix]/iqel-ft[munu][ix].c1);
+         if(d>diff)
+            diff=d;
       }
-
-      if (NPROC>1)
-      {
-         global_hsum(isx[0],diff+munu);
-         global_hsum(isx[1],&tdiff);
-      }
-      else
-      {
-         local_hsum(isx[0],diff+munu);
-         local_hsum(isx[1],&tdiff);
-      }
-
-      diff[munu]/=tdiff;
-
    }
+   
+   d=diff;
+   MPI_Reduce(&d,&diff,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
+   return diff;
 }
 
 
 int main(int argc,char *argv[])
 {
-   int my_rank,bc,munu;
-   double phi[2],phi_prime[2];
-   double diff[6],mxw,ym,iqel2;
-   complex_dble *u1d,*u1db,*u1dm,cone;
+   int my_rank,bc;
+   double su3phi[2],su3phi_prime[2];
+   double u1phi,u1phi_prime;
+   double diff,mxw,ym,iqel2;
+   complex_dble *u1d,*u1db,*u1dm;
    su3_dble *ud;
    FILE *flog=NULL;
    u1lat_parms_t u1lp;
@@ -131,18 +97,20 @@ int main(int argc,char *argv[])
                     "Syntax: check7 [-bc <type>]");
    }
 
-   set_flds_parms(2,0);
+   set_flds_parms(3,0);
    print_flds_parms();
 
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
-   phi[0]=0.0;
-   phi[1]=0.0;
-   phi_prime[0]=0.0;
-   phi_prime[1]=0.0;
-   set_bc_parms(bc,0,0,phi,phi_prime);
+   su3phi[0]=0.573;
+   su3phi[1]=-0.573;
+   su3phi_prime[0]=-1.827;
+   su3phi_prime[1]=1.827;
+   u1phi=0.573;
+   u1phi_prime=-1.827;
+   set_bc_parms(bc,0,su3phi,su3phi_prime,u1phi,u1phi_prime);
    print_bc_parms();
 
-   set_u1lat_parms(0,1.0/137.0,5.0,0.0,7.0,0.0,0.0);
+   set_u1lat_parms(0,1.0/137.0,5.0,0.0,7.0,0.0,0.0,0);
    print_lat_parms();
 
    u1lp=u1lat_parms();
@@ -152,9 +120,6 @@ int main(int argc,char *argv[])
    start_ranlux(0,12345);
    geometry();
 
-   cone.re=1.0;
-   cone.im=0.0;
-
    random_ad();
    u1db=u1dfld(LOC);
    u1dm=u1db+4*VOLUME;
@@ -163,11 +128,14 @@ int main(int argc,char *argv[])
    for (u1d=u1db;u1d<u1dm;u1d++)
    {
       (*ud).c11=(*u1d);
-      (*ud).c22=cone;
-      (*ud).c33=cone;
+      (*ud).c22.re=(*u1d).re;
+      (*ud).c22.im=-(*u1d).im;
+      if(((*u1d).re!=0)||((*u1d).im!=0.0))
+         (*ud).c33.re=1.0;
       ud++;
    }
    set_flags(UPDATED_UD);
+   copy_bnd_ud();
 
    u1ft=u1ftensor();
    ft=ftensor();
@@ -176,19 +144,14 @@ int main(int argc,char *argv[])
    ym=ym_action();
 
    mxw/=iqel2;
-   ym=3.0*ym/4.0;
+   ym=ym/4.0;
 
-   compare(diff);
+   diff=compare();
    
    if (my_rank==0)
    {
       printf("\n");
-      printf("dev_munu= {sum_x abs(u1ft[munu][x]-ft[munu][x].c1)} / {sum_x abs(u1ft[munu][x])}\n\n");
-      printf("Relative deviation (munu,dev_munu)                  = ");
-      for (munu=0;munu<6;munu++)
-	 printf("(%d, %.1e) ",munu,diff[munu]);
-      printf("\n");
-
+      printf("Maximum deviation between SU(3) and U(1) field tensors = %.1e\n\n",diff);
       printf("Relative deviation between Maxwell and Y.M. actions = %.1e\n\n",fabs(1.0-mxw/ym));
       fclose(flog);
    }

@@ -20,5 +20,5 @@ set, open boundary conditions are assumed. The option may be set but has no
 effect in the case of the other programs.
 
 The programs check[3-5] accept the option -gg <gauge> that allows the gauge
-group (0=QCD, 1=QED, 2=QCD+QED) to be chosen at runtime. When the option is not
+group (1=QCD, 2=QED, 3=QCD+QED) to be chosen at runtime. When the option is not
 set, QCD is assumed.

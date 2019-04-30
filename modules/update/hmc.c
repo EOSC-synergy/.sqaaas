@@ -6,6 +6,7 @@
 * Copyright (C) 2005, 2007, 2009-2013 Martin Luescher, Filippo Palombi,
 *               2016                  Stefan Schaefer, Isabel Campos
 *               2017                  Agostino Patella
+*               2019                  Agostino Patella, Nazario Tantalo
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -114,7 +115,7 @@ static void init_rs(int nr)
 static int check_rat_actions(void)
 {
    int k,l,j,ie;
-   int nact,*iact,ir,nr,im0,isw;
+   int nact,*iact,ir,nr,ifl,isw;
    hmc_parms_t hmc;
    action_parms_t ap;
    rat_parms_t rp;
@@ -131,7 +132,7 @@ static int check_rat_actions(void)
       if ((ap.action==ACF_RAT)||(ap.action==ACF_RAT_SDET))
       {
          ir=ap.irat[0];
-         im0=ap.im0;
+         ifl=ap.ifl;
          rp=rat_parms(ir);
          nr=rp.degree;
          init_rs(nr);
@@ -143,7 +144,7 @@ static int check_rat_actions(void)
 
             if ((ap.action==ACF_RAT)||(ap.action==ACF_RAT_SDET))
             {
-               if ((ap.irat[0]==ir)&&(ap.im0==im0))
+               if ((ap.irat[0]==ir)&&(ap.ifl==ifl))
                {
                   if (ap.action==ACF_RAT_SDET)
                      isw+=1;
@@ -177,28 +178,28 @@ static int match_force(action_parms_t ap,force_parms_t fp)
    {
       ie&=(fp.force==FRF_TM1);
       ie&=(ap.ipf==fp.ipf);
-      ie&=(ap.im0==fp.im0);
+      ie&=(ap.ifl==fp.ifl);
       ie&=(ap.imu[0]==fp.imu[0]);
    }
    else if (ap.action==ACF_TM1_EO)
    {
       ie&=(fp.force==FRF_TM1_EO);
       ie&=(ap.ipf==fp.ipf);
-      ie&=(ap.im0==fp.im0);
+      ie&=(ap.ifl==fp.ifl);
       ie&=(ap.imu[0]==fp.imu[0]);
    }
    else if (ap.action==ACF_TM1_EO_SDET)
    {
       ie&=(fp.force==FRF_TM1_EO_SDET);
       ie&=(ap.ipf==fp.ipf);
-      ie&=(ap.im0==fp.im0);
+      ie&=(ap.ifl==fp.ifl);
       ie&=(ap.imu[0]==fp.imu[0]);
    }
    else if (ap.action==ACF_TM2)
    {
       ie&=(fp.force==FRF_TM2);
       ie&=(ap.ipf==fp.ipf);
-      ie&=(ap.im0==fp.im0);
+      ie&=(ap.ifl==fp.ifl);
       ie&=(ap.imu[0]==fp.imu[0]);
       ie&=(ap.imu[1]==fp.imu[1]);
    }
@@ -206,7 +207,7 @@ static int match_force(action_parms_t ap,force_parms_t fp)
    {
       ie&=(fp.force==FRF_TM2_EO);
       ie&=(ap.ipf==fp.ipf);
-      ie&=(ap.im0==fp.im0);
+      ie&=(ap.ifl==fp.ifl);
       ie&=(ap.imu[0]==fp.imu[0]);
       ie&=(ap.imu[1]==fp.imu[1]);
    }
@@ -214,7 +215,7 @@ static int match_force(action_parms_t ap,force_parms_t fp)
    {
       ie&=(fp.force==FRF_RAT);
       ie&=(ap.ipf==fp.ipf);
-      ie&=(ap.im0==fp.im0);
+      ie&=(ap.ifl==fp.ifl);
       ie&=(ap.irat[0]==fp.irat[0]);
       ie&=(ap.irat[1]==fp.irat[1]);
       ie&=(ap.irat[2]==fp.irat[2]);
@@ -223,7 +224,7 @@ static int match_force(action_parms_t ap,force_parms_t fp)
    {
       ie&=(fp.force==FRF_RAT_SDET);
       ie&=(ap.ipf==fp.ipf);
-      ie&=(ap.im0==fp.im0);
+      ie&=(ap.ifl==fp.ifl);
       ie&=(ap.irat[0]==fp.irat[0]);
       ie&=(ap.irat[1]==fp.irat[1]);
       ie&=(ap.irat[2]==fp.irat[2]);
@@ -287,7 +288,7 @@ void hmc_sanity_check(void)
             iepf|=(ap.ipf>=npf);
             iemu|=(ap.imu[0]<0);
             iemu|=(ap.imu[0]>=nmu);
-            iem0|=(qlat_parms(ap.im0).m0==DBL_MAX);
+            iem0|=(qlat_parms(ap.ifl).m0==DBL_MAX);
 
             if ((ap.action==ACF_TM2)||
                 (ap.action==ACF_TM2_EO))
@@ -301,7 +302,7 @@ void hmc_sanity_check(void)
          {
             iepf|=(ap.ipf<0);
             iepf|=(ap.ipf>=npf);
-            iem0|=(qlat_parms(ap.im0).m0==DBL_MAX);
+            iem0|=(qlat_parms(ap.ifl).m0==DBL_MAX);
 
             rp=rat_parms(ap.irat[0]);
             ierat|=(ap.irat[2]>=rp.degree);
@@ -328,7 +329,7 @@ void hmc_sanity_check(void)
                iepf|=(fp.ipf>=npf);
                iemu|=(fp.imu[0]<0);
                iemu|=(fp.imu[0]>=nmu);
-               iem0|=(qlat_parms(fp.im0).m0==DBL_MAX);
+               iem0|=(qlat_parms(fp.ifl).m0==DBL_MAX);
 
                if ((fp.force==FRF_TM2)||
                    (fp.force==FRF_TM2_EO))
@@ -342,7 +343,7 @@ void hmc_sanity_check(void)
             {
                iepf|=(fp.ipf<0);
                iepf|=(fp.ipf>=npf);
-               iem0|=(qlat_parms(fp.im0).m0==DBL_MAX);
+               iem0|=(qlat_parms(fp.ifl).m0==DBL_MAX);
 
                rp=rat_parms(fp.irat[0]);
                ierat|=(fp.irat[2]>=rp.degree);
@@ -357,7 +358,7 @@ void hmc_sanity_check(void)
       error_root(iem0!=0,1,"hmc_sanity_check [hmc.c]",
                  "Some sea-quark mass indices are out of range");
       error_root(ierat!=0,1,"hmc_sanity_check [hmc.c]",
-                 "Some rational functions are not or not correctly specified");
+                 "Some rational functions are not correctly specified");
       error_root(((gauge()&1)!=0)&&iacg3==0,1,"hmc_sanity_check [hmc.c]",
                  "SU(3) gauge action is missing");
       error_root(((gauge()&1)==0)&&iacg3>0,1,"hmc_sanity_check [hmc.c]",
@@ -582,13 +583,13 @@ static void chk_mode_regen(int isp,int *status)
    sp=solver_parms(isp);
 
    if ((sp.solver==DFL_SAP_GCR)&&(status[2]>0))
-      add2counter("modes",2,status+2);
+      add2counter("modes",2+3*sp.idfl,status+2);
 }
 
 
 static void start_hmc(double *act0,su3_dble *uold,double *aold)
 {
-   int i,nact,*iact;
+   int i,nact,*iact,idfl;
    int status[3];
    double *mu;
    su3_dble *udb;
@@ -597,6 +598,7 @@ static void start_hmc(double *act0,su3_dble *uold,double *aold)
    hmc_parms_t hmc;
    action_parms_t ap;
    dirac_parms_t dp;
+   dflst_t dfl_status;
 
    hmc=hmc_parms();
    nact=hmc.nact;
@@ -623,21 +625,33 @@ static void start_hmc(double *act0,su3_dble *uold,double *aold)
          assign_dvec2dvec(3,adb+4*VOLUME+7*(BNDRY/4),abnd);
       random_u1mom();
       act0[0]+=u1momentum_action(0);
+      if (hmc.facc)
+         u1mom_Delta_no0(2,mdflds()->u1mom,mdflds()->u1mom);
    }
 
    dfl=dfl_parms();
 
    if (dfl.Ns)
    {
-      dfl_modes2(status);
-      error_root((status[1]<0)||((status[1]==0)&&(status[0]<0)),1,
-                 "start_hmc [hmc.c]","Deflation subspace generation "
-                 "failed (status = %d;%d)",status[0],status[1]);
+      idfl=0;
+      while(1)
+      {
+         dfl_status=dfl_gen_parms(idfl).status;
+         if(dfl_status==DFL_OUTOFRANGE) break;
+         if(dfl_status==DFL_DEF)
+         {
+            dfl_modes2(idfl,status);
+            error_root((status[1]<0)||((status[1]==0)&&(status[0]<0)),1,
+                       "start_hmc [hmc.c]","Generation of deflation subspace %d "
+                       "failed (status = %d;%d)",idfl,status[0],status[1]);
 
-      if (status[1]==0)
-         add2counter("modes",0,status);
-      else
-         add2counter("modes",2,status+1);
+            if (status[1]==0)
+               add2counter("modes",3*idfl,status);
+            else
+               add2counter("modes",2+3*idfl,status+1);
+         }
+         idfl++;
+      }
    }
 
    for (i=0;i<nact;i++)
@@ -650,7 +664,7 @@ static void start_hmc(double *act0,su3_dble *uold,double *aold)
          act0[i+1]=action6(0);
       else
       {
-         dp=qlat_parms(ap.im0);
+         dp=qlat_parms(ap.ifl);
          set_dirac_parms1(&dp);
 
          if (ap.action==ACF_TM1)
@@ -705,13 +719,17 @@ static void end_hmc(double *act1)
    action_parms_t ap;
    dirac_parms_t dp;
 
+   hmc=hmc_parms();
+
    act1[0]=0.0;
    if((gauge()&1)!=0)
       act1[0]+=su3momentum_action(0);
    if((gauge()&2)!=0)
+   {
+      if (hmc.facc)
+         u1mom_Delta_no0(3,mdflds()->u1mom,mdflds()->u1mom);
       act1[0]+=u1momentum_action(0);
-
-   hmc=hmc_parms();
+   }
    nact=hmc.nact;
    iact=hmc.iact;
    mu=hmc.mu;
@@ -726,7 +744,7 @@ static void end_hmc(double *act1)
          act1[i+1]=action6(0);
       else
       {
-         dp=qlat_parms(ap.im0);
+         dp=qlat_parms(ap.ifl);
          set_dirac_parms1(&dp);
          status[2]=0;
 

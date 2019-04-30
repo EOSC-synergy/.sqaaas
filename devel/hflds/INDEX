@@ -11,7 +11,7 @@ of boundary condition to be chosen. When the option is not set, open boundary
 conditions are assumed.
 
 The programs check1 and time1 accept the option -gg <gauge> that allows the
-gauge group (0=QCD, 1=QED, 2=QCD+QED) to be chosen at runtime. When the option
+gauge group (1=QCD, 2=QED, 3=QCD+QED) to be chosen at runtime. When the option
 is not set, QCD is assumed.
 
 The program check1 accepts the option -q <echarge> that allows the electric

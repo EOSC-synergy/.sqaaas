@@ -4,7 +4,7 @@
 * File dfl_modes.c
 *
 * Copyright (C) 2007, 2011-2013 Martin Luescher
-*               2016, 2017 Agostino Patella
+*               2016, 2017, 2019 Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -13,22 +13,22 @@
 *
 * The externally accessible functions are
 *
-*   void dfl_modes(int *status)
-*     Computes the basis vectors of the deflation subspace by applying a
+*   void dfl_modes(int idfl,int *status)
+*     Computes the basis vectors of the deflation subspace idfl by applying a
 *     smoothing procedure to a set of random fields. The subspace is then
 *     initialized by calling the program dfl_subspace().
 *
-*   void dfl_update(int nsm,int *status)
-*     Updates the deflation subspace by applying nsm deflated smoothing
+*   void dfl_update(int idfl,int nsm,int *status)
+*     Updates the deflation subspace idfl by applying nsm deflated smoothing
 *     steps to the global fields from which the current subspace was built.
 *
-*   void dfl_modes2(int *status)
+*   void dfl_modes2(int idfl,int *status)
 *     Calls the program dfl_modes() and, if status[0]=-3 is returned,
 *     call dfl_modes() a second time. The array status must have at least
 *     two elements that report the status values returned in the two calls.
 *     Normally dfl_modes() is called only once in which case status[1]=0.
 *
-*   void dfl_update2(int nsm,int *status)
+*   void dfl_update2(int idfl,int nsm,int *status)
 *     Calls the program dfl_update() and, if status[0]=-3 is returned,
 *     call dfl_modes(). The array status must have at least two elements
 *     that report the status values returned in the two calls. Normally
@@ -61,9 +61,9 @@
 *
 *  set_dfl_gen_parms()    Subspace generation parameters.
 *
-* See doc/parms.pdf and the relevant files in the modules/flags directory
-* for further explanations. The update program moreover assumes that the
-* current deflation subspace was previously initialized using dfl_modes().
+* See openQCD-1.6/doc/parms.pdf and the relevant files in the modules/flags
+* directory for further explanations. The update program moreover assumes that
+* the current deflation subspace was previously initialized using dfl_modes().
 *
 * Each inverse iteration step consists of the application of a few cycles
 * of the Schwarz alternating procedure (see sap/sap.c). After the first
@@ -183,7 +183,7 @@ static void print_res(spinor **mds)
 
 #endif
 
-static int set_frame(void)
+static int set_frame(int idfl)
 {
    int nb,isw,ifail;
    int *bs,swu,swe,swo;
@@ -218,12 +218,13 @@ static int set_frame(void)
    error_root(dpr.nkv==0,1,"set_frame [dfl_modes.c]",
               "Deflation projection parameters are not set");
 
-   dgn=dfl_gen_parms();
+   dgn=dfl_gen_parms(idfl);
    error_root(dgn.ninv==0,1,"set_frame [dfl_modes.c]",
               "Deflation subspace generation parameters are not set");
 
    dsv=dirac_parms();
    set_dirac_parms1(&(dgn.dp));
+   use_dfl_subspace(idfl);
 
    if (query_grid_flags(SAP_BLOCKS,HBGR_UP2DATE)!=1)
       assign_ud2ubgr(SAP_BLOCKS);
@@ -515,13 +516,13 @@ static void dfl_smooth_fields(spinor **mds,int *status)
 
 #endif
 
-void dfl_modes(int *status)
+void dfl_modes(int idfl,int *status)
 {
    int n,ifail;
    spinor **mds;
 
    status[0]=0;
-   ifail=set_frame();
+   ifail=set_frame(idfl);
    mds=reserve_ws(Ns);
    random_fields(mds);
 
@@ -529,6 +530,7 @@ void dfl_modes(int *status)
    if (my_rank==0)
    {
       printf("Progress report [program dfl_modes]:\n\n");
+      printf("idfl = %d\n",idfl);
       printf("Ns = %d, ninv = %d, nmr = %d, ncy = %d\n",
              Ns,dgn.ninv,dgn.nmr,dgn.ncy);
       printf("nkv = %d, nmx = %d, res = %.1e, ifail = %d\n\n",
@@ -603,7 +605,7 @@ void dfl_modes(int *status)
 }
 
 
-void dfl_update(int nsm,int *status)
+void dfl_update(int idfl,int nsm,int *status)
 {
    int n,ifail,iprms[1];
    spinor **mds;
@@ -619,7 +621,7 @@ void dfl_update(int nsm,int *status)
    }
 
    status[0]=0;
-   ifail=set_frame();
+   ifail=set_frame(idfl);
    mds=reserve_ws(Ns);
    restore_fields(mds);
 
@@ -627,6 +629,7 @@ void dfl_update(int nsm,int *status)
    if (my_rank==0)
    {
       printf("Progress report [program dfl_update]:\n\n");
+      printf("idfl = %d\n",idfl);
       printf("nsm = %d\n",nsm);
       printf("Ns = %d, ninv = %d, nmr = %d, ncy = %d\n",
              Ns,dgn.ninv,dgn.nmr,dgn.ncy);
@@ -690,44 +693,44 @@ void dfl_update(int nsm,int *status)
 }
 
 
-void dfl_modes2(int *status)
+void dfl_modes2(int idfl,int *status)
 {
-   dfl_modes(status);
+   dfl_modes(idfl,status);
 
    if (status[0]==-3)
    {
 #ifdef DFL_MODES_DBG
       if (my_rank==0)
       {
-         printf("Generation of deflation subspace failed\n");
+         printf("Generation of deflation subspace %d failed\n",idfl);
          printf("Start second attempt\n");
          fflush(stdout);
       }
 #endif
 
-      dfl_modes(status+1);
+      dfl_modes(idfl,status+1);
    }
    else
       status[1]=0;
 }
 
 
-void dfl_update2(int nsm,int *status)
+void dfl_update2(int idfl,int nsm,int *status)
 {
-   dfl_update(nsm,status);
+   dfl_update(idfl,nsm,status);
 
    if (status[0]==-3)
    {
 #ifdef DFL_MODES_DBG
       if (my_rank==0)
       {
-         printf("Update of deflation subspace failed\n");
+         printf("Update of deflation subspace %d failed\n",idfl);
          printf("Attempt to regenerate subspace\n");
          fflush(stdout);
       }
 #endif
 
-      dfl_modes(status+1);
+      dfl_modes(idfl,status+1);
    }
    else
       status[1]=0;

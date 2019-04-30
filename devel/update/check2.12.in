@@ -1,0 +1,210 @@
+
+[Configurations]
+cnfg_dir     /home/data/openQCD/cnfg
+name         16x8x8x8b6.00id2
+first        7
+last         7
+step         2
+
+[Gauge group]
+gauge        SU(3)xU(1)
+
+[Boundary conditions]
+type         0
+cstar        3
+
+[SU(3) action]
+beta         6.0
+c0           1.2222
+cG           1.30
+cG'          0.90
+SF_type      0
+
+[U(1) action]
+type         compact
+alpha        0.5
+invqel       3.0
+c0           1.6667
+cG           1.10
+cG'          1.05
+SF_type      0
+
+[Quark action]
+nfl          2
+
+[Flavour 0]
+kappa        0.1300
+qhat         2
+su3csw       1.052
+u1csw        0.572
+cF           0.95
+cF'          0.90
+theta        0.34 -1.25 0.58
+
+[Flavour 1]
+kappa        0.12505
+qhat         -3
+su3csw       0.367
+u1csw        0.892
+cF           0.5
+cF'          0.6
+theta        0.21 0.15 -1.58
+
+[HMC parameters]
+actions      0 1 2 3 4 5
+npf          4
+mu           0.1 1.0
+nlv          4
+tau          0.5
+facc         1
+
+[Action 1]
+action       ACF_TM1
+ipf          0
+ifl          0
+imu          1
+isp          0
+
+[Action 0]
+action       ACG_SU3
+
+[Action 5]
+action       ACG_U1
+
+[Action 2]
+action       ACF_TM2
+ipf          1
+ifl          0
+imu          0 1
+isp          1 0
+
+[Action 3]
+action       ACF_RAT_SDET
+ipf          2
+ifl          1
+irat         0 0 6
+isp          2
+
+[Action 4]
+action       ACF_RAT
+ipf          3
+ifl          1
+irat         0 7 11
+isp          2
+
+[Rational 0]
+power        -1 2
+degree       12
+range        0.001 7.7
+mu           0.0
+
+[Level 0]
+integrator   OMF4
+nstep        2
+forces       5
+
+[Level 1]
+integrator   OMF4
+nstep        1
+forces       0
+
+[Level 2]
+integrator   OMF4
+nstep        1
+forces       1 2 3
+
+[Level 3]
+integrator   LPFR
+nstep        3
+forces       4
+
+[Force 0]
+force        FRG_SU3
+
+[Force 5]
+force        FRG_U1
+
+[Force 1]
+force        FRF_TM1
+isp          3
+ncr          0
+
+[Force 2]
+force        FRF_TM2
+isp          4
+ncr          0
+
+[Force 3]
+force        FRF_RAT_SDET
+isp          5
+
+[Force 4]
+force        FRF_RAT
+isp          5
+
+[Solver 0]
+solver       CGNE
+nmx          256
+res          1.0e-12
+
+[Solver 1]
+solver       SAP_GCR
+nkv          16
+isolv        1
+nmr          4
+ncy          5
+nmx          24
+res          1.0e-12
+
+[Solver 2]
+solver       MSCG
+nmx          256
+res          1.0e-12
+
+[Solver 3]
+solver       CGNE
+nmx          256
+res          1.0e-10
+
+[Solver 4]
+solver       SAP_GCR
+nkv          16
+isolv        1
+nmr          4
+ncy          5
+nmx          24
+res          1.0e-10
+
+[Solver 5]
+solver       MSCG
+nmx          256
+res          1.0e-10
+
+[SAP]
+bs           4 4 4 4
+
+[Deflation subspace]
+bs           4 4 4 4
+Ns           8
+
+[Deflation subspace generation 0]
+kappa        0.1350
+mu           0.01
+qhat         0
+su3csw       0.78
+u1csw        0.32
+cF           1.0
+cF'          1.0
+theta        0 0 0
+ninv         5
+nmr          4
+ncy          5
+
+[Deflation projection]
+nkv          16
+nmx          64
+res          1.0e-2
+
+[Deflation update scheme]
+dtau         0.3
+nsm          1

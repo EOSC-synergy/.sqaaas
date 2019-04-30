@@ -27,7 +27,7 @@
 *   void set_dvec2zero(int vol,double *X)
 *     Sets the elements of X to zero.
 *
-*   void assign_dalg2dalg(int vol,double *X,double *Y)
+*   void assign_dvec2dvec(int vol,double *X,double *Y)
 *     Assigns the field X to the field Y.
 *
 *   void swap_dvec(int vol,double *X,double *Y)

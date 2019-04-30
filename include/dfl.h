@@ -4,6 +4,7 @@
 * File dfl.h
 *
 * Copyright (C) 2011 Martin Luescher
+*               2019 Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -30,15 +31,18 @@ typedef struct
 extern dfl_grid_t dfl_geometry(void);
 
 /* DFL_MODES_C */
-extern void dfl_modes(int *status);
-extern void dfl_update(int nsm,int *status);
-extern void dfl_modes2(int *status);
-extern void dfl_update2(int nsm,int *status);
+extern void dfl_modes(int idfl,int *status);
+extern void dfl_update(int idfl,int nsm,int *status);
+extern void dfl_modes2(int idfl,int *status);
+extern void dfl_update2(int idfl,int nsm,int *status);
+
+/* DFL_MULTIPLE_C */
+void use_dfl_subspace(int idfl);
 
 /* DFL_SAP_GCR_C */
-extern double dfl_sap_gcr(int nkv,int nmx,double res,double mu,
+extern double dfl_sap_gcr(int idfl,int nkv,int nmx,double res,double mu,
                           spinor_dble *eta,spinor_dble *psi,int *status);
-extern double dfl_sap_gcr2(int nkv,int nmx,double res,double mu,
+extern double dfl_sap_gcr2(int idfl,int nkv,int nmx,double res,double mu,
                            spinor_dble *eta,spinor_dble *psi,int *status);
 
 /* DFL_SUBSPACE_C */

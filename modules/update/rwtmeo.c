@@ -4,11 +4,12 @@
 * File rwtmeo.c
 *
 * Copyright (C) 2012-2014 Martin Luescher, Stefan Schaefer
+*               2019 Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
 *
-* Twisted-mass reweighting factors (even-odd preconditioned version).
+* HMC twisted-mass reweighting factors (even-odd preconditioned version).
 *
 * The externally accessible functions are
 *
@@ -173,7 +174,7 @@ double rwtm1eo(double mu1,double mu2,int isp,double *sqn,int *status)
       sap=sap_parms();
       set_sap_parms(sap.bs,sp.isolv,sp.nmr,sp.ncy);
       mulg5_dble(VOLUME/2,eta);
-      dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mu1,eta,phi,status);
+      dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mu1,eta,phi,status);
 
       error_root((status[0]<0)||(status[1]<0),1,
                  "rwtm1eo [rwtmeo.c]","DFL_SAP_GCR solver failed "
@@ -282,7 +283,7 @@ double rwtm2eo(double mu1,double mu2,int isp,double *sqn,int *status)
       set_sap_parms(sap.bs,sp.isolv,sp.nmr,sp.ncy);
 
       mulg5_dble(VOLUME/2,eta);
-      dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mu1,eta,phi,status);
+      dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mu1,eta,phi,status);
 
       error_root((status[0]<0)||(status[1]<0),1,
                  "rwtm2eo [rwtmeo.c]","DFL_SAP_GCR solver failed "
@@ -293,7 +294,7 @@ double rwtm2eo(double mu1,double mu2,int isp,double *sqn,int *status)
       mulg5_dble(VOLUME/2,phi);
       set_sd2zero(VOLUME/2,phi+(VOLUME/2));
 
-      dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,sqrt(2.0)*mu2,phi,eta,stat);
+      dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,sqrt(2.0)*mu2,phi,eta,stat);
 
       error_root((stat[0]<0)||(stat[1]<0),2,
                  "rwtm2eo [rwtmeo.c]","DFL_SAP_GCR solver failed "
@@ -305,7 +306,7 @@ double rwtm2eo(double mu1,double mu2,int isp,double *sqn,int *status)
 
       if (mu1>0.0)
       {
-         dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mu1,phi,phi,stat);
+         dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mu1,phi,phi,stat);
 
          error_root((stat[0]<0)||(stat[1]<0),3,
                     "rwtm2eo [rwtmeo.c]","DFL_SAP_GCR solver failed "

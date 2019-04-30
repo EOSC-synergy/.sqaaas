@@ -23,7 +23,7 @@ MAIN = check1 check2 check3 check4 check5 check6
 
 ARCHIVE = archive sarchive
 
-FLAGS = flags lat_parms hmc_parms dfl_parms parms_utils
+FLAGS = flags lat_parms hmc_parms dfl_parms
 
 LATTICE = bcnds uidx geometry cstar
 
@@ -40,7 +40,7 @@ U1FLDS = adflds adcom u1flds ad_shift u1_plaq_sum u1fcts u1_bstap ad_bcnds \
 
 UFLDS = plaq_sum uflds udcom ud_cstar
 
-UTILS = endian error hsum mutils utils wspace
+UTILS = endian error hsum ioutils mutils utils wspace
 
 MODULES = $(FLAGS) $(LATTICE) $(ARCHIVE) $(LINALG) $(RANDOM) $(UFLDS) \
           $(U1FLDS) $(SFLDS) $(SU3FCTS) $(UTILS)

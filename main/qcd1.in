@@ -13,87 +13,127 @@ level        0
 seed         73099
 
 [Boundary conditions]
-type         2
-SFtype       0
-cstar        0
-phi          0.12 -0.56
-phi'         0.92 0.76
+type         open-SF
+cstar        1
+su3phi       0.12 -0.56
+
 
 [SU(3) action]
 beta         6.0
 c0           1.6667
 cG           1.10
-cG'          1.05
+cG'          1.0
+SFtype       orbifold
 
 [Quark action]
-nfl          1
+nfl          2
 
 [Flavour 0]
-kappa        0.1300
-csw          1.234
+kappa        0.128
+su3csw       1.234
 cF           0.95
 cF'          0.90
-theta        0.5 1.0 -0.5
+
+[Flavour 1]
+kappa        0.12505
+su3csw       0.367
+cF           0.5
+cF'          0.90
 
 [HMC parameters]
-actions      0 1 2
-npf          2
+actions      1 2 3 4 5
+npf          4
 mu           0.01 1.0
 nlv          3
-tau          0.5
+tau          0.1
+facc         1
 
 [MD trajectories]
-nth          32
-ntr          128
-dtr_log      4
-dtr_ms       8
-dtr_cnfg     32
+nth          2
+ntr          10
+dtr_log      1
+dtr_ms       1
+dtr_cnfg     2
+
 
 [Level 0]
 integrator   OMF4
-nstep        1
-forces       0
+nstep        2
+forces       1
 
 [Level 1]
 integrator   OMF2
 lambda       0.2
 nstep        2
-forces       1
+forces       2 3
 
 [Level 2]
 integrator   LPFR
 nstep        6
-forces       2
+forces       4 5
 
-[Action 0]
-action       ACG_SU3
 
 [Action 1]
+action       ACG_SU3
+
+[Action 2]
 action       ACF_TM1
 ipf          0
-im0          0
+ifl          0
 imu          1
 isp          0
 
-[Action 2]
+[Action 3]
 action       ACF_TM2
 ipf          1
-im0          0
+ifl          0
 imu          0 1
 isp          1 0
 
-[Force 0]
-force        FRG_SU3
+[Action 4]
+action       ACF_RAT_SDET
+ipf          2
+ifl          1
+irat         0 0 6
+isp          5
+
+[Action 5]
+action       ACF_RAT
+ipf          3
+ifl          1
+irat         0 7 11
+isp          5
+
+
+[Rational 0]
+power        -1 2
+degree       12
+range        0.001 7.7
+mu           0.0
+
+
 
 [Force 1]
+force        FRG_SU3
+
+[Force 2]
 force        FRF_TM1
 isp          2
 ncr          4
 
-[Force 2]
+[Force 3]
 force        FRF_TM2
 isp          3
 ncr          0
+
+[Force 4]
+force        FRF_RAT_SDET
+isp          4
+
+[Force 5]
+force        FRF_RAT
+isp          5
+
 
 [Solver 0]
 solver       CGNE
@@ -107,6 +147,7 @@ isolv        1
 nmr          4
 ncy          5
 nmx          24
+idfl         0
 res          1.0e-10
 
 [Solver 2]
@@ -121,7 +162,23 @@ isolv        1
 nmr          4
 ncy          5
 nmx          24
+idfl         0
 res          1.0e-8
+
+[Solver 4]
+solver       SAP_GCR
+nkv          16
+isolv        1
+nmr          4
+ncy          5
+nmx          24
+res          1.0e-10
+
+[Solver 5]
+solver       MSCG
+nmx          256
+res          1.0e-10
+
 
 [SAP]
 bs           4 4 4 4
@@ -130,13 +187,12 @@ bs           4 4 4 4
 bs           4 4 4 4
 Ns           28
 
-[Deflation subspace generation]
-kappa        0.1350
-mu           0.01
-csw          1.234
+[Deflation subspace generation 0]
+kappa        0.128
+mu           0.02
+su3csw       1.234
 cF           0.95
-cF'          0.90
-theta        0.5 1.0 -0.5
+cF'          1.0
 ninv         5
 nmr          4
 ncy          5

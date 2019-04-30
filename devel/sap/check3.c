@@ -37,7 +37,7 @@
 int my_rank,id,first,last,step;
 int bs[4],nmr,ncy,nkv,nmx,eoflg,bc,qhat;
 double kappa,su3csw,u1csw,mu,cF,cF_prime;
-double phi[2],phi_prime[2],theta[3],m0,res;
+double su3phi[2],su3phi_prime[2],u1phi,u1phi_prime,theta[3],m0,res;
 char cnfg_dir[NAME_SIZE],cnfg_file[NAME_SIZE],nbase[NAME_SIZE];
 
 
@@ -76,19 +76,27 @@ int main(int argc,char *argv[])
       read_line("last","%d",&last);
       read_line("step","%d",&step);
 
-      phi[0]=0.0;
-      phi[1]=0.0;
-      phi_prime[0]=0.0;
-      phi_prime[1]=0.0;
+      su3phi[0]=0.0;
+      su3phi[1]=0.0;
+      su3phi_prime[0]=0.0;
+      su3phi_prime[1]=0.0;
+      u1phi=0.0;
+      u1phi_prime=0.0;
       cF=1.0;
       cF_prime=1.0;
 
       find_section("Boundary conditions");
       read_line("type","%d",&bc);
       if (bc==1)
-         read_dprms("phi",2,phi);
+      {
+         read_dprms("su3phi",2,su3phi);
+         read_line("u1phi","%lf",&u1phi);
+      }
       if ((bc==1)||(bc==2))
-         read_dprms("phi'",2,phi_prime);
+      {
+         read_dprms("su3phi'",2,su3phi_prime);
+         read_line("u1phi'","%lf",&u1phi_prime);
+      }
 
       find_section("Lattice parameters");
       read_line("kappa","%lf",&kappa);
@@ -128,8 +136,10 @@ int main(int argc,char *argv[])
    MPI_Bcast(&step,1,MPI_INT,0,MPI_COMM_WORLD);
 
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(phi,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(phi_prime,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(su3phi,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(su3phi_prime,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(&u1phi,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(&u1phi_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
    MPI_Bcast(&kappa,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
    MPI_Bcast(&qhat,1,MPI_INT,0,MPI_COMM_WORLD);
@@ -152,7 +162,7 @@ int main(int argc,char *argv[])
    m0=DBL_MAX;
    if (kappa!=0.0) m0=1.0/(2.0*kappa)-4.0;
 
-   set_bc_parms(bc,0,0,phi,phi_prime);
+   set_bc_parms(bc,0,su3phi,su3phi_prime,u1phi,u1phi_prime);
    print_bc_parms();
 
    sap=set_sap_parms(bs,0,nmr,ncy);

@@ -1,0 +1,207 @@
+\documentclass[11pt,fleqn]{article}
+
+\usepackage[left=34mm,right=34mm,top=45mm,bottom=60mm,centering]{geometry}
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{mathtools}
+\usepackage{bm}
+\usepackage{framed}
+\usepackage{hyperref}
+
+\usepackage{tikz} 
+\usetikzlibrary{arrows}
+
+\usepackage{sectsty}
+\allsectionsfont{\sffamily\normalsize}
+\chapterfont{\sffamily}
+
+\newtheorem{definition}{Definition}
+
+\newcommand{\tr}{\mathrm{tr}\,}
+\newcommand{\Tr}{\mathrm{Tr}\,}
+\renewcommand{\vec}[1]{\mathbf{#1}}
+\renewcommand{\overline}[1]{\bar{#1}}
+\renewcommand{\Re}[0]{\operatorname{Re}}
+\renewcommand{\Im}[0]{\operatorname{Im}}
+\renewcommand{\d}{\mathrm{d}}
+
+
+
+\setlength\parindent{0pt}
+\setlength{\parskip}{4mm plus2mm minus2mm}
+
+
+\begin{document}
+
+\vspace*{20mm}
+
+{
+\sffamily
+\huge
+\textbf{Dirac operator}
+\\
+\rule{\textwidth}{1pt}
+\\[2mm]
+\large
+Agostino Patella, RC$^*$ collaboration
+\hfill
+July 2017
+}
+
+\vspace{20mm}
+
+
+
+\section{Introduction}
+
+The only substantial difference between the Dirac operator in \texttt{openQ*D} and \texttt{openQCD} is the coupling to the U(1) gauge field, which will be illustrated in these notes. Other aspects, for instance:
+\begin{itemize}
+   \item definition of the block Dirac operator,
+   \item implementation and numerical issues of the even-odd preconditioning,
+   \item details of the gamma-matrix algebra,
+\end{itemize}
+require trivial generalization with respect to the pure SU(3) case, which is discussed in detail in \cite{openQCD:dirac}.
+
+
+\section{Boundary conditions in time}
+
+In the time direction, the gauge field can be chosen to satisfy open (or type 0), SF (or type 1), open-SF (or type 2) or periodic (or type 3) boundary conditions. A detailed description of the boundary conditions in time for the gauge field can be found in \cite{gauge_action,openQCD:gauge_action}. The boundary conditions in time for the quark fields depend on the boundary conditions for the gauge field, in the following way.
+\begin{itemize}
+   \item If the gauge field satisfies \textit{periodic} boundary conditions in time, the quark field $\psi(x)$ is defined for $0 \le x < N_0$ and is extended to every value of $x_0$ by means of anti-periodic boundary conditions, i.e.
+   \begin{gather}
+      \psi(x+N_0 \hat{0}) = - \psi(x) \ .
+   \end{gather}
+   
+   \item If the gauge field satisfies \textit{SF} or \textit{open-SF} boundary conditions in time, the quark field $\psi(x)$ is defined for $0 \le x \le N_0$ and satisfies SF boundary conditions, i.e.
+   \begin{gather}
+      \psi(x)|_{x_0=0} = \psi(x)|_{x_0=N_0} = 0 \ .
+   \end{gather}
+   
+   \item If the gauge field satisfies \textit{open} boundary conditions in time, the quark field $\psi(x)$ is defined for $0 \le x < N_0$ and satisfies SF boundary conditions, i.e.
+   \begin{gather}
+      \psi(x)|_{x_0=0} = \psi(x)|_{x_0=N_0-1} = 0 \ .
+   \end{gather}
+\end{itemize}
+
+
+\section{Boundary conditions in space}
+
+In the space direction, the gauge field can be chosen to be periodic or to satisfy C$^\star$ boundary conditions. C$^\star$ boundary conditions are implemented in \texttt{openQ*D} by means of an orbifold construction along direction $x$, which is described in detail in \cite{cstar} (familiarity with this document is assumed in this section). The space direction $k$ is said to be C$^\star$ (resp. periodic), if the gauge and quark fields satisfy C$^\star$ (resp. periodic) boundary conditions along direction $k$ in the physical lattice. As explained in \cite{cstar}, C$^\star$ boundary conditions are mapped into periodic or shifted boundary conditions on the extended lattice. 
+
+In all cases the quark field $\psi(x)$ is defined for $0 \le x_k < N_k$ and $k=1,2,3$. The way in which the quark field is extended to all values of $x_k$ depends on the number of C$^\star$ directions, in the following way.
+\begin{itemize}
+   \item If all space directions are periodic, the quark field $\psi(x)$ is extended to all values of $x_k$ for $k=1,2,3$ by means of phase-periodic boundary conditions, i.e.
+   \begin{gather}
+      \psi(x+N_k \hat{k}) = e^{i \theta_k} \psi(x) \ .
+   \end{gather}
+   
+   \item If the $k=1$ direction is C$^\star$, because of the orfifold construction, the quark field $\psi(x)$ is extended to all values of $x_1$ by means of periodic boundary conditions, i.e.
+   \begin{gather}
+      \psi(x+N_1 \hat{1}) = \psi(x) \ .
+   \end{gather}
+   
+   \item If at least one C$^\star$ boundary condition is chosen, and the $k=2,3$ direction is periodic, the quark field $\psi(x)$ is extended to all values of $x_k$ by means of periodic boundary conditions, i.e.
+   \begin{gather}
+      \psi(x+N_k \hat{k}) = \psi(x) \ .
+   \end{gather}
+   Notice that C$^\star$ boundary conditions in one direction are not compatible with phase-periodic boundary conditions in any other direction.
+   
+   \item If the $k=2,3$ direction is C$^\star$, the quark field $\psi(x)$ is extended to all values of $x_k$ by means of shifted boundary conditions, i.e.
+   \begin{gather}
+      \psi(x+N_k \hat{k}) = \psi(x + \tfrac{N_1}{2} \hat{1}) \ .
+   \end{gather}
+
+\end{itemize}
+
+
+\section{Definition of the Dirac operator}
+
+The Dirac operator can be written as
+\begin{gather}
+   D = m_0 + D_\text{w} + \delta D_\text{sw} + \delta D_\text{b}
+   \ .
+\end{gather}
+where $D_\text{w}$ is the (unimproved) Wilson-Dirac operator, $\delta D_\text{sw}$ is the Sheikholeslami–Wohlert (SW) term, and $\delta D_\text{b}$ is the boundary $O(a)$-improvement term. In presence of electromagnetism, the Dirac operator depends on the electric charge of the quark field. Let $q$ be the physical electric charge in units of $e$ (i.e. $q=2/3$ for the up quark, and $q=-1/3$ for the down quark). In the compact formulation of QED, all electric charges must be integer multiples of an elementary charge $q_\text{el}$, which appears as a parameter in the U(1) gauge action (for more details, see \cite{gauge_action}). It is useful to introduce the integer parameter
+\begin{gather}
+   \hat{q} = \frac{q}{q_\text{el}} \in \mathbb{Z} \ .
+\end{gather}
+
+The Wilson-Dirac operator can be written as
+\begin{gather}
+   D_\text{w}
+   =
+   \sum_{\mu=0}^3 \frac{1}{2} \left\{ \gamma_\mu ( \nabla_\mu + \nabla^*_\mu ) - \nabla^*_\mu \nabla_\mu \right\}
+   \ ,
+\end{gather}
+where the covariant derivatives are defined as
+\begin{gather}
+   \nabla_\mu \psi(x) = U(x,\mu) e^{i \hat{q} A(x,\mu)} \psi(x+\hat{\mu}) - \psi(x)
+   \ , \\
+   \nabla^*_\mu \psi(x) = \psi(x) - U(x-\hat{\mu},\mu)^\dag e^{-i \hat{q} A(x-\hat{\mu},\mu)} \psi(x-\hat{\mu})
+   \ .
+\end{gather}
+Notice that the integer parameter $\hat{q}$ appears in the hopping term of the Wilson-Dirac operator. It is understood that $\nabla_\mu \psi(x) = \nabla^*_\mu \psi(x) = 0$ if $x$ belongs to a time boundary.
+
+The SW term is given by
+\begin{gather}
+   \delta D_\text{sw}
+   =
+   c^\text{SU(3)}_\text{sw} \sum_{\mu,\nu=0}^3 \frac{i}{4} \sigma_{\mu\nu} \widehat{F}_{\mu\nu}
+   + q \, c^\text{U(1)}_\text{sw} \sum_{\mu,\nu=0}^3 \frac{i}{4} \sigma_{\mu\nu} \widehat{A}_{\mu\nu}
+   \ .
+\end{gather}
+The SU(3) field tensor $\widehat{F}_{\mu\nu}(x)$ is constructed as in eqs.~(2.13) and~(2.14) in \cite{openQCD:dirac}. The U(1) field tensor $\widehat{A}_{\mu\nu}(x)$ is defined as
+\begin{gather}
+   \hat A_{\mu\nu}(x) = \frac{i}{4 q_\text{el}} \Im\left\{
+   z_{\mu\nu}(x)+ 
+   z_{\mu\nu}(x-\hat{\mu})+
+   z_{\mu\nu}(x-\hat{\nu})+
+   z_{\mu\nu}(x-\hat{\mu}-\hat{\nu})
+   \right\}
+   \ , \\
+   z_{\mu\nu}(x) = 
+   e^{ i \{ A(x,\mu) + A(x+\hat{\mu},\nu) - A(x+\hat{\nu},\mu) - A(x,\nu) \} }
+   \ .
+\end{gather}
+The normalization is chosen in such a way that $ -i e_0 \hat A_{\mu\nu}(x) $ is the canonically-normalized field tensor in the naive continuum limit. Notice that the field tensors are anti-hermitian.
+
+The definition of $\delta D_b$ depends on the boundary conditions in time. For periodic boundary conditions $\delta D_b=0$. In all other cases
+\begin{gather}
+   \delta D_b \psi(x)
+   =
+   \{ (c_\text{F}-1) \delta_{x_0,1} + (c'_\text{F}-1) \delta_{x_0,T-1} \} \psi(x) \ ,
+\end{gather} 
+where $T=N_0$ for SF and open-SF boundary conditions, and $T=N_0-1$ for open boundary conditions. For SF and open boundary conditions the relation $c_\text{F} = c'_\text{F}$ is imposed.
+
+At tree-level of perturbation theory, on-shell $O(a)$-improvement is achieved by setting $c^\text{SU(3)}_\text{sw} = c^\text{U(1)}_\text{sw} = c_\text{F} = c'_\text{F} = 1$.
+
+
+\begin{thebibliography}{9}
+
+\bibitem{openQCD:dirac} 
+  M.~Luscher,
+  \textit{Implementation of the lattice Dirac operator}, code documentation,
+  \texttt{doc/openQCD-1.6/dirac.pdf}.
+
+\bibitem{gauge_action}
+  A. Patella,
+  \textit{Gauge actions}, code documentation,
+  \texttt{doc/gauge\_action.pdf}.
+
+\bibitem{openQCD:gauge_action} 
+  M.~Luscher,
+  \textit{Gauge actions in openQCD simulations}, code documentation,
+  \texttt{doc/openQCD-1.6/gauge\_action.pdf}.
+
+\bibitem{cstar}
+  A. Patella,
+  \textit{C$^\star$ boundary conditions}, code documentation,
+  \texttt{doc/cstar.pdf}.
+
+\end{thebibliography}
+
+
+
+\end{document}

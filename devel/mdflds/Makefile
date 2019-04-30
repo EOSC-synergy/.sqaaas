@@ -19,7 +19,7 @@ all: rmxeq mkdep mkxeq
 
 # main programs and modules to be compiled
 
-MAIN = check1 check2
+MAIN = check1 check2 check3 check4 check5
 
 ARCHIVE = archive
 
@@ -27,10 +27,13 @@ BLOCK = block blk_grid map_u2blk map_sw2blk map_s2blk
 
 DFL = dfl_geometry
 
+DFT = dft4d dft_com dft_shuf fft small_dft
+
 DIRAC = Dw_dble Dw Dw_bnd
 
 FLAGS = flags action_parms dfl_parms dirac_parms force_parms hmc_parms \
-        lat_parms mdint_parms rat_parms sap_parms solver_parms parms_utils
+        lat_parms mdint_parms rat_parms sap_parms solver_parms \
+        dft4d_parms dft_parms
 
 HFLDS = hflds
 
@@ -40,7 +43,7 @@ LINALG = salg salg_dble valg valg_dble liealg cmatrix_dble cmatrix dalg
 
 LINSOLV = cgne fgcr fgcr4vd mscg
 
-MDFLDS = mdflds su3fcom u1fcom md_cstar
+MDFLDS = mdflds su3fcom u1fcom md_cstar u1mom_map u1mom_facc
 
 RANDOM = ranlux ranlxs ranlxd gauss
 
@@ -58,7 +61,7 @@ TCHARGE = ftcom ftensor
 
 UFLDS = plaq_sum uflds udcom bstap ud_cstar
 
-UTILS = endian error hsum mutils utils wspace
+UTILS = endian error hsum ioutils mutils utils wspace
 
 U1FLDS = adflds adcom u1flds ad_shift u1_plaq_sum u1fcts u1_bstap ad_bcnds\
          ad_cstar
@@ -69,11 +72,12 @@ VFLDS = vflds vinit vcom vdcom
 
 SHARE = mdflds_utils
 
+
 MODULES = $(ARCHIVE) $(BLOCK) $(DFL) $(DIRAC) $(FLAGS) \
           $(LATTICE) $(LINALG) $(LINSOLV) $(MDFLDS) $(RANDOM) \
           $(RATFCTS) $(SAP) $(SFLDS) $(SU3FCTS) $(SW_TERM) $(TCHARGE) \
           $(UFLDS) $(UTILS) $(U1FLDS) $(U1FTENSOR) $(VFLDS) \
-			 $(HFLDS) $(SHARE)
+	  $(HFLDS) $(SHARE) $(DFT)
 
 
 # Logging option (-mpilog or -mpitrace or -mpianim)
@@ -93,7 +97,7 @@ VPATH = .:$(MDIR)/flags:$(MDIR)/lattice:$(MDIR)/archive:$(MDIR)/linalg:\
           $(MDIR)/sw_term:$(MDIR)/tcharge:$(MDIR)/block:$(MDIR)/sap:\
           $(MDIR)/linsolv:$(MDIR)/dfl:$(MDIR)/vflds:\
           $(MDIR)/ratfcts:$(MDIR)/u1flds:$(MDIR)/u1ftensor:\
-			 $(MDIR)/hflds:$(SHDIR)
+          $(MDIR)/hflds:$(MDIR)/dft:$(SHDIR)
 
 
 # additional include directories

@@ -40,6 +40,10 @@ sf_parms.c       Schroedinger functional boundary values
 
 solver_parms.c   Solver parameter data base
 
+dft_parms.c      DFT parameter data base
+
+dft4d_parms.c    DFT4D parameter data base
+
 
 Include file
 ------------
@@ -110,7 +114,7 @@ dirac_parms_t set_dirac_parms9(int qhat,double m0,
                    respectively.
 
     th1,th2,th3    Angles specifying the phase-periodic boundary
-                   conditions for the quark fields in direction 1,2,3.       
+                   conditions for the quark fields in direction 1,2,3.
 
   The return value is a structure that contains all above parameters.
 
@@ -191,11 +195,11 @@ dfl_gen_parms_t set_dfl_gen_parms(double kappa,double mu,
                    and T, respectively.
 
     th1,th2,th3    Angles specifying the phase-periodic boundary
-                   conditions for the quark fields in direction 1,2,3.       
+                   conditions for the quark fields in direction 1,2,3.
 
     ninv           Total number of inverse iteration steps (ninv>=4).
 
-    nmr            Number of block minimal residual iterations to be 
+    nmr            Number of block minimal residual iterations to be
                    used when the SAP smoother is applied.
 
     ncy            Number of SAP cycles per inverse iteration.
@@ -239,6 +243,43 @@ void check_dfl_parms(FILE *fdat)
   stored on the file fdat on MPI process 0, assuming the latter were
   written to the file by the program write_dfl_parms() (mismatches of
   maximal solver iteration numbers are not considered to be an error).
+
+void read_dfl_parms(void)
+  On process 0, this program reads the following sections from the stdin,
+  as explained in more details in doc/parms.pdf
+
+    [Deflation subspace]
+    bs        <int> <int> <int> <int>
+    Ns        <int>
+
+    [Deflation subspace generation]
+    kappa     <double>
+    qhat      <int>
+    mu        <double>
+    su3csw    <double>
+    u1csw     <double>
+    cF        <double>
+    cF'       <double>
+    theta     <double> <double> <double>
+    ninv      <int>
+    nmr       <int>
+    ncy       <int>
+
+    [Deflation projection]
+    nkv       <int>
+    nmx       <int>
+    res       <double>
+
+    [Deflation update scheme]
+    dtau      <double>
+    nsm       <int>
+
+  The first three sections are read independently of the value of 'update',
+  while the fourth section is read only if update!=0.
+  Depending on the the active gauge group and on the boundary conditions,
+  some lines are not read and can be omitted in the input file. After
+  reading the stdin, the deflation parameters are set with 'set_dfl_parms',
+  'set_dfl_pro_parms', 'set_dfl_gen_parms', 'set_dfl_upd_parms'.
 
 void set_flags(event_t event)
   Reports an event to the data base, which changed the global gauge
@@ -328,7 +369,7 @@ void check_force_parms(FILE *fdat)
   to the file by the program write_force_parms().
 
 hmc_parms_t set_hmc_parms(int nact,int *iact,int npf,int nmu,
-                          double *mu,int nlv,double tau)
+                          double *mu,int nlv,double tau,int facc)
   Sets some basic parameters of the HMC algorithm. The parameters are
 
     nact        Number of terms in the total action
@@ -346,6 +387,9 @@ hmc_parms_t set_hmc_parms(int nact,int *iact,int npf,int nmu,
     nlv         Number of levels of the molecular-dynamics integrator
 
     tau         Molecular-dynamics trajectory length
+
+    facc        U(1) Fourier-acceleration flag (facc=0 inactive,
+                facc!=0 active); ignored if U(1) gauge field is not active.
 
   The total action must include the gauge action, but pseudo-fermion
   actions are optional and the momentum action is treated separately.
@@ -377,7 +421,7 @@ flds_parms_t flds_parms(void)
   the above parameters.
 
 su3lat_parms_t set_su3lat_parms(double beta,double c0,
-                                double cG,double cG_prime)
+                                double cG,double cG_prime,int SFtype)
   Sets the parameters for the SU(3) gauge action. The parameters are
 
     beta           Inverse SU(3) bare coupling (beta=6/g0^2).
@@ -388,31 +432,38 @@ su3lat_parms_t set_su3lat_parms(double beta,double c0,
     cG,            SU(3) gauge action improvement coefficients at time 0
     cG_prime       and T, respectively.
 
+    SFtype         Type of SF boundary for Luescher-Weisz actions
+                   (0: orbifold constuction - 1: Aoki-Frezzotti-Weisz)
+
 su3lat_parms_t su3lat_parms(void)
   Returns the current SU(3) gauge action parameters in a structure that
   contains the above parameters.
 
 u1lat_parms_t set_u1lat_parms(int type,double alpha,double invqel,
                               double lambda,double c0,
-                              double cG,double cG_prime)
+                              double cG,double cG_prime,int SFtype)
   Sets the parameters for the U(1) gauge action. The parameters are
+
     type           Type of U(1) gauge action (0: compact, 1: non-compact)
-    
+
     alpha          Bare fine-structure constant (alpha=1/(4 pi e0^2)).
-    
+
     invqel         Inverse of the elementary electric charge. Only matter
                    with an electric charge equal to an integer value of
                    1.0/invqel is allowed.
-                   
+
     lambda         Gauge-fixing parameter (relevant only for the noncompact
                    formulation).
-                   
+
     c0             Coefficient of the plaquette loops in the compact U(1)
                    gauge action (relevant only for the compact formulation).
-                   
+
     cG,            U(1) gauge action improvement coefficients at time 0
     cG_prime       and T, respectively (relevant only for the compact
                    formulation).
+
+    SFtype         Type of SF boundary for Luescher-Weisz actions
+                   (0: orbifold constuction - 1: Aoki-Frezzotti-Weisz)
 
 u1lat_parms_t u1lat_parms(void)
   Returns the current U(1) gauge action parameters in a structure that
@@ -439,7 +490,7 @@ dirac_parms_t set_qlat_parms(int ifl,double kappa,
                    respectively.
 
     th1,th2,th3    Angles specifying the phase-periodic boundary conditions
-                   for the quark fields in direction 1,2,3.       
+                   for the quark fields in direction 1,2,3.
 
   The return value is a structure that contains the above parameters, but
   kappa which is replaced by the bare quark mass m0.
@@ -454,36 +505,40 @@ void write_flds_bc_lat_parms(FILE *fdat)
   Writes the global lattices sizes, fields, boundary and lattice parameters
   to the file fdat on MPI process 0.
 
-void check_lat_parms(FILE *fdat)
+void check_flds_bc_lat_parms(FILE *fdat)
   Compares the global lattice sizes, fields, boundary and the lattice
   parameters with the values stored on the file fdat on MPI process 0,
   assuming the latter were written to the file by the program
   write_flds_bc_lat_parms().
 
-bc_parms_t set_bc_parms(int type,int SFtype,int cstar,
-                        double *phi,double *phi_prime)
+bc_parms_t set_bc_parms(int type,int cstar,
+                        double *phi3,double *phi3_prime,
+                        double phi1,double phi1_prime)
   Sets the boundary conditions and the associated parameters of the
   action. The parameters are
 
     type           Chosen type of time boundary condition (0: open, 1: SF,
                    2: open-SF, 3: periodic).
 
-    SFtype         Type of SF boundary for Luescher-Weisz actions
-                   (0: orbifold constuction - 1: Aoki-Frezzotti-Weisz)
-
     cstar          Number of spatial directions with C-periodic boundary
                    conditions.
-                   
-    phi[0],        First two angles that define the boundary values of
-    phi[1]         the gauge field at time 0.
 
-    phi_prime[0],  First two angles that define the boundary values of
-    phi_prime[1]   the gauge field at time T.
+    phi3[0],       First two angles that define the boundary values of
+    phi3[1]        the SU(3) gauge field at time 0.
+
+    phi3_prime[0], First two angles that define the boundary values of
+    phi3_prime[1]  the SU(3) gauge field at time T.
+
+    phi1           Angle that defines the boundary values of the U(1)
+                   gauge field at time 0.
+
+    phi1_prime     Angle that defines the boundary values of the U(1)
+                   gauge field at time T.
 
   The return value is a structure that contains these parameters plus
-  the third angles. In this structure, the angles are stored in the form of
-  arrays phi[2][3], where phi[0][] and phi[1][] are the parameters at
-  time 0 and T, respectively.
+  the third SU(3) angles. In this structure, the angles are stored in the
+  form of arrays phi3[2][3], where phi3[0][] and phi3[1][] are the
+  parameters at time 0 and T, respectively.
 
 bc_parms_t bc_parms(void)
   Returns a structure that contains the boundary parameters.
@@ -494,6 +549,79 @@ void print_bc_parms(void)
 int bc_type(void)
   Returns the type of the chosen boundary conditions (0: open, 1: SF,
   2: open-SF, 3: periodic).
+
+void read_bc_parms(void)
+  On process 0, this program reads the following section from the stdin,
+  as explained in more details in doc/parms.pdf
+
+    [Boundary conditions]
+    type      <string|int>
+    cstar     <int>
+    su3phi    <double> <double>
+    su3phi'   <double> <double>
+    u1phi     <double>
+    u1phi'    <double>
+
+  This program assumes that 'set_flds_parms' has been already called.
+  Depending on the the gauge group selected with 'set_flds_parms', some
+  lines are not read and can be omitted in the input file. After reading
+  the stdin, the boundary conditions parameters are set with 'set_bc_parms'.
+
+void read_glat_parms(void)
+  On process 0, this program reads a number of sections from the stdin
+  with the parameters of the gauge actions, as explained in more details
+  in doc/parms.pdf. This program assumes that 'set_flds_parms' and
+  'set_bc_parms' have been already called. If the SU(3) gauge field is
+  active, the program reads the following section
+
+    [SU(3) action]
+    beta         <double>
+    c0           <double>
+    SFtype       <string|int>
+    cG           <double>
+    cG'          <double>
+
+  Depending on the boundary conditions, some lines are not read and can be
+  omitted in the input file. After reading the stdin, the SU(3) action
+  parameters are set with 'set_su3lat_parms'.
+
+  If the U(1) gauge field is active, the program reads the following section
+
+    [U(1) action]
+    type         <string|int>
+    alpha        <double>
+    invqel       <double>
+    c0           <double>
+    SFtype       <string|int>
+    cG           <double>
+    cG'          <double>
+
+  Depending on the boundary conditions, some lines are not read and can be
+  omitted in the input file. After reading the stdin, the U(1) action
+  parameters are set with 'set_u1lat_parms'.
+
+void read_qlat_parms(void)
+  On process 0, this program reads a number of sections from the stdin
+  with the parameters of the quark actions, as explained in more details
+  in doc/parms.pdf. This program assumes that 'set_flds_parms' and
+  'set_bc_parms' have been already called.
+
+  If nfl is the number of quark flavours set with the 'set_flds_parms'
+  program, for each ifl=0,...,nfl-1, the program reads the following
+  sections
+
+    [Flavour ifl]
+    qhat         <int>
+    kappa        <double>
+    su3csw       <double>
+    u1csw        <double>
+    cF           <double>
+    cF'          <double>
+    theta        <double>
+
+  Depending on the boundary conditions and the active gauge, some lines are
+  not read and can be omitted in the input file. After reading the stdin,
+  the quark flavour parameters are set with 'set_qlat_parms'.
 
 mdint_parms_t set_mdint_parms(int ilv,integrator_t integrator,double lambda,
                               int nstep,int nfr,int *ifr)
@@ -589,16 +717,17 @@ void print_rat_parms(void)
   process 0.
 
 void write_rat_parms(FILE *fdat)
-  Writes the defined rational function parameter sets to the file fdat 
+  Writes the defined rational function parameter sets to the file fdat
   on MPI process 0.
 
 void check_rat_parms(FILE *fdat)
-  Compares the defined rational function parameter sets with those 
+  Compares the defined rational function parameter sets with those
   on the file fdat on MPI process 0, assuming the latter were written
   to the file by the program write_rat_parms().
 
-rw_parms_t set_rw_parms(int irw,rwfact_t rwfact,int im0,int nsrc,
-                        int irp,int nfct,double *mu,int *np,int *isp)
+rw_parms_t set_rw_parms(int irw,rwfact_t rwfact,int ifl,int nsrc,
+                        int irp1,int irp2,int nfct,double *mu,int *np,
+                        int *isp)
   Sets the parameters in the reweighting factor parameter set number
   irw and returns a structure containing them (see the notes).
 
@@ -615,7 +744,7 @@ void read_rw_parms(int irw)
     rwfact   <rwfact_t>
     im0      <int>
     nsrc     <int>
-    irp      <int>
+    irp      <int> [<int>]
     mu       <double> [<double>]
     np       <int> [<int>]
     isp      <int> [<int>]
@@ -623,7 +752,7 @@ void read_rw_parms(int irw)
   are then read using read_line() [utils/mutils.c] and the data are
   added to the data base by calling set_rw_parms(irw,...). Depending
   on the value of "rwfact", some lines are not read and can be omitted
-  in the input file. The number of items on the lines with tag "mu",
+  in the input file. The number of items on the lines with tag "irp", "mu",
   "np" and "isp" depends on the reweighting factor too (see the notes).
 
 void print_rw_parms(void)
@@ -663,6 +792,23 @@ void print_sap_parms(int ipr)
   Prints the SAP parameters to stdout on MPI process 0. Depending
   on whether ipr!=0 or 0, the full information is printed or only
   the block size.
+
+void write_sap_parms(FILE *fdat)
+  Writes the SAP parameters to the file fdat on MPI process 0.
+
+void check_sap_parms(FILE *fdat)
+  Compares the SAP parameters with the values stored on the file fdat
+  on MPI process 0, assuming the latter were written to the file by
+  the program write_sap_parms().
+
+void read_sap_parms(void)
+  On process 0, this program reads the following section from the stdin,
+  as explained in more details in doc/parms.pdf
+
+    [SAP]
+    bs        <int> <int> <int> <int>
+
+  After reading the stdin, the SAP parameters are set with 'set_sap_parms'.
 
 sf_parms_t set_sf_parms(double *phi,double *phi_prime)
   Sets the parameters of the boundary fields in the Schroedinger
@@ -742,65 +888,15 @@ void check_solver_parms(FILE *fdat)
   to the file by the program write_solver_parms(). Mismatches of the
   maximal solver iteration number are not considered to be an error.
 
-void check_global_dble(const char fnm[256],int nargs,...)
-  Checks if all variables passed as [...] take the same value in all MPI
-  processes. A number of nargs double arguments is expected instead of
-  [...]. The string fnm is expected to contain the name of the function
-  that calls the test (used in the error message).
+dft_parms_t *dft_parms(int id)
+  Returns the DFT parameter set with the given id. If there is no
+  such parameter set, the program returns NULL.
 
-void check_global_dblearray(const char fnm[256],int size,double *data)
-  Checks if the array data[size] contains the same values in all MPI
-  processes. The string fnm is expected to contain the name of the function
-  that calls the test (used in the error message).
+int set_dft4d_parms(int *idp,int *nx,int csize)
+  Initializes a new instance of a DFT4D parameter set for the Fourier
+  transformation of fields in four dimensions (see the notes). The
+  program returns the id of the parameter set in the data base.
 
-void check_global_int(const char fnm[256],int nargs,...)
-  Checks if all variables passed as [...] take the same value in all MPI
-  processes. A number of nargs int arguments is expected instead of [...].
-  The string fnm is expected to contain the name of the function that calls
-  the test (used in the error message).
-
-void check_global_intarray(const char fnm[256],int size,int *data)
-  Checks if the array data[size] contains the same values in all MPI
-  processes. The string fnm is expected to contain the name of the function
-  that calls the test (used in the error message).
-
-void write_little_dble(FILE *fdat,int nargs,...)
-  Writes the variables passed as [...] in the fdat file in little endian.
-  A number of nargs double arguments is expected instead of [...].
-
-void write_little_int(FILE *fdat,int nargs,...)
-  Writes the variables passed as [...] in the fdat file in little endian.
-  A number of nargs int arguments is expected instead of [...].
-
-void write_little_dblearray(FILE *fdat,int size,double *data)
-  Writes the array data[size] in the fdat file in little endian.
-
-void write_little_intarray(FILE *fdat,int size,int *data)
-  Writes the array data[size] in the fdat file in little endian.
-
-void check_fpar_dble(const char fnm[256],FILE *fdat,int nargs,...)
-  Reads the next nargs double values from the file fdat and checks that
-  they match the values of the variables passed as [...]. A number of nargs
-  double arguments is expected instead of [...]. The string fnm is expected
-  to contain the name of the function that calls the test (used in the error
-  message).
-
-void check_fpar_int(const char fnm[256],FILE *fdat,int nargs,...)
-  Reads the next nargs int values from the file fdat and checks that
-  they match the values of the variables passed as [...]. A number of nargs
-  double arguments is expected instead of [...]. The string fnm is expected
-  to contain the name of the function that calls the test (used in the error
-  message).
-
-void check_fpar_dblearray(const char fnm[256],FILE *fdat,int size,
-                          double *data)
-  Reads the next size double values from the file fdat and checks that
-  they match the values of the array data[size]. The string fnm is expected
-  to contain the name of the function that calls the test (used in the error
-  message).
-
-void check_fpar_intarray(const char fnm[256],FILE *fdat,int size,int *data)
-  Reads the next size int values from the file fdat and checks that
-  they match the values of the array data[size]. The string fnm is expected
-  to contain the name of the function that calls the test (used in the error
-  message).
+dft4d_parms_t *dft4d_parms(int id)
+  Returns the DFT4D parameter set with the given id. If there is no
+  such parameter set, the program returns NULL.

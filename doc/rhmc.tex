@@ -1,0 +1,584 @@
+\documentclass[11pt,fleqn]{article}
+
+\usepackage[left=34mm,right=34mm,top=45mm,bottom=60mm,centering]{geometry}
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{mathtools}
+\usepackage{bm}
+\usepackage{framed}
+\usepackage{hyperref}
+
+\usepackage{tikz} 
+\usetikzlibrary{arrows}
+
+\usepackage{sectsty}
+\sectionfont{\sffamily\normalsize}
+\subsectionfont{\normalfont\itshape\sffamily\normalsize}
+\chapterfont{\sffamily}
+
+\newtheorem{definition}{Definition}
+
+\newcommand{\tr}{\mathrm{tr}\,}
+\newcommand{\Tr}{\mathrm{Tr}\,}
+\renewcommand{\vec}[1]{\mathbf{#1}}
+\renewcommand{\overline}[1]{\bar{#1}}
+\renewcommand{\Re}[0]{\operatorname{Re}}
+\renewcommand{\Im}[0]{\operatorname{Im}}
+\renewcommand{\d}{\mathrm{d}}
+
+\newcommand{\Rmu}{R}
+\newcommand{\R}{\tilde{R}}
+
+
+
+\setlength\parindent{0pt}
+\setlength{\parskip}{4mm plus2mm minus2mm}
+
+
+\usepackage{tocloft}
+\renewcommand{\cfttoctitlefont}{\sffamily\bfseries\large}
+%\renewcommand{\cftchapfont}{\scshape}
+
+\renewcommand{\cftsecfont}{\normalsize\sffamily}
+%\renewcommand{\cftsecleader}{\hfill}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsecpagefont}{\cftsecfont}
+
+\renewcommand{\cftsubsecfont}{\small\sffamily}
+\renewcommand{\cftsubsecleader}{\hfill}
+\renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsubsecpagefont}{\cftsubsecfont}
+
+
+\begin{document}
+
+\vspace*{20mm}
+
+{
+\sffamily
+\huge
+\textbf{RHMC algorithm in \texttt{openQ*D}}
+\\
+\rule{\textwidth}{1pt}
+\\[2mm]
+\large
+Agostino Patella, RC$^*$ collaboration
+\hfill
+October 2017
+\\[10mm]
+\normalsize
+with excerpts from: M. L\"uscher, \textit{Charm and strange quark in openQCD simulations}, Feb 2012, \texttt{doc/openQCD-1.6/rhmc.pdf}
+}
+
+\vspace{30mm}
+
+%\FloatBarrier
+
+\tableofcontents
+
+\pagebreak
+
+
+\section{Introduction}
+
+Let $D$ be the Dirac operator for some choice of parameters. Each degenerate quark multiplet contributes to the gauge-field probability distribution with a factor of the type
+\begin{gather}
+   | \det D |^{2\alpha} = \det (D^\dag D)^{\alpha} \ ,
+\end{gather}
+where $\alpha$ is a positive number. Three values of $\alpha$ are useful in typical simulations with the \texttt{openQ*D} code.
+\begin{itemize}
+   \item $\alpha=1$: for the up/down doublet in isosymmetric simulations with periodic boundary conditions in space.
+   \item $\alpha=1/2$: for the strange and charm quarks in isosymmetric simulations with periodic boundary conditions in space; for the up/down doublet in isosymmetric simulations with C$^\star$ boundary conditions in space.
+   \item $\alpha=1/4$: for all quarks in simulations with isospin-breaking correction (QCD+QED) with C$^\star$ boundary conditions in space.
+\end{itemize}
+In the case $\alpha=1$ the HMC algorithm can be used, in the other two cases the RHMC algorithm must be used.
+
+
+\section{Quark determinant}
+
+The RHMC algorithm implemented in the \texttt{openQ*D} code makes use of even-odd preconditioning, i.e. of the decomposition
+\begin{gather}
+   \det D = \det ( \mathbf{1}_\text{e} + D_\text{oo} ) \, \det \hat{D} \ ,
+   \label{eq:fact1}
+\end{gather}
+where the notation of ref.~\cite{openQCD:dirac} is followed. In short, $D$ is the Dirac operator, $D_\text{oo}$ is the odd-odd part of the Dirac operator, $\hat{D}$ is the even-odd preconditioned Dirac operator, and $\mathbf{1}_\text{e}$ is the projector over the space of spinor fields with support on the even sites.
+
+
+
+The first determinant in the r.h.s. of eq.~\eqref{eq:fact1} is referred to as \textit{small determinant}. The $D_\text{oo}$ matrix is diagonal in coordinate space, i.e.
+\begin{gather}
+   D_\text{oo}(x,y) = (\mathbf{1}_\text{o})_{xy} M(x) \ ,
+\end{gather}
+where $M(x)$ is a matrix in spin and color space, and $\mathbf{1}_\text{o}$ is the projector over the space of spinor fields with support on the odd sites. It turns out that $M(x)$ is positive if the gauge field tensors are close enough to zero (i.e. close enough to the continuum limit). Therefore one can write
+\begin{gather}
+   \ln \det ( \mathbf{1}_\text{e} + D_\text{oo} ) = \sum_{x \text{ odd}} \ln \det M(x) = - S_\text{sdet} \ .
+   \label{eq:Ssdet}
+\end{gather}
+It is worth to stress that the determinant in $\det M(x)$ is taken in spin and color space only, therefore the action $S_\text{sdet}$ and the associated forces can be calculated exactly. Details on the implementation of the small-determinant action and force are given in ref.~\cite{openQCD:forces}.
+
+A generic power of the determinant of $D$ can be represented as
+\begin{gather}
+   | \det D |^{2\alpha} = e^{- 2 \alpha S_\text{sdet}} \det (\hat{D}^\dag \hat{D})^\alpha \ .
+   \label{eq:fact2}
+\end{gather}
+The non-integer power of $\hat{D}^\dag \hat{D}$ is dealt with by means of a rational approximation. Also, in order to suppress configurations with exceptionally small eigenvalues of $\hat{D}$, the \texttt{openQ*D} code allows for twisted-mass preconditioning. In practice this means that a fictitious twisted-mass parameter $\hat{\mu}$ is introduced, and a rational approximation $\Rmu$ for $( \hat{D}^\dag \hat{D} + \hat{\mu}^2 )^{-\alpha}$ is considered. The quark determinant in eq.~\eqref{eq:fact2} can be written as
+\begin{gather}
+   | \det D |^{2\alpha}
+   =
+   W \ e^{- 2 \alpha S_\text{sdet}} \ \det \Rmu^{-1} \ ,
+   \label{eq:fact3}
+   \\
+   W = \det [ ( \hat{D}^\dag \hat{D})^\alpha \Rmu ]
+   \ , \label{eq:W}
+   \\
+   \Rmu \simeq ( \hat{D}^\dag \hat{D} + \hat{\mu}^2 )^{-\alpha}
+   \ .
+\end{gather}
+The \texttt{openQ*D} code simulates the probability distribution \textit{without} $W$ which has to be separately calculated and included as a reweighting factor.
+
+
+\section{Rational approximation}
+\label{sec:ratapprox}
+
+It is convenient to introduce the hermitian operator $\hat{Q}=\gamma_5 \hat{D}$, in terms of which $\hat{D}^\dag \hat{D} = \hat{Q}^2$. Let us assume that the spectrum of $|\hat{Q}|$ is contained in the interval $[r_a,r_b]$, and let us choose an integer $n$. A rational function of order $[n,n]$ in $q^2$ has the form
+\begin{gather}
+   \rho(q^2) = A \prod_{j=1}^n \frac{q^2 + \nu_j^2}{q^2 + \mu_j^2} \ .
+   \label{eq:ratfunc}
+\end{gather}
+Without loss of generality one can assume
+\begin{gather}
+   \nu_1 > \nu_2 > \dots > \nu_n \ , \qquad
+   \mu_1 > \mu_2 > \dots > \mu_n \ .
+\end{gather}
+
+Let us choose $\rho(q^2)$ to be the optimal rational approximation of order $[n,n]$ of the function $(q^2 + \hat{\mu}^2)^{-\alpha}$ in the domain $q \in [r_a,r_b]$, i.e. the rational function of the form~\eqref{eq:ratfunc} which minimizes the uniform relative error
+\begin{gather}
+   \delta = \max_{q \in [r_a,r_b]} | 1 - (q^2 + \hat{\mu}^2)^{\alpha} \rho(q^2) |
+   \ .
+   \label{eq:error}
+\end{gather}
+The optimal rational approximation can be calculated with the \texttt{MinMax} code (in the \texttt{minmax} directory of the \texttt{openQ*D} code) which implements the minmax approximation algorithm in multiple precision. As explained in ref.~\cite{parms}, the output of the \texttt{MinMax} code can be cut and paste in an input file for the \texttt{openQ*D} code.
+
+If $\rho(q^2)$ is the desired optimal rational approximation, the operator $\Rmu$ which appears in eq.~\eqref{eq:fact3} is defined simply as
+\begin{gather}
+   \Rmu = \rho(\hat{Q}^2) = \rho(\hat{D}^\dag \hat{D}) =
+   A \prod_{j=1}^n \frac{\hat{D}^\dag \hat{D} + \nu_j^2}{\hat{D}^\dag \hat{D} + \mu_j^2}
+   \ .
+\end{gather}
+Eq.~\eqref{eq:error} implies the following norm bound
+\begin{gather}
+   \| 1 - (\hat{D}^\dag \hat{D} + \hat{\mu}^2)^{\alpha} \Rmu \| \le \delta \ .
+   \label{eq:normbound}
+\end{gather}
+
+
+
+\section{Frequency splitting and pseudofermion action}
+
+The rational approximation constructed in section~\ref{sec:ratapprox} can be broken up in factors of the form
+\begin{gather}
+   P_{k,l} = \prod_{j=k}^l \frac{\hat{D}^\dag \hat{D} + \nu_j^2}{\hat{D}^\dag \hat{D} + \mu_j^2} \ .
+   \label{eq:Pfactor}
+\end{gather}
+
+If $n = 12$, for example, a possible factorization is 
+\begin{gather}
+   \Rmu = A P_{1,5} P_{6,9} P_{10,12} \ .
+\end{gather}
+The contribution of $\Rmu$ to the quark determinant is
+\begin{gather}
+   \det \Rmu^{-1} = \text{constant} \times \det P_{1,5}^{-1} \ \det P_{6,9}^{-1} \ \det P_{10,12}^{-1} \ .
+\end{gather}
+In practice this decomposition achieves a frequency splitting similar to the Hasenbusch decomposition for the HMC algorithm.
+
+Each $P_{k,l}^{-1}$ determinant is simulated as usual by adding a pseudofermion action of the form
+\begin{gather}
+   S_{\text{pf},k,l} = ( \phi^{k,l}_\text{e} , P_{k,l} \phi^{k,l}_\text{e} ) \ ,
+   \label{eq:Spf}
+\end{gather}
+where the fields $\phi^{k,l}_\text{e}$ are independent pseudofermions that live on the even sites of the lattice. By using a partial fraction decomposition
+\begin{gather}
+   P_{k,l}
+   =
+   1 + \sum_{j=k}^l \frac{\sigma_j}{\hat{D}^\dag \hat{D} + \mu_j^2}
+   \ , \\
+   \sigma_j = (\nu_j^2 - \mu_j^2) \prod_{\substack{m=l,\dots,k\\m \neq j}} \frac{\nu_m^2-\mu_j^2}{\mu_m^2-\mu_j^2}
+   \ ,
+\end{gather}
+the pseudofermion action in eq.~\eqref{eq:Spf} is cast into a sum of terms formally identical to the action of an HMC with twisted mass
+\begin{gather}
+   S_{\text{pf},k,l} = ( \phi^{k,l}_\text{e} , \phi^{k,l}_\text{e} ) 
+   + \sum_{j=k}^l \sigma_j \ ( \phi^{k,l}_\text{e}, (\hat{D}^\dag \hat{D} + \mu_j^2)^{-1} \phi^{k,l}_\text{e} )
+   = \nonumber \\ \quad =
+   \| \phi^{k,l}_\text{e} \|^2
+   + \sum_{j=k}^l \sigma_j \ \| (\hat{D} + i \gamma_5 \mu_j)^{-1} \gamma_5 \phi^{k,l}_\text{e} \|^2
+   = \nonumber \\ \quad =
+   \| \phi^{k,l}_\text{e} \|^2
+   + \sum_{j=k}^l \sigma_j \ \| \mathbf{1}_e (D + i \gamma_5 \mu_j \mathbf{1}_e)^{-1} \gamma_5 \phi^{k,l}_\text{e} \|^2
+   \ ,
+   \label{eq:Spf2}
+\end{gather}
+where the following identities has been used
+\begin{gather}
+   \hat{D}^\dag \hat{D} + \mu_j^2 = \gamma_5 (\hat{D} + i \gamma_5 \mu_j) (\hat{D} + i \gamma_5 \mu_j)^\dag \gamma_5 \ , \\
+   (\hat{D} + i \gamma_5 \mu_j^2)^{-1} = \mathbf{1}_e (D + i \gamma_5 \mu_j^2 \mathbf{1}_e)^{-1} \mathbf{1}_e \ .
+\end{gather}
+
+
+
+\section{Molecular dynamics}
+
+No C$^\star$ boundary conditions are assumed in this section. If C$^\star$ boundary conditions are used, the molecular-dynamics Hamiltonian and equations need to be modified because of the orbifold construction as explained in \cite{cstar}. However the expressions of the molecular-dynamics forces are the same with or without C$^\star$ boundary conditions.
+
+The momentum fields associated to the SU(3) and U(1) gauge fields are denoted by $\Pi(x,\mu)$ and $\pi(x,\mu)$ respectively. The momentum $\Pi(x,\mu)$ lives in the Lie algebra of SU(3),
+\begin{gather}
+   \Pi(x,\mu) = \Pi^a(x,\mu) T^a \ ,
+\end{gather}
+where $\Pi^a(x,\mu)$ are taken to be real. The momentum field $\pi(x,\mu)$ is taken to be real, like the gauge field $A(x,\mu)$. The molecular-dynamics Hamiltonian is
+\begin{gather}
+   H = \frac{1}{2} \sum_{x,\mu} \bigg\{ [\pi(x,\mu)]^2 + \sum_a [\Pi^a(x,\mu)]^2 \bigg\} + S(U,A) \ ,
+   \label{eq:hamiltonian}
+\end{gather}
+where the total action is the sum of the gauge actions, terms of the type in eq.~\eqref{eq:Spf2}, and the effective action for the small determinant given in eq.~\eqref{eq:Ssdet}.
+
+The evolution equations generated by the Hamiltonian~\eqref{eq:hamiltonian}
+\begin{subequations}
+   \label{eq:MD}
+   \begin{alignat}{2}
+      &
+      \partial_t U(x,\mu) = \Pi(x,\mu) U(x,\mu) \ ,
+      &&
+      \partial_t \Pi(x,\mu) = F(x,\mu) \ ,
+      \\
+      & 
+      \partial_t A(x,\mu) = \pi(x,\mu) \ ,
+      & \qquad &
+      \partial_t \pi(x,\mu) = f(x,\mu) \ ,
+   \end{alignat}
+\end{subequations}
+where the forces are defined as
+\begin{subequations}
+   \label{eq:force}
+   \begin{gather}
+      F(x,\mu) = - \partial_{U(x,\mu)} S(U,A) \ ,
+      \label{eq:forceSU3} \\
+      f(x,\mu) = - \partial_{A(x,\mu)} S(U,A) \ .
+      \label{eq:forceU1}
+   \end{gather}
+\end{subequations}
+The forces can be split in different contributions, accordingly to the action splitting. The gauge action and forces are discussed in~\cite{gauge_action,openQCD:gauge_action}.
+
+
+
+\subsection{Forces}
+
+The forces associated to the pseudofermion action in eq.~\eqref{eq:Spf2} has the following form
+\begin{gather}
+   F_{k,l}^a(x,\mu)
+   =
+   - \partial_{U(x,\mu)}^a S_{\text{pf},k,l}
+   =
+   2 \sum_{j=k}^l \sigma_j \, \Re ( \chi^{k,l}_j , \gamma_5 \partial_{U(x,\mu)}^a D \, \psi^{k,l}_j )
+   \ , \\
+   f_{k,l}^a(x,\mu)
+   =
+   - \partial_{A(x,\mu)} S_{\text{pf},k,l}
+   =
+   2 \sum_{j=k}^l \sigma_j \, \Re ( \chi^{k,l}_j , \gamma_5 \partial_{A(x,\mu)} D \, \psi^{k,l}_j )
+   \ ,
+\end{gather}
+with the definitions
+\begin{gather}
+   \psi^{k,l}_j = (D + i \gamma_5 \mu_j \mathbf{1}_e)^{-1} \gamma_5 \phi^{k,l}_\text{e} \ , \\
+   \chi^{k,l}_j = (D - i \gamma_5 \mu_j \mathbf{1}_e)^{-1} \gamma_5 \mathbf{1}_e \psi^{k,l}_j \ .
+\end{gather}
+The calculation of the fields $\psi^{k,l}$ and $\chi^{k,l}$ requires the Dirac equation to be solved $2(l-k+1)$ times. If the physical and twisted mass are small enough, it may be convenient to use highly optimized single-shift solvers. Otherwise the previous equations can be recast into the following scheme
+\begin{gather}
+   \chi^{k,l}_{j,\text{e}} = ( \hat{D}^\dag \hat{D} + \mu_j^2 )^{-1} \psi^{k,l} \ , \\
+   \chi^{k,l}_{j,\text{o}} = - D_\text{oo}^{-1} D_\text{oe} \chi^{k,l}_{j,\text{e}} \ , \\
+   \psi^{k,l}_{j,\text{e}} = \gamma_5 (\hat{D} - i \gamma_5 \mu_j) \chi^{k,l}_{j,\text{e}} \ , \\
+   \psi^{k,l}_{j,\text{o}} = - D_\text{oo}^{-1} D_\text{oe} \psi^{k,l}_{j,\text{e}} \ .
+\end{gather}
+In this case the $\chi^{k,l}_{j,\text{e}}$ fields can be calculated by means of a multi-shift conjugate gradient solver (while the other fields do not require to solve the Dirac equation).
+
+In the following the $j,k,l$ indices will be suppressed, and so the $\sigma_j$ prefactor. Each force can be split in the sum of two terms. The SU(3) and U(1) hopping forces
+\begin{gather}
+   F_\text{hop}^a(x,\mu)
+   =
+   2 \Re ( \chi, \gamma_5 \partial_{U(x,\mu)}^a (D_\text{eo} + D_\text{oe}) \, \psi )
+   = \nonumber \\ \qquad \qquad =
+   \Re \text{tr}_\text{color} \, \{ e^{i \hat{q} A(x,\mu)} T^a U(x,\mu) X_\mu(x) \}
+   \ , \\
+   f_\text{hop}(x,\mu)
+   =
+   2 \Re ( \chi, \gamma_5 \partial_{A(x,\mu)} (D_\text{eo} + D_\text{oe}) \, \psi )
+   = \nonumber \\ \qquad \qquad =
+   \hat{q} \Re \text{tr}_\text{color} \, \{ i e^{i \hat{q} A(x,\mu)} U(x,\mu) X_\mu(x) \}
+   \ ,
+\end{gather}
+are written in terms of the vector field
+\begin{gather}
+   X_\mu(x) = \text{tr}_\text{spin} \, \{ \gamma_5 (1-\gamma_\mu) \psi(x+\hat{\mu}) \chi(x)^\dag + \gamma_5 (1-\gamma_\mu) \chi(x+\hat{\mu}) \psi(x)^\dag \} \ .
+\end{gather}
+The SU(3) and U(1) Sheikholeslami–Wohlert (SW) forces
+\begin{gather}
+   F_\text{sw}^a(x,\mu)
+   =
+   2 \Re ( \chi, \gamma_5 \partial_{U(x,\mu)}^a (D_\text{ee} + D_\text{oo}) \, \psi )
+   = \nonumber \\ \qquad \qquad =
+   \frac{c^\text{SU(3)}_\text{sw}}{4} \sum_{y\nu\rho} \Re \text{tr}_\text{color} \, \{ X_{\nu\rho}(y) \partial_{U(x,\mu)}^a \widehat{F}_{\nu\rho}(y) \}
+   \ , \\
+   f_\text{sw}(x,\mu)
+   =
+   2 \Re ( \chi, \gamma_5 \partial_{A(x,\mu)} (D_\text{ee} + D_\text{oo}) \, \psi )
+   = \nonumber \\ \qquad \qquad =
+   \frac{q\, c^\text{U(1)}_\text{sw}}{4} \sum_{y\nu\rho} \Re \text{tr}_\text{color} \, \{ X_{\nu\rho}(y) \partial_{A(x,\mu)} \widehat{A}_{\nu\rho}(y) \}
+   \ ,
+\end{gather}
+are written in terms of the tensor field
+\begin{gather}
+   X_{\mu\nu}(x) = i \text{tr}_\text{spin} \, \{ \gamma_5 \sigma_{\mu\nu} \psi(x) \chi(x)^\dag + \gamma_5 \sigma_{\mu\nu} \chi(x) \psi(x)^\dag \}
+   \ .
+\end{gather}
+The exact formula for the derivative of the SU(3) field tensor $\widehat{F}_{\nu\rho}$ with respect to the gauge field can be found in~\cite{openQCD:forces}. The derivative of the U(1) field tensor $\widehat{A}_{\nu\rho}$ with respect to the gauge field is a trivial generalization.
+
+The forces associated to the small-determinant action~\eqref{eq:Ssdet} are
+\begin{gather}
+   F_\text{sdet}^a(x,\mu)
+   =
+   - \partial_{U(x,\mu)}^a S_\text{sdet}
+   =
+   \sum_{y \text{ odd}} \tr \{ M(y)^{-1} \partial_{U(x,\mu)}^a M(y) \}
+   = \nonumber \\ \qquad \qquad =
+   \frac{i c^\text{SU(3)}}{4} \sum_{y \text{ odd}} \sum_{\nu\rho} \tr \{ M(y)^{-1} \sigma_{\nu\rho} \partial_{U(x,\mu)}^a \widehat{F}_{\nu\rho}(y) \}
+   \ , \\
+   f_\text{sdet}(x,\mu)
+   =
+   - \partial_{A(x,\mu)} S_\text{sdet}
+   =
+   \sum_{y \text{ odd}} \tr \{ M(y)^{-1} \partial_{A(x,\mu)} M(y) \}
+   = \nonumber \\ \qquad \qquad =
+   \frac{i q\, c^\text{U(1)}}{4} \sum_{y \text{ odd}} \sum_{\nu\rho} \tr \{ M(y)^{-1} \sigma_{\nu\rho} \partial_{A(x,\mu)} \widehat{A}_{\nu\rho}(y) \}
+   \ .
+\end{gather}
+
+
+
+
+
+\subsection{Pseudofermion field generation}
+
+At the beginning of the molecular-dynamics trajectories, the pseudo-fermion fields must be chosen randomly with the proper distribution. In order to do so, one can use the identities
+\begin{gather}
+   P_{k,l}
+   =
+   \prod_{j=k}^l \frac{\hat{Q}^2 + \nu_j^2}{\hat{Q}^2 + \mu_j^2}
+   =
+   \prod_{j=k}^l \frac{(\hat{Q} - i \nu_j)(\hat{Q} + i \nu_j)}{(\hat{Q} - i\mu_j)(\hat{Q} + i\mu_j)}
+   =
+   (A_{k,l}^{-1})^\dag A_{k,l}^{-1}
+   \ , \\
+   A_{k,l}
+   =
+   \prod_{j=k}^l \frac{\hat{Q} + i \mu_j}{\hat{Q} + i \nu_j}
+   \label{eq:Afactor}
+   \ , \\
+   S_{\text{pf},k,l} = \| A_{k,l}^{-1} \phi^{k,l}_\text{e} \|^2 \ .
+   \label{eq:Spf3}
+\end{gather}
+Therefore the correct distribution for the pseudofermion fields is obtained by generating the fields $\eta^{k,l}_\text{e}$ randomly with normal distribution and by setting
+\begin{gather}
+   \phi^{k,l}_\text{e} = A_{k,l} \eta^{k,l}_\text{e} \ .
+\end{gather}
+In practice one uses a partial fraction decomposition
+\begin{gather}
+   A_{k,l} = 1 + i \sum_{j=k}^l \frac{\tau_j}{\hat{Q} + i \nu_j}
+   \ , \\
+   \tau_j = (\mu_j^2 - \nu_j^2) \prod_{\substack{m=l,\dots,k\\m \neq j}} \frac{\mu_m-\nu_j}{\nu_m-\nu_j}
+   \ .
+\end{gather}
+The application of $A_{k,l}$ to the source field $\eta^{k,l}_\text{e}$ amounts to solving the Dirac equation $l−k+1$ times. The multi-shift CG solver can be used here for the simultaneous solution of these equations, but in the case of the few smallest masses $\nu_j$ the use of a highly efficient single-shift solver may be preferable.
+
+
+
+
+\section{Reweighting factors}
+
+Let $\R$ and $\Rmu$ be the optimal rational approximations of order $[n,n]$ for $(\hat{D}^\dag \hat{D})^{-\alpha}$ and $(\hat{D}^\dag \hat{D} + \hat{\mu}^2)^{-\alpha}$ respectively. It is assumed that the relative errors of the two rational approximations are not greater than $\delta$ in the common spectral range $[r_a,r_b]$.
+
+The reweighting factor $W$ defined in eq.~\eqref{eq:W} is decomposed in two factors which are calculated separately, i.e.
+\begin{gather}
+   W = W_\text{rat} W_\text{rtm} \ , \\
+   W_\text{rat} = \det [ (\hat{D}^\dag \hat{D})^{\alpha} \R ] \ ,
+   \label{eq:Wrat} \\
+   W_\text{rtm} = \det [ \R^{-1} \Rmu ]
+   \label{eq:Wtm} \ .
+\end{gather}
+
+
+\subsection{Reweighting factor $W_\text{rat}$}
+
+In the calculation of the reweighting factor $W_\text{rat}$ in eq.~\eqref{eq:Wrat}, it is assumed that the exponent $\alpha$ is a positive rational number of the form
+\begin{gather}
+   \alpha = \frac{u}{v} \ ,
+\end{gather}
+where $u$ and $v$ are natural numbers. The reweighting factor can be represented as
+\begin{gather}
+   W_\text{rat} = \det [ \hat{Q}^{2u} \R^v ]^{\frac{1}{v}}
+   =
+   \det (1 + Z)^{\frac{1}{v}} \ ,
+   \label{eq:Wrat2}
+\end{gather}
+where the operator $Z$ is defined as
+\begin{gather}
+   Z = \hat{Q}^{2u} \R^v - 1 \ .
+\end{gather}
+The determinant in eq.~\eqref{eq:Wrat2} is estimated stochastically
+\begin{gather}
+   W_\text{rat} = \lim_{N \to \infty} \frac{1}{N} \sum_{j=1}^N \exp \{ - ( \eta^j_\text{e} , [ (1 + Z)^{-\frac{1}{v}} - 1 ] \eta^j_\text{e} ) \}
+   \ ,
+   \label{eq:Wrat3}
+\end{gather}
+where the fields $\eta^j_\text{e}$ are $N$ independent normally-distributed pseudofermions that live on the even sites of the lattice. From the norm bound in eq.~\eqref{eq:normbound} for $\hat{\mu}=0$, and the positivity of $\R$ (which is guaranteed if the relative error $\delta$ is small enough), it follows that
+\begin{gather}
+   0 \le 1+Z = \hat{Q}^{2u} \R^v = [ \hat{Q}^{2\alpha} \R]^v \le (1 + \delta)^v \ ,
+\end{gather}
+which yields the norm bound
+\begin{gather}
+   \| Z \| \le \Delta = (1 + \delta)^v - 1 = v \delta + O(\delta^2) \ .
+   \label{eq:normbound2}
+\end{gather}
+Therefore the Taylor series
+\begin{gather}
+   (1 + Z)^{-\frac{1}{v}} = 1 + \sum_{n=1}^\infty c_{v,n} \, Z^n \ , \\
+   c_{v,n} = (-1)^n \frac{\tfrac{1}{v} (\tfrac{1}{v}+1) \cdots (\tfrac{1}{v} + n - 1)}{n!}
+\end{gather}
+converges rapidly in operator norm. The exponent in eq.~\eqref{eq:Wrat3} can be estimated from the first few terms of
+\begin{gather}
+   ( \eta^j_\text{e} , [ (1 + Z)^{-\frac{1}{v}} - 1 ] \eta^j_\text{e} ) = \sum_{n=1}^\infty
+   c_{v,n} \, ( \eta^j_\text{e} , Z^n \eta^j_\text{e} )  \ .
+\end{gather}
+It is possible to estimate the size of these terms by noting that $\| \eta^j_\text{e} \|^2$ is very nearly equal to 12 times the number $N_\text{e}$ of even lattice points. Taking the bound~\eqref{eq:normbound2} into account, the following estimate is obtained
+\begin{gather}
+   | ( \eta^j_\text{e} , Z^n \eta^j_\text{e} ) | \le \| Z \|^n \, \| \eta^j_\text{e} \|^2
+   \le
+   \Delta^n \| \eta^j_\text{e} \|^2
+   \simeq
+   12 (v \delta)^n N_\text{e}
+   \ .
+\end{gather}
+
+The statistical fluctuations of the exponents in eq.~\eqref{eq:Wrat3} derive from those of the gauge field and those of the random sources $\eta^j_\text{e}$. For a given gauge field, the variance of the exponent is equal to
+\begin{gather}
+   \tr \{ [ (1 + Z)^{-\frac{1}{v}} - 1 ]^2 \}
+   =
+   \frac{1}{v^2} \tr Z^2 + O(\delta^3)
+   \le
+   12 N_\text{e} \delta^2 + O(\delta^3) \ .
+\end{gather}
+These fluctuations are guaranteed to be small if, for instance, $12 N_\text{e} \delta^2 \le 10^{−4}$. One can then just as well set $N = 1$ in eq.~\eqref{eq:Wrat3}, i.e. a sufficiently accurate stochastic estimate of $W_\text{rat}$ is obtained in this case with a single random source.
+
+When the stronger constraint $12 N_\text{e} \delta \le 10^{−2}$ is satisfied, the reweighting factor $W_\text{rat}$ deviates from 1 by at most 1\%. Larger approximation errors can however be tolerated in practice as long as the fluctuations of $W_\text{rat}$ remain small.
+
+
+
+\subsection{Reweighting factor $W_\text{rtm}$}
+
+Let us choose a rational approximation $\Rmu$ of order $[n,n]$ for $(\hat{D}^\dag \hat{D} + \hat{\mu}^2)^{-\alpha}$ of the form
+\begin{gather}
+   \Rmu =
+   A \prod_{j=1}^n \frac{\hat{D}^\dag \hat{D} + \nu_j^2}{\hat{D}^\dag \hat{D} + \mu_j^2}
+   \ , \\
+   \nu_1 > \nu_2 > \dots > \nu_n \ , \qquad
+   \mu_1 > \mu_2 > \dots > \mu_n \ ,
+\end{gather}
+and a rational approximation $\R$ of order $[n,n]$ for $(\hat{D}^\dag \hat{D})^{-\alpha}$ of the form
+\begin{gather}
+   \R =
+   \tilde{A} \prod_{j=1}^n \frac{\hat{D}^\dag \hat{D} + \tilde{\nu}_j^2}{\hat{D}^\dag \hat{D} + \tilde{\mu}_j^2}
+   \ , \\
+   \tilde{\nu}_1 > \tilde{\nu}_2 > \dots > \tilde{\nu}_n \ , \qquad
+   \tilde{\mu}_1 > \tilde{\mu}_2 > \dots > \tilde{\mu}_n \ .
+\end{gather}
+Let us rewrite eq.~\eqref{eq:Wtm} as
+\begin{gather}
+   W_\text{rtm} = \det [ \Rmu^{-1} \R ]^{-1} \ .
+\end{gather}
+Notice that the operator $\Rmu^{-1} \R$ is also a rational function of $\hat{Q}^2=\hat{D}^\dag \hat{D}$. It is convenient to break up this rational function in factors of the type
+\begin{gather}
+   \tilde{P}_{k,l} = \prod_{j=k}^l \frac{(\hat{D}^\dag \hat{D} + \mu_j^2)(\hat{D}^\dag \hat{D} + \tilde{\nu}_j^2)}{(\hat{D}^\dag \hat{D} + \nu_j^2)(\hat{D}^\dag \hat{D} + \tilde{\mu}_j^2)} \ .
+\end{gather}
+
+If $n = 12$, for example, the reweighting factor $W_\text{rtm}$ can be factorized as
+\begin{gather}
+   W_\text{rtm} = \text{constant} \times \det \tilde{P}_{1,5}^{-1} \ \det \tilde{P}_{6,9}^{-1} \ \det \tilde{P}_{10,12}^{-1} \ .
+\end{gather}
+Each of the above determinants is estimated stochastically
+\begin{gather}
+   \det \tilde{P}_{k,l}^{-1} = \lim_{N \to \infty} \frac{1}{N} \sum_{j=1}^N \exp \{ - ( \eta^j_\text{e} , [ \tilde{P}_{k,l} - 1 ] \eta^j_\text{e} ) \}
+   \ ,
+\end{gather}
+where the fields $\eta^j_\text{e}$ are $N$ independent normally-distributed pseudofermions that live on the even sites of the lattice. It is useful to consider the partial fraction decomposition
+\begin{gather}
+   \tilde{P}_{k,l}
+   =
+   1 + \sum_{j=k}^l \left( \frac{\sigma_j}{\hat{D}^\dag \hat{D} + \nu_j^2} + \frac{\tilde{\sigma}_j}{\hat{D}^\dag \hat{D} + \tilde{\mu}_j^2} \right)
+   \ , \\
+   \sigma_j =
+   \frac{(\tilde{\nu}_j^2-\nu_j^2)(\mu_j^2-\nu_j^2)}{\tilde{\mu}_j^2-\nu_j^2}
+   \prod_{\substack{m=l,\dots,k\\m \neq j}} \frac{(\tilde{\nu}_m^2-\nu_j^2)(\mu_m^2-\nu_j^2)}{(\tilde{\mu}_m^2-\nu_j^2)(\nu_m^2-\nu_j^2)}
+   \ , \\
+   \tilde{\sigma}_j =
+   \frac{(\tilde{\nu}_j^2-\tilde{\mu}_j^2)(\mu_j^2-\tilde{\mu}_j^2)}{\nu_j^2-\tilde{\mu}_j^2}
+   \prod_{\substack{m=l,\dots,k\\m \neq j}} \frac{(\tilde{\nu}_m^2-\tilde{\mu}_j^2)(\mu_m^2-\tilde{\mu}_j^2)}{(\tilde{\mu}_m^2-\tilde{\mu}_j^2)(\nu_m^2-\tilde{\mu}_j^2)}
+   \ .
+\end{gather}
+Typically $\sigma_j$ and $\tilde{\sigma}_j$ are found to have opposite signs. Also, for small values of $j$, $|\sigma_j|$ and $|\tilde{\sigma}_j|$ are of the same order of magnitude, therefore it is convenient for numerical stability to use the following representation
+\begin{gather}
+   \tilde{P}_{k,l}
+   =
+   1 + \sum_{j=k}^l \frac{(\sigma_j+\tilde{\sigma}_j) (\hat{D}^\dag \hat{D}) + \sigma_j \tilde{\mu}_j^2+\tilde{\sigma}_j \nu_j^2}{(\hat{D}^\dag \hat{D} + \nu_j^2)(\hat{D}^\dag \hat{D} + \tilde{\mu}_j^2)}
+   \ .
+\end{gather}
+
+
+
+\begin{thebibliography}{9}
+
+\bibitem{openQCD:dirac} 
+  M.~Luscher,
+  \textit{Implementation of the lattice Dirac operator}, code documentation,
+  \texttt{doc/openQCD-1.6/dirac.pdf}.
+
+\bibitem{openQCD:forces} 
+  M.~Luscher,
+  \textit{Molecular-dynamics quark forces}, code documentation,
+  \texttt{doc/openQCD-1.6/forces.pdf}.
+
+\bibitem{parms} 
+  A. Patella,
+  \textit{Missing},
+  \texttt{doc/parms.pdf}.
+
+\bibitem{cstar}
+  A. Patella,
+  \textit{C$^\star$ boundary conditions}, code documentation,
+  \texttt{doc/cstar.pdf}.
+
+\bibitem{gauge_action}
+  A. Patella,
+  \textit{Gauge actions}, code documentation,
+  \texttt{doc/gauge\_action.pdf}.
+
+\bibitem{openQCD:gauge_action}
+  M.~Luscher,
+  \textit{Gauge actions in openQCD simulations}, code documentation,
+  \texttt{doc/openQCD-1.6/gauge\_action.pdf}.
+
+
+\end{thebibliography}
+
+\end{document}

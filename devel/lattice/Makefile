@@ -21,7 +21,7 @@ all: rmxeq mkdep mkxeq
 
 MAIN = check1 check2 check3
 
-FLAGS = flags dirac_parms lat_parms dfl_parms parms_utils
+FLAGS = flags dirac_parms lat_parms dfl_parms
 
 LATTICE = bcnds uidx geometry cstar
 
@@ -33,7 +33,7 @@ SU3FCTS = su3prod su3ren cm3x3
 
 UFLDS = plaq_sum shift uflds udcom bstap ud_cstar
 
-UTILS = endian error hsum mutils utils wspace
+UTILS = endian error hsum ioutils mutils utils wspace
 
 MODULES = $(FLAGS) $(LATTICE) $(RANDOM) $(UFLDS) $(SFLDS) $(SU3FCTS) \
           $(UTILS)

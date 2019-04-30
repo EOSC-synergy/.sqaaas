@@ -4,6 +4,7 @@
 * File force2.c
 *
 * Copyright (C) 2011-2013 Stefan Schaefer, Martin Luescher
+*               2019 Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -176,7 +177,7 @@ double setpf2(double mu0,double mu1,int ipf,int isp,int icom,int *status)
       set_sap_parms(sap.bs,sp.isolv,sp.nmr,sp.ncy);
 
       mulg5_dble(VOLUME,phi);
-      dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mu1,phi,psi,status);
+      dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mu1,phi,psi,status);
       mulg5_dble(VOLUME,phi);
 
       error_root((status[0]<0)||(status[1]<0),1,

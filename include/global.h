@@ -45,10 +45,10 @@
 #error : The local lattice sizes must be even and not smaller than 4
 #endif
 
-#if ((NPROC0_BLK<1)||(NBROC0_BLK>NPROC0)||((NPROC0%NPROC0_BLK)!=0)|| \
-     (NPROC1_BLK<1)||(NBROC1_BLK>NPROC1)||((NPROC1%NPROC1_BLK)!=0)|| \
-     (NPROC2_BLK<1)||(NBROC2_BLK>NPROC2)||((NPROC2%NPROC2_BLK)!=0)|| \
-     (NPROC3_BLK<1)||(NBROC3_BLK>NPROC3)||((NPROC3%NPROC3_BLK)!=0))   
+#if ((NPROC0_BLK<1)||(NPROC0_BLK>NPROC0)||((NPROC0%NPROC0_BLK)!=0)|| \
+     (NPROC1_BLK<1)||(NPROC1_BLK>NPROC1)||((NPROC1%NPROC1_BLK)!=0)|| \
+     (NPROC2_BLK<1)||(NPROC2_BLK>NPROC2)||((NPROC2%NPROC2_BLK)!=0)|| \
+     (NPROC3_BLK<1)||(NPROC3_BLK>NPROC3)||((NPROC3%NPROC3_BLK)!=0))
 #error : Improper processor block sizes NPROC0_BLK,..,NPROC3_BLK
 #endif
 

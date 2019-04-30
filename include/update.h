@@ -70,4 +70,7 @@ extern double rwtm2(double mu1,double mu2,int isp,double *sqn,int *status);
 extern double rwtm1eo(double mu1,double mu2,int isp,double *sqn,int *status);
 extern double rwtm2eo(double mu1,double mu2,int isp,double *sqn,int *status);
 
+/* RWRTM_C */
+extern double rwrtm(int irp1,int irp2,int np1,int np2,int isp,double *sqn,int *status);
+
 #endif

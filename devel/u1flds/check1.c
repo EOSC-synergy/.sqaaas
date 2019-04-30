@@ -135,10 +135,12 @@ int main(int argc,char *argv[])
    int iu,ix,ifc,x0,k,ie;
    double d1,d2,dmax1,dmax2;
    double dmax1_all,dmax2_all;
-   double phi[2],phi_prime[2];
+   double su3phi[2],su3phi_prime[2];
+   double u1phi,u1phi_prime;
    double *ad,*adb,*adm;
    complex_dble *u1d,*u1db,*u1dm;
    FILE *flog=NULL;
+   int gs[4]={N0,N1,N2,N3};
 
    MPI_Init(&argc,&argv);
    MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
@@ -173,11 +175,18 @@ int main(int argc,char *argv[])
 
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
-   phi[0]=0.0;
-   phi[1]=0.0;
-   phi_prime[0]=0.0;
-   phi_prime[1]=0.0;
-   set_bc_parms(bc,0,cs,phi,phi_prime);
+   su3phi[0]=0.0;
+   su3phi[1]=0.0;
+   su3phi_prime[0]=0.0;
+   su3phi_prime[1]=0.0;
+   u1phi=0.0;
+   u1phi_prime=0.0;
+   if (cs==0)
+   {
+      u1phi=0.573;
+      u1phi_prime=-1.827;
+   }
+   set_bc_parms(bc,cs,su3phi,su3phi_prime,u1phi,u1phi_prime);
    print_bc_parms();
 
    start_ranlux(0,123456);
@@ -215,10 +224,7 @@ int main(int argc,char *argv[])
       }
       else
       {
-         /*
-         d2=dev_bval_dble(ifc/2,phi,ud);
-         */
-         d2=fabs(*ad);
+         d2=fabs((*ad)-u1phi/gs[ifc/2]);
          if (d2>dmax2)
             dmax2=d2;
       }
@@ -230,10 +236,7 @@ int main(int argc,char *argv[])
 
       for (k=1;k<4;k++)
       {
-         /*
-         d2=dev_bval_dble(k,phi_prime,ud);
-         */
-         d2=fabs(*ad);
+         d2=fabs((*ad)-u1phi_prime/gs[k]);
          ad+=1;
 
          if (d2>dmax2)
@@ -289,13 +292,10 @@ int main(int argc,char *argv[])
       }
       else
       {
-         /*
-         d2=dev_bval_dble(ifc/2,phi,ud);
-         */
-         d2=fabs((*u1d).re-1.0);
+         d2=fabs((*u1d).re-cos(u1phi/gs[ifc/2]));
          if (d2>dmax2)
             dmax2=d2;
-         d2=fabs((*u1d).im);
+         d2=fabs((*u1d).im-sin(u1phi/gs[ifc/2]));
          if (d2>dmax2)
             dmax2=d2;
       }
@@ -307,10 +307,10 @@ int main(int argc,char *argv[])
 
       for (k=1;k<4;k++)
       {
-         d2=fabs((*u1d).re-1.0);
+         d2=fabs((*u1d).re-cos(u1phi_prime/gs[k]));
          if (d2>dmax2)
             dmax2=d2;
-         d2=fabs((*u1d).im);
+         d2=fabs((*u1d).im-sin(u1phi_prime/gs[k]));
          if (d2>dmax2)
             dmax2=d2;
          u1d+=1;
@@ -372,13 +372,10 @@ int main(int argc,char *argv[])
       }
       else
       {
-         /*
-         d2=dev_bval_dble(ifc/2,phi,ud);
-         */
-         d2=fabs((*u1d).re-1.0);
+         d2=fabs((*u1d).re-cos(u1phi/gs[ifc/2]));
          if (d2>dmax2)
             dmax2=d2;
-         d2=fabs((*u1d).im);
+         d2=fabs((*u1d).im-sin(u1phi/gs[ifc/2]));
          if (d2>dmax2)
             dmax2=d2;
       }
@@ -391,11 +388,10 @@ int main(int argc,char *argv[])
 
       for (k=1;k<4;k++)
       {
-         /*d2=dev_bval_dble(k,phi_prime,ud);*/
-         d2=fabs((*u1d).re-1.0);
+         d2=fabs((*u1d).re-cos(u1phi_prime/gs[k]));
          if (d2>dmax2)
             dmax2=d2;
-         d2=fabs((*u1d).im);
+         d2=fabs((*u1d).im-sin(u1phi_prime/gs[k]));
          if (d2>dmax2)
             dmax2=d2;
          u1d+=1;

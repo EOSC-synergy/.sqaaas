@@ -65,6 +65,10 @@ cstar        2                     # Number of spatial directions with
                                    #   1: C* b.c.s in X
                                    #   2: C* b.c.s in XY
                                    #   3: C* b.c.s in XYZ
+u1phi        0.43                  # Boundary values of the U(1) gauge field
+                                   # at time 0
+u1phi'       -1.32                 # Boundary values of the U(1) gauge field
+                                   # at time NPROC0*L0
 
 [U(1) action]
 invqel       6.0                   # Inverse of the elementary charge used in
@@ -165,6 +169,9 @@ See the functions write_file_head() and write_data() in the program file mxw1.c
 for the exact order in which the data are written to the output files. Notice
 that, in case of C* boundary conditions, the densities are summed over the
 physical volume (i.e. half of the lattice).
+
+A simple main program that reads and analyses the data files is included in
+the directory ../devel/nompi/main.
 
 
 BINARY FILE FORMAT

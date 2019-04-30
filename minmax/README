@@ -1,0 +1,258 @@
+Introduction and notation
+-------------------------
+
+MinMax rational approximation
+
+          R^n_{ra rb}(x) = A * { ( x + a_1 )*( x + a_3 ) ... ( x + a_2n-1 ) }
+                             / { ( x + a_2 )*( x + a_4 ) ... ( x + a_2n ) }
+
+of the function
+
+          f(x)= ( x + mu^2 ) ^{p/q},
+
+in the range
+
+          x in [ra^2,rb^2].
+
+By default, the program minmax minimizes the relative error
+
+          delta= max_[ra^2,rb^2]{ |delta(x)| },
+          delta(x)= 1 - R^n_{ra rb}(x)/f(x).
+
+If the option -abs is set, the program minmax minimizes the absolute error
+
+          delta= max_[ra^2,rb^2]{ |delta(x)| },
+          delta(x)= f(x) - R^n_{ra rb}(x).
+
+The MinMax approximation of degree n is obtained by searching for the nodes,
+
+          x_i,  i= 0,...,2n+1,    e_i= delta(x_i).
+
+These are 2n+2 points having the following properties
+
+          x_{i+1} > x_i,     e_i = (-1)^i e_0,    (Chebyshev condition)
+
+and the approximation is such that
+
+          delta <= |e_0|.
+
+The program minmax starts with n=1 (or n=nstart if the -nstart option has been
+set, see below) and generates the rational approximations for all the values of
+n<=n_max, where  n_max is the smallest integer such that
+
+          delta<= goal.
+
+Remarkably, in the case p/q= -1/2 the roots a_i are known analytically in terms
+of elliptic integrals (Zolotarev). In this case the a_i's are real and positive.
+I don't know if for general values of p/q the roots are always real and
+positive, maybe yes because in practice this seems to be the case.
+
+The program assumes that the a_i's are complex numbers. When the roots are real
+and positive, the program defines the following quantities
+
+          nu_i= sqrt( a_{2i+1} ),     mu_i= sqrt( a_{2i+2}),   i= 0, ..., n-1,
+
+          Re{a_k}>0,     Im{a_k}=0,
+
+that are used to generate the openQ*D input files (see below).
+
+A useful observation to save some time is that, by minimizing the *relative*
+error, i.e. when the -abs option is *not* set, one has
+
+          f(x)= ( x + mu^2 ) ^{p/q},    --->    R^n_{ra rb}(x),
+
+          f(x)= ( x + mu^2 )^{-p/q},   --->    1/R^n_{ra rb}(x).
+
+
+Running the Program
+-------------------
+
+To run the program, the command line syntax is
+
+          minmax -p <int> -q <int> -ra <float> -rb <float> -goal <float>
+                 [-mu <float>]
+                 [-abs] [-prec <int>] [-outpath <string>] [-nopen]
+                 [-nstart <int> <float> <float>]
+
+The options have the following meaning:
+
+ -p <p>                      p is an integer, p!=0,  that is used to build the
+                             power f(x)= ( x + mu^2 )^{p/q}
+
+ -q <q>                      q is an integer, q>0,  that is used to build the
+                             power f(x)= ( x + mu^2 )^{p/q}
+
+ -ra <ra>                    ra is a float, ra>0.0,  that defines the range of
+                             the approximation; notice that in the range one has
+                             ra^2, x in [ra^2,rb^2]
+
+ -rb <rb>                    rb is a float, rb>ra,  that defines the range of
+                             the approximation; notice that in the range one has
+                             rb^2, x in [ra^2,rb^2]
+
+ -goal <goal>                goal is a float, the approximation at n=n_max will
+                             have an error delta<= goal
+
+ [-mu <mu>]                  a non-vanishing value of mu can be set by using
+                             this option; by default mu=0
+
+ [-abs]                      by setting this option the program minimizes the
+                             absolute error while, by default, the relative
+                             error is minimized
+
+ [-prec <prec>]              by setting this option one can set the arithmetic
+                             precision used in internal calculations; by default
+                             prec=200; by lowering this number one can possibly
+                             speed-up the calculation if the algorithm remains
+                             stable; by rising this number one can stabilize the
+                             algorithm if it fails to converge
+
+ [-outpath <string>]         by default the results are written in the working
+                             directory; by setting this option one can change
+                             the output path
+
+ [-nopen]                    by default the program writes a series of files,
+                             n<int>.in (see below) to be used as input for the
+                             openQ*D programs; by setting this option these
+                             files are not written
+
+ [-nstart <nstart> <c> <d>]  if this option is set, the iteration will start
+                             from n=nstart, otherwise, from n=1. To choose the
+                             parameters c and d, one can run the program without
+                             the -nsstart option and look into the minmax.log
+                             file. After the first few iterations the program
+                             suggests the values of nstart, c and d by fitting
+                             the error of the nth order approximation according
+                             to delta = exp(-n*c+d)
+
+
+
+Output
+------
+
+In the working dir (or in the outpath if the option -outpath has been set) the
+program creates a directory,
+
+          outpaht/p<p>q<q>mu<mu>ra<ra>rb<rb>/
+
+In this directory the program writes the file
+
+          minmax.log
+
+and, unless the option -nopen has been set, the openQ*D input files
+
+          n<nstart>.in ... n<n_max>.in
+
+The minmax.log file has an header explaining the notation and a section for each
+value of n containing the results. A sample section is
+
+    ----------------------------------------------------------------------
+    n= 2 error <= 1.2e-01
+    ----------------------------------------------------------------------
+
+    A	   3.7600235512532471e-01
+
+    a_1    (   4.3561694339168291e+00,   0.0000000000000000e+00 )
+    a_2    (   8.8997611717716507e-01,   0.0000000000000000e+00 )
+    a_3    (   8.0521621360497946e-03,   0.0000000000000000e+00 )
+    a_4    (   1.6450765060579773e-03,   0.0000000000000000e+00 )
+
+
+    x_0    1.1197237488999999e-04    e_0   1.2041557196823977e-01
+    x_1    8.7516569252295967e-04    e_1  -1.2041557196823977e-01
+    x_2    1.6733129465202758e-02    e_2   1.2041557196823977e-01
+    x_3    4.2831325774848439e-01    e_3  -1.2041557196823977e-01
+    x_4    8.1889453100953453e+00    e_4   1.2041557196823977e-01
+    x_5    6.4000000000000000e+01    e_5  -1.2041557196823977e-01
+
+    ----------------------------------------------------------------------
+
+where a_i are the roots, x_i the nodes and e_i the corresponding errors. The
+e_i's have to satisfy the Chebyshev condition if the program is working
+correctly.
+
+An example of an openQ*D input file is
+
+    power            -1 4                           # p q
+    degree           2                              # n
+    range            0.00000000e+00 8.00000000e+00  # ra rb  NOTE: not ra^2 rb^2
+    mu               1.00000000e-04                 # mu
+    delta            3.6727366613520523e-01         # e_0
+    A                4.80951695997628825285e-01     # A
+    nu[0]            5.97993720597686517770e-01     # nu_i= sqrt(a_{2i+1})
+    mu[0]            1.76346086487129294351e-01     # mu_i= sqrt(a_{2i+2})
+    nu[1]            4.53763666168582012472e-03
+    mu[1]            1.34153896334051172048e-03
+    x[0]             0.00000000000000000000e+00
+    x[1]             6.97085595908008955748e-07
+    x[2]             5.25469531185064704019e-05
+    x[3]             1.21773180108422640622e-02
+    x[4]             9.05124997065750336311e-01
+    x[5]             6.40000000000000000000e+01
+
+
+
+Algorithm
+---------
+
+The program solves the MinMax problem by using the Remes (somethimes spelled
+Remez) second algorithm. A detailed discussion of the Remes algorithm can be
+found in
+
+    Ralston, A. and Wilf, H.S. Mathematical Methods for Digital Computers
+                               (New York: Wiley), 1960, Chapter 13.
+
+together with an explicit implementation.
+
+The Remes algorithm is based on a non-linear set of equations and, for this
+reason, it is notoriously difficult to obtain a stable implementation. Moreover
+the algorithm requires multiple precision arithmetic for essentially any
+function of interest.
+
+Although substantially different, the implementation of the Remes second
+algorithm  used in this program is inspired to the one of Ralston and Wilf.
+
+The program is currently rather slow but stable. There is room for inprovement
+and I hope to be able to optimize the code in future releases.
+
+
+
+Installation
+------------
+
+To install the program one needs the multiple-precision floating point libraries
+
+   gmp.h,                 https://gmplib.org
+
+   mpfr.h, mpf2mpfr.h,    http://www.mpfr.org
+
+Many thanks to the authors of these libraries for their excellent work!!
+
+Once the multiple-precision libraries have been installed, let's say in the path
+/usr/local, at the beginning of the Makefile one has to set
+
+    # compiler and paths
+
+    GCC = gcc
+
+    MPLIBPATH = /usr/local
+
+If the C-compiler is different from gcc one has to change the variable GCC with
+the shell command of the compiler
+
+
+
+Author
+------
+
+The MinMax program has been written by Nazario Tantalo. If a bug is discovered,
+please send a report to: nazario.tantalo@roma2.infn.it
+
+
+
+License
+-------
+
+The software may be used under the terms of the GNU General Public Licence (GPL)
+as published by the Free Software Foundation; either version 2 of the  License,
+or any later version.

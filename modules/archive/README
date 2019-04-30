@@ -27,27 +27,37 @@ List of functions
 void write_cnfg(char *out)
   Writes the lattice sizes, the process grid sizes, the coordinates of the
   calling process, the state of the random number generators, the local
-  plaquette sums and the local double-precision (SU(3)+U(1) or U(1)/SU(3)
+  plaquette sums and the local double-precision (SU(3)xU(1) or U(1)/SU(3)
   only) gauge field to the file "out".
 
-void read_cnfg(char *in)
-  Reads the local double-precision U(1) and/or SU(3) gauge field from the
-  file "in", assuming it was written to the file by the program
-  write_cnfg(). The program then resets the random number generator
-  and checks that the restored field is compatible with the chosen
-  boundary conditions.
+int read_cnfg(char *in)
+  Detects the type of gauge configuration written in the file "in"
+  (i.e. (SU(3)xU(1) or U(1)/SU(3) only). It reads only the gauge fields
+  that are active, as returned by the gauge() program defined in
+  'modules/flags/lat_parms.c'. The program then resets the random number
+  generator and checks that the restored field is compatible with the chosen
+  boundary conditions (see the notes). It returns 1 if "in" contains only
+  the SU(3) field, 2 if "in" contains only the U(1) field, and 3 if "in"
+  contains both. The program assumes that the file "in" was written by the
+  program write_cnfg().
 
 void export_cnfg(char *out)
   Writes the lattice sizes and the global double-precision U(1) and/or SU(3)
   gauge field to the file "out" from process 0 in the universal format
   specified below (see the notes).
 
-void import_cnfg(char *in)
-  Reads the global U(1) and/or SU(3) double-precision gauge field from the
-  file "in" on process 0, assuming the field was written to the file in
-  the universal format. The U(1) and SU(3) fields are periodically extended
-  if needed and the program then checks that the configuration is compatible
-  with the chosen boundary conditions (see the notes).
+int import_cnfg(char *in)
+  Detects the type of gauge configuration written in the file "in"
+  (i.e. (SU(3)xU(1) or U(1)/SU(3) only). It reads only the gauge fields
+  that are active, as returned by the gauge() program defined in
+  'modules/flags/lat_parms.c'. The program then resets the random number
+  generator and checks that the restored field is compatible with the chosen
+  boundary conditions. The U(1) and SU(3) fields are periodically extended
+  if needed (see the notes). It returns 1 if "in" contains only the SU(3)
+  field, 2 if "in" contains only the U(1) field, and 3 if "in" contains
+  both. The program assumes that the file "in" was written by the program
+  export_cnfg() in the universal format, and file "in" is accessed by
+  process 0 only.
 
 void write_sfld(char *out,spinor_dble *sd)
   Writes the lattice sizes, the process grid sizes, the coordinates

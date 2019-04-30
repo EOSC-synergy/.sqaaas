@@ -1,0 +1,233 @@
+\documentclass[11pt,fleqn]{article}
+
+\usepackage[left=34mm,right=34mm,top=45mm,bottom=60mm,centering]{geometry}
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{mathtools}
+\usepackage{bm}
+\usepackage{framed}
+\usepackage{hyperref}
+
+\usepackage{tikz} 
+\usetikzlibrary{arrows}
+
+\usepackage{sectsty}
+\sectionfont{\sffamily\normalsize}
+\subsectionfont{\normalfont\itshape\sffamily\normalsize}
+\chapterfont{\sffamily}
+
+\newtheorem{definition}{Definition}
+
+\newcommand{\tr}{\mathrm{tr}\,}
+\newcommand{\Tr}{\mathrm{Tr}\,}
+\renewcommand{\vec}[1]{\mathbf{#1}}
+\renewcommand{\overline}[1]{\bar{#1}}
+\renewcommand{\Re}[0]{\operatorname{Re}}
+\renewcommand{\Im}[0]{\operatorname{Im}}
+\renewcommand{\d}{\mathrm{d}}
+
+
+\setlength\parindent{0pt}
+\setlength{\parskip}{4mm plus2mm minus2mm}
+
+
+\usepackage{tocloft}
+\renewcommand{\cfttoctitlefont}{\sffamily\bfseries\large}
+%\renewcommand{\cftchapfont}{\scshape}
+
+\renewcommand{\cftsecfont}{\normalsize\sffamily}
+%\renewcommand{\cftsecleader}{\hfill}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsecpagefont}{\cftsecfont}
+
+\renewcommand{\cftsubsecfont}{\small\sffamily}
+\renewcommand{\cftsubsecleader}{\hfill}
+\renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsubsecpagefont}{\cftsubsecfont}
+
+
+\begin{document}
+
+\vspace*{20mm}
+
+{
+\sffamily
+\huge
+\textbf{U(1) Fourier acceleration}
+\\
+\rule{\textwidth}{1pt}
+\\[2mm]
+\large
+Agostino Patella, Nazario Tantalo, RC$^*$ collaboration
+\hfill
+December 2017
+}
+
+\vspace{30mm}
+
+%\FloatBarrier
+
+\tableofcontents
+
+\pagebreak
+
+
+\section{Introduction}
+
+The \texttt{openQ*D} code supports the Fourier acceleration for the U(1) molecular-dynamics equations~\cite{Duane:1986fy}. This feature can be typically enabled by setting to 1 the value of the \texttt{facc} parameter in the \texttt{[HMC parameters]} section in the input file.
+
+
+\section{Molecular dynamics}
+
+The molecular-dynamics Hamiltonian with Fourier acceleration is defined to be
+\begin{gather}
+   H = \frac{1}{2} ( \pi , D^{-1} \pi )_\text{U(1)} + \frac{1}{2} ( \Pi , \Pi )_\text{SU(3)} + S(U,A) \ ,
+\end{gather}
+where $\pi$ and $\Pi$ are the momenta conjugated to $A$ and $U$ respectively. The scalar products are defined as
+\begin{gather}
+   ( \Pi , \Pi )_\text{SU(3)} = \omega_{\text{C}^\star} \sum_{x,\mu,a} [\Pi^a(x,\mu)]^2 \ , \\
+   ( \phi , \phi )_\text{U(1)} = \omega_{\text{C}^\star} \sum_{x,\mu} [\phi(x,\mu)]^2 \ .
+\end{gather}
+The overall weight $\omega_{\text{C}^\star}$ is $1$ if no C$^\star$ boundary conditions are used, and $1/2$ otherwise because of the orbifold construction (see~\cite{cstar} for more details).
+
+The operator $(-D)$ is a discretization of the Laplacian defined with appropriate boundary conditions. If the boundary conditions allow for zero modes, the action of the operator $D$ is set to the identity on the zero mode by hand. The operator $D$ is strictly positive, real and symmetric. The explicit definition of $D$ will be given in sec.~\ref{sec:laplacian}.
+
+In order to generate the momentum field $\pi$ with the correct distribution, one can generate a field $\phi$ with distribution $\propto \exp \{ - \frac{1}{2} ( \phi , \phi )_\text{U(1)} \}$ first, and then define
+\begin{gather}
+   \pi = D^{1/2} \phi \ .
+\end{gather}
+The evolution equation for the U(1) gauge field with Fourier acceleration becomes
+\begin{gather}
+   \partial_t A(x,\mu) = D^{-1} \pi(x,\mu) \ ,
+\end{gather}
+while the other fields are unaffected. The other equations are discussed in detail in~\cite{rhmc}.
+
+
+\section{Laplacian}
+\label{sec:laplacian}
+
+The U(1) momentum is generally represented in momentum space as
+\begin{gather}
+   \pi(x,\mu) = \frac{1}{L^3} \sum_{p_0 \in E_\mu} \sum_{\vec{p} \in \mathcal{P}} e_\mu(p_0,x_0) e^{i \vec{p} \vec{x}} \tilde{\pi}(p,\mu) \ .
+\end{gather}
+The basis functions $e_\mu(p_0,x_0)$ (for fixed $\mu$) are orthogonal with respect to a weighted scalar product
+\begin{gather}
+   \sum_{x_0} w_\mu(x_0) e_\mu^*(p_0,x_0) e_\mu(q_0,x_0) = \delta_{p_0,q_0} \ ,
+\end{gather}
+where the weight $w_\mu(x)$ is taken to be $1/2$ if $x$ belongs to an open boundary (i.e. $x_0=0$ for open and open-SF b.c.s, and $x_0=T-1$ for open b.c.s) and $\mu=1,2,3$. In all other cases $w_\mu(x)$ is taken to be $1$. The relation between $\pi$ and $\tilde{\pi}$ is easily inverted
+\begin{gather}
+   \tilde{\pi}(p,\mu)
+   =
+   \sum_{x} w_\mu(x_0) e_\mu^*(p_0,x_0) e^{-i \vec{p} \vec{x}} \pi(x,\mu) \ .
+\end{gather}
+
+The set $\mathcal{P}$ is given by all spatial momenta $\vec{p} = (p_1,p_2,p_3)$ of the form
+\begin{gather}
+   p_k = \tfrac{\pi}{L_k} (2n_k+c_k) \quad \text{with } n_k=0,\dots,L_k-1 \ ,
+\end{gather}
+where $c_k=0$ if $k$ is a periodic direction and $c_k=1$ if $k$ is a C$^\star$ direction. The sets $E_\mu$ and the eigenfunctions $e_\mu(p_0,x_0)$ depend on the boundary conditions in time. In the following $k=1,2,3$.
+\begin{itemize}
+   \item Open boundary conditions:
+   \begin{gather}
+      E_0 = \frac{\pi}{N_0-1} \{ 1 , \dots , N_0-1 \} \ , \qquad
+      E_k = \frac{\pi}{N_0-1} \{ 0 , \dots , N_0-1 \} \ , \\
+      e_0(p_0,x_0) = \frac{i}{(1+\delta_{p_0,\pi})(N_0-1)} \sin \left[ p_0\left(x_0 + \frac{1}{2} \right) \right] \ , \\
+      e_k(p_0,x_0) = \frac{1}{(1+\delta_{p_0,0}+\delta_{p_0,\pi})(N_0-1)} \cos ( p_0 x_0 ) \ .
+   \end{gather}
+   \item SF boundary conditions:
+   \begin{gather}
+      E_0 = \frac{\pi}{N_0} \{ 0 , \dots , N_0-1 \} \ , \qquad
+      E_k = \frac{\pi}{N_0} \{ 1 , \dots , N_0-1 \} \ , \\
+      e_0(p_0,x_0) = \frac{1}{(1+\delta_{p_0,\pi})N_0} \cos \left[ p_0\left(x_0 + \frac{1}{2} \right) \right] \ , \\
+      e_k(p_0,x_0) = \frac{i}{N_0} \sin ( p_0 x_0 ) \ .
+   \end{gather}
+   \item Open-SF boundary conditions:
+   \begin{gather}
+      E_0 = E_k = \frac{\pi}{N_0} \left( \{ 0 , \dots , N_0-1 \} + \frac{1}{2} \right) \ , \\
+      e_0(p_0,x_0) = \frac{i}{N_0} \sin \left[ p_0\left(x_0 + \frac{1}{2} \right) \right] \ , \\
+      e_k(p_0,x_0) = \frac{1}{N_0} \cos \left[ p_0\left(x_0 + \frac{1}{2} \right) \right] \ .
+   \end{gather}
+   \item Periodic boundary conditions:
+   \begin{gather}
+      E_0 = E_k = \frac{2\pi}{N_0} \{ 0 , \dots , N_0-1 \} \ , \\
+      e_0(p_0,x_0) = e_k(p_0,x_0) = \frac{1}{N_0} \exp ( i p_0 x_0 ) \ .
+   \end{gather}
+\end{itemize}
+
+We use the Fourier decomposition to define the intermediate operator $D_\text{N}$
+\begin{gather}
+   [D_\text{N}\pi](x,\mu) = \frac{1}{L^3} \sum_{p_0 \in E_\mu} \sum_{\vec{p} \in \mathcal{P}} e_\mu(p_0,x_0) e^{i \vec{p} \vec{x}} \tilde{D}_\text{N}(p) \tilde{\pi}(p,\mu) \ , \\
+   \tilde{D}_\text{N}(p) =
+   \begin{cases}
+      1 & \text{if } p=0 \\
+      4 \sum_\mu \sin^2 \frac{p_\mu}{2} \quad & \text{otherwise}
+   \end{cases}
+   \ .
+\end{gather}
+Explicity
+\begin{gather}
+   D_\text{N}(x,\mu;y,\nu)
+   =
+   \frac{1}{L^3} \sum_{p_0 \in E_\mu} \sum_{\vec{p} \in \mathcal{P}}
+   \tilde{D}_\text{N}(p) \delta_{\mu\nu}
+   e^{i \vec{p} (\vec{x}-\vec{y})}
+   e_\mu(p_0,x_0) e_\nu^*(p_0,y_0) w_\nu(y_0)
+   \ .
+\end{gather}
+
+With respect to the scalar product defined by
+\begin{gather}
+   ( \phi , \phi )_G = (\phi , G \phi) \ , \\
+   [G\phi](x,\mu) = w_\mu(x_0) \phi(x,\mu) \ .
+\end{gather}
+the operator $D_\text{N}$ is symmetric and strictly positive, i.e.
+\begin{gather}
+   ( \phi' , D_\text{N} \phi )_G = ( D_\text{N} \phi' , \phi )_G
+   \ , \\
+   ( \phi , D_\text{N} \phi )_G \ge 0
+   \ , \\
+   ( \phi , D_\text{N} \phi )_G = 0 \ \Leftrightarrow \ \phi = 0
+   \ .
+\end{gather}
+
+The desired operator is defined as
+\begin{gather}
+   D = G^{1/2} D_\text{N} G^{-1/2} \ .
+\end{gather}
+Symmetry and strict positivity of $D$ with respect to the canonical scalar product of $D$ follow from the corresponding properties of $D_\text{N}$. Notice that
+\begin{gather}
+   D^\alpha = G^{1/2} D_\text{N}^\alpha G^{-1/2} \ .
+\end{gather}
+
+The \texttt{openQ*D} code uses the fast-Fourier-transform (FFT) algorithm to contruct $\tilde{\pi}(p,\mu)$ from $\pi(x,\mu)$ and vice versa. The FFT is implemented in the module \texttt{dft} which is an adaptation of the correponding module in the \texttt{NSPT-1.4} code written by Mattia Dalla Brida and Martin L\"uscher~\cite{NSPT}.
+
+
+\begin{thebibliography}{9}
+
+\bibitem{Duane:1986fy}
+  S.~Duane, R.~Kenway, B.~J.~Pendleton and D.~Roweth,
+  \textit{Acceleration of Gauge Field Dynamics},
+  Phys.\ Lett.\ B {\bf 176}, 143 (1986).
+  
+\bibitem{cstar}
+  A. Patella,
+  \textit{C$^\star$ boundary conditions}, code documentation,
+  \texttt{doc/cstar.pdf}.
+
+\bibitem{rhmc} 
+  A. Patella,
+  \textit{RHMC algorithm in \texttt{openQ*D}}, code documentation,
+  \texttt{doc/rhmc.pdf}.
+
+\bibitem{NSPT} 
+  \texttt{NSPT-1.4} simulation package,
+  \url{http://luscher.web.cern.ch/luscher/NSPT}.
+
+\end{thebibliography}
+
+
+
+\end{document}

@@ -29,6 +29,8 @@ ms4         Computation of quark propagators.
 
 ms5         Computation of U(1) Wilson-flow observables.
 
+ms6         Computation of CA_mu(y0,x0) and CP(y0,x0) correlators.
+
 
 Some examples of valid input parameter files can be found in the directory
 ./examples.

@@ -114,10 +114,10 @@ int main(int argc,char *argv[])
    phi[1]=-0.534;
    phi_prime[0]=0.912;
    phi_prime[1]=0.078;
-   set_bc_parms(bc,sf,cs,phi,phi_prime);
+   set_bc_parms(bc,cs,phi,phi_prime,0.573,-1.827);
    print_bc_parms();
 
-   set_su3lat_parms(3.50,0.95,0.82,1.32);
+   set_su3lat_parms(3.50,0.95,0.82,1.32,sf);
 
    start_ranlux(0,1234);
    geometry();

@@ -23,7 +23,7 @@ MAIN = check1 check2 check3 check4 check5
 
 BLOCK = block blk_grid map_u2blk map_sw2blk map_s2blk
 
-FLAGS = flags dirac_parms lat_parms sap_parms dfl_parms parms_utils
+FLAGS = flags dirac_parms lat_parms sap_parms dfl_parms
 
 LATTICE = bcnds ftidx uidx geometry cstar
 
@@ -49,7 +49,7 @@ U1FTENSOR = u1ftcom u1ftensor u1fluxes mxw_action
 
 HFLDS = hflds
 
-UTILS = endian error hsum mutils utils wspace
+UTILS = endian error hsum ioutils mutils utils wspace
 
 SHARE = gflds_utils
 

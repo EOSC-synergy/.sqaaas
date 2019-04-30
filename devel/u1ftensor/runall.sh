@@ -1,6 +1,7 @@
 #!/bin/bash
 
 
+MPIRUN="mpirun $OPENQXD_MPIRUN_OPTS"
 NAME=u1ftensor
 
 ALL="1 2 3 4 5 6 7"
@@ -24,23 +25,23 @@ fi
 
 
 
-if [ -z "$QCDQED_CHECK_LOGDIR" ] ; then
-   echo "Please define the environment variable QCDQED_CHECK_LOGDIR"
+if [ -z "$OPENQXD_CHECK_LOGDIR" ] ; then
+   echo "Please define the environment variable OPENQXD_CHECK_LOGDIR"
    exit -1
 fi
 
-if [ ! -d "$QCDQED_CHECK_LOGDIR" ] ; then
-   echo "The environment variable QCDQED_CHECK_LOGDIR must contain the absolute path of a valid directory"
+if [ ! -d "$OPENQXD_CHECK_LOGDIR" ] ; then
+   echo "The environment variable OPENQXD_CHECK_LOGDIR must contain the absolute path of a valid directory"
    exit -1
 fi
 
-if [[ "$QCDQED_CHECK_LOGDIR" != /* ]]; then
-   echo "The environment variable QCDQED_CHECK_LOGDIR must contain the absolute path of a valid directory"
+if [[ "$OPENQXD_CHECK_LOGDIR" != /* ]]; then
+   echo "The environment variable OPENQXD_CHECK_LOGDIR must contain the absolute path of a valid directory"
    exit -1
 fi
 
 
-LDIR=${QCDQED_CHECK_LOGDIR}/${NAME}
+LDIR=${OPENQXD_CHECK_LOGDIR}/${NAME}
 if [ ! -d "$LDIR" ] ; then
    mkdir $LDIR
 fi
@@ -65,22 +66,22 @@ for CN in $ALL ; do
    if [ ${bc[$CN]} -eq 1 ] && [ ${cs[$CN]} -eq 1 ] ; then
       for BC in 0 1 2 3 ; do
          for CS in 0 1 2 3 ; do
-            mpirun -np ${NPROC} ./check${CN} -bc ${BC} -cs ${CS}
+            $MPIRUN -np ${NPROC} ./check${CN} -bc ${BC} -cs ${CS}
             mv check${CN}.log ${LDIR}/check${CN}-bc${BC}-cs${CS}-np${NPROC}.log
          done
       done
    elif [ ${bc[$CN]} -eq 1 ] && [ ${cs[$CN]} -eq 0 ] ; then
       for BC in 0 1 2 3 ; do
-         mpirun -np ${NPROC} ./check${CN} -bc ${BC}
+         $MPIRUN -np ${NPROC} ./check${CN} -bc ${BC}
          mv check${CN}.log ${LDIR}/check${CN}-bc${BC}-np${NPROC}.log
       done
    elif [ ${bc[$CN]} -eq 0 ] && [ ${cs[$CN]} -eq 1 ] ; then
       for CS in 0 1 2 3 ; do
-         mpirun -np ${NPROC} ./check${CN} -cs ${CS}
+         $MPIRUN -np ${NPROC} ./check${CN} -cs ${CS}
          mv check${CN}.log ${LDIR}/check${CN}-cs${CS}-np${NPROC}.log
       done
    elif [ ${bc[$CN]} -eq 0 ] && [ ${cs[$CN]} -eq 0 ] ; then
-      mpirun -np ${NPROC} ./check${CN}
+      $MPIRUN -np ${NPROC} ./check${CN}
       mv check${CN}.log ${LDIR}/check${CN}-np${NPROC}.log
    fi
 done

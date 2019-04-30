@@ -37,7 +37,7 @@
 
 static int my_rank,bc,first,last,step,nmx,qhat;
 static double kappa,m0,su3csw,u1csw,mu,cF,cF_prime;
-static double phi[2],phi_prime[2],theta[3],res;
+static double phi3[2],phi3_prime[2],phi1,phi1_prime,theta[3],res;
 static char cnfg_dir[NAME_SIZE],cnfg_file[NAME_SIZE],nbase[NAME_SIZE];
 
 
@@ -96,16 +96,24 @@ int main(int argc,char *argv[])
       read_line("type","%d",&bc);
       read_line("cstar","%d",&cs);
 
-      phi[0]=0.0;
-      phi[1]=0.0;
-      phi_prime[0]=0.0;
-      phi_prime[1]=0.0;
+      phi3[0]=0.0;
+      phi3[1]=0.0;
+      phi3_prime[0]=0.0;
+      phi3_prime[1]=0.0;
+      phi1=0.0;
+      phi1_prime=0.0;
 
       if (bc==1)
-         read_dprms("phi",2,phi);
+      {
+         read_dprms("su3phi",2,phi3);
+         read_line("u1phi","%lf",&phi1);
+      }
 
       if ((bc==1)||(bc==2))
-         read_dprms("phi'",2,phi_prime);
+      {
+         read_dprms("su3phi'",2,phi3_prime);
+         read_line("u1phi'","%lf",&phi1_prime);
+      }
 
 
       cF=1.0;
@@ -148,8 +156,10 @@ int main(int argc,char *argv[])
 
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(phi,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(phi_prime,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(phi3,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(phi3_prime,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(&phi1,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(&phi1_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
    MPI_Bcast(&mu,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
    MPI_Bcast(&nmx,1,MPI_INT,0,MPI_COMM_WORLD);
@@ -158,11 +168,11 @@ int main(int argc,char *argv[])
    set_flds_parms(3,0);
    print_flds_parms();
 
-   set_bc_parms(bc,0,cs,phi,phi_prime);
+   set_bc_parms(bc,cs,phi3,phi3_prime,phi1,phi1_prime);
    print_bc_parms();
 
-   set_su3lat_parms(3.50,0.95,0.82,1.32);
-   set_u1lat_parms(0,1.5,1.2,0.0,0.482,0.87,0.57);
+   set_su3lat_parms(3.50,0.95,0.82,1.32,0);
+   set_u1lat_parms(0,1.5,1.2,0.0,0.482,0.87,0.57,0);
    print_lat_parms();
 
    start_ranlux(0,1234);

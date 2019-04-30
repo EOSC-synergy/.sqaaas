@@ -90,51 +90,23 @@ int main(int argc,char *argv[])
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&sf,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
-   phi[0]=0.0;
-   phi[1]=0.0;
-   phi_prime[0]=0.0;
-   phi_prime[1]=0.0;
-   set_bc_parms(bc,sf,cs,phi,phi_prime);
+   phi[0]=0.324;
+   phi[1]=-0.324;
+   phi_prime[0]=-1.452;
+   phi_prime[1]=1.452;
+   set_bc_parms(bc,cs,phi,phi_prime,0.324,-1.452);
    print_bc_parms();
 
    alpha=.013;
    qel2=2.45;
    beta=1./(16.*atan(1)*qel2*alpha);
-   set_u1lat_parms(0,alpha,1.0/sqrt(qel2),0.0,0.482,0.87,0.57);
-   set_su3lat_parms(beta,0.482,0.87,0.57);
+   set_u1lat_parms(0,alpha,1.0/sqrt(qel2),0.0,0.482,0.87,0.57,sf);
+   set_su3lat_parms(beta,0.482,0.87,0.57,sf);
    print_lat_parms();
 
    start_ranlux(0,12345);
    geometry();
    
-   /*
-   cm3x3_zero(1,M);
-   d=.21;
-   M[0].c12.re=d;
-   M[0].c21.re=-M[0].c12.re;
-   cm3x3_unity(1,M+1);
-   prod2su3alg(M,M+1,&X);
-   if (my_rank==0)
-   {
-      printf("T3 = ( %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e )\n\n",
-      X.c1/d,X.c2/d,X.c3/d,X.c4/d,X.c5/d,X.c6/d,X.c7/d,X.c8/d);
-   }
-   
-   expXsu3(1.0,&X,M+1);
-   if (my_rank==0)
-   {
-      printf("                 | ( %.2e  %.2e ) ( %.2e  %.2e ) ( %.2e  %.2e ) |\n",
-             M[1].c11.re,M[1].c11.im,M[1].c12.re,M[1].c12.im,M[1].c13.re,M[1].c13.im);
-      printf("exp ( d * T3 ) = | ( %.2e  %.2e ) ( %.2e  %.2e ) ( %.2e  %.2e ) |\n",
-             M[1].c21.re,M[1].c21.im,M[1].c22.re,M[1].c22.im,M[1].c23.re,M[1].c23.im);
-      printf("                 | ( %.2e  %.2e ) ( %.2e  %.2e ) ( %.2e  %.2e ) |\n\n",
-             M[1].c31.re,M[1].c31.im,M[1].c32.re,M[1].c32.im,M[1].c33.re,M[1].c33.im);
-      
-      printf("cos(d) = %.2e\n",cos(d));
-      printf("sin(d) = %.2e\n\n",sin(d));
-   }
-   */
-
    random_ad();
    ad=adfld();
    ud=udfld();
@@ -142,8 +114,8 @@ int main(int argc,char *argv[])
    for(i=0;i<4*VOLUME;i++)
    {
       ud[i].c11.re=ud[i].c22.re=cos(ad[i]);
-      ud[i].c12.re=sin(ad[i]);
-      ud[i].c21.re=-ud[i].c12.re;
+      ud[i].c11.im=sin(ad[i]);
+      ud[i].c22.im=-ud[i].c11.im;
       ud[i].c33.re=1.0;
    }
    set_flags(UPDATED_UD);
@@ -155,43 +127,51 @@ int main(int argc,char *argv[])
    (A,B) = -2 tr AB = 12 (A1 B1 + A2 B2) - 6 (A1 B2 + A2 B1)
                       + 4 (A3 B3 + A4 B4 + A5 B5 + A6 B6 + A7 B7 + A8 B8)
    
-   d/dt f(e^{t*X} U) |_{t=0} = ( X , d f(U) )
+   d f(U) is defined such that
+   ( X , d f(U) ) = d/dt f(e^{t*X} U) |_{t=0}
+   
+   its components are defined in such a way that
    d f(U) = sum_{a=1}^8 Ta da f(U)
    
    in particular
-   (T3,T3) = 4
-   d/dt f(e^{t*T3} U) |_{t=0} = ( T3 , d f(U) ) = 4 d3 f(U)
-   
+   T = (2*T1+T2)/3
+   d/dt f(e^{t*T} U) |_{t=0} = ( T , d f(U) )
+      = 1/3 ( 2*T1+T2 , d f(U) )
+      = 1/3 [ (2*T1+T2,T1) d1 f(U) + (2*T1+T2,T2) d2 f(U) ]
+      = 1/3 [ (2*12-6) d1 f(U) + (2*(-6)+12) d2 f(U) ]
+      = 6 d1 f(U)
 
-        |  0 1 0 |
-   T3 = | -1 0 0 |
-        |  0 0 0 |
+
+       | i   0   0 |
+   T = | 0  -i   0 |
+       | 0   0   0 |
    
-                   | cos A   sin A   0 |
-   U = exp(A*T3) = | -sin A  cos A   0 |
-                   | 0       0       1 |
+                  | exp(iA) 0        0 |
+   U = exp(A*T) = | 0       exp(-iA) 0 |
+                  | 0       0        1 |
    
-   tr U = 1 + 2 cos A
    Re tr U = 1 + 2 Re exp(iA)
    
    S1(A) = 1 - Re exp(i Ap)
    S3(U) = 1 - 1/3 Re tr Up
    
-   S3(exp(A*X3)) = 1 - 1/3 Re tr exp(A*X3)
-                 = 1 - 1/3 ( 1 + 2 Re exp(i Ap) )
-                 = 2/3 S1(A)
+   S3(exp(A*T)) = 1 - 1/3 Re tr exp(Ap*T)
+                = 1 - 1/3 ( 1 + 2 Re exp(i Ap) )
+                = 2/3 S1(A)
    
-   d^3 S3(U) = d/dt S3(exp(t*T3) U) |_{t=0}
-   4 d^3 S3(exp(A*T3)) = d/dt S3(exp(t*T3) exp(A*T3)) |_{t=0}
-                       = d/dA [S3(exp(A*T3))]
-                       = 2/3 d/dA S1(A)
+   d/dt S3(exp(t*T) U) |_{t=0} = 2 d1 S3(U)
+   6 d1 S3(exp(A*T)) = d/dt S3(exp(t*T) exp(A*T)) |_{t=0}
+                     = d/dA [S3(exp(A*T))]
+                     = 2/3 d/dA S1(A)
+   
+   d/dA S1(A) = 9 d1 S3(exp(A*T))
    
    beta_QCD = 6/g2
    beta_QED = 1/(qel2 e2)
    
    we have chosen beta_QCD = beta_QED i.e. g2/6 = qel2 e2
    
-   plaq_su3frc = g2 F3 = g2/6 F1 = qel2 e2 F1 = qel2 plaq_u1frc
+   plaq_su3frc.c1 = g2 F3.c1 = g2/9 F1 = 2/3 qel2 e2 F1 = 2/3 plaq_u1frc
    
    ****************************************************************************/
    
@@ -214,7 +194,7 @@ int main(int argc,char *argv[])
    dmax=0.0;
    for(i=0;i<4*VOLUME;i++)
    {
-      d=fabs(frc1[i]-6.*frc3[i].c3);
+      d=fabs(frc1[i]-9.*frc3[i].c1);
       if(d>dmax) dmax=d;
    }
    MPI_Reduce(&dmax,&dmax_all,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
@@ -232,7 +212,7 @@ int main(int argc,char *argv[])
    dmax=0.0;
    for(i=0;i<4*VOLUME;i++)
    {
-      d=fabs(qel2*frc1[i]-frc3[i].c3);
+      d=fabs(frc1[i]-1.5*frc3[i].c1);
       if(d>dmax) dmax=d;
    }
    MPI_Reduce(&dmax,&dmax_all,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);

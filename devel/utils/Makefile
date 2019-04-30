@@ -21,13 +21,13 @@ all: rmxeq mkdep mkxeq
 
 MAIN = check1
 
-FLAGS = flags lat_parms parms_utils
+FLAGS = flags lat_parms
 
 LATTICE = geometry
 
 RANDOM = ranlux ranlxs ranlxd
 
-UTILS = endian error mutils utils
+UTILS = endian error ioutils mutils utils
 
 MODULES = $(FLAGS) $(LATTICE) $(RANDOM) $(UTILS)
 

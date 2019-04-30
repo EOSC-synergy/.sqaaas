@@ -1,0 +1,420 @@
+\documentclass[11pt,fleqn]{article}
+
+\usepackage[left=34mm,right=34mm,top=45mm,bottom=60mm,centering]{geometry}
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{mathtools}
+\usepackage{bm}
+\usepackage{framed}
+\usepackage{hyperref}
+
+\usepackage{tikz} 
+\usetikzlibrary{arrows}
+
+\usepackage{sectsty}
+\sectionfont{\sffamily\normalsize}
+\subsectionfont{\normalfont\itshape\sffamily\normalsize}
+\chapterfont{\sffamily}
+
+\newtheorem{definition}{Definition}
+
+\newcommand{\tr}{\mathrm{tr}\,}
+\newcommand{\Tr}{\mathrm{Tr}\,}
+\renewcommand{\vec}[1]{\mathbf{#1}}
+\renewcommand{\overline}[1]{\bar{#1}}
+\renewcommand{\Re}[0]{\operatorname{Re}}
+\renewcommand{\Im}[0]{\operatorname{Im}}
+\renewcommand{\d}{\mathrm{d}}
+
+
+\setlength\parindent{0pt}
+\setlength{\parskip}{4mm plus2mm minus2mm}
+
+
+\usepackage{tocloft}
+\renewcommand{\cfttoctitlefont}{\sffamily\bfseries\large}
+%\renewcommand{\cftchapfont}{\scshape}
+
+\renewcommand{\cftsecfont}{\normalsize\sffamily}
+%\renewcommand{\cftsecleader}{\hfill}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsecpagefont}{\cftsecfont}
+
+\renewcommand{\cftsubsecfont}{\small\sffamily}
+\renewcommand{\cftsubsecleader}{\hfill}
+\renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsubsecpagefont}{\cftsubsecfont}
+
+
+\begin{document}
+
+\vspace*{20mm}
+
+{
+\sffamily
+\huge
+\textbf{Gauge actions}
+\\
+\rule{\textwidth}{1pt}
+\\[2mm]
+\large
+Agostino Patella, RC$^*$ collaboration
+\hfill
+December 2017
+}
+
+\vspace{30mm}
+
+%\FloatBarrier
+
+\tableofcontents
+
+\pagebreak
+
+
+\section{Introduction}
+
+The \texttt{openQ*D} code supports a one-parameter family of SU(3) gauge actions, built with plaquettes and planar double-plaquettes. This family includes the Wilson, L\"uscher-Weisz and Iwasaki actions. Besides an overall $1/2$ factor in case of C$^\star$ boundary conditions (which is discussed in \cite{cstar}), the implementation of the SU(3) gauge action and force is identical to the one of the \texttt{openQCD} code. The main features will be summerized here. Some more details about the implementation of the SU(3) gauge action and force can be found in \cite{openQCD:gauge_action}.
+
+%The \texttt{openQ*D} code supports two choices for the U(1) gauge action.
+%\begin{itemize}
+%   \item A compact U(1) gauge action, built with plaquettes and planar double-plaquettes. This is a %trivial adaptation of the SU(3) gauge action.
+%   
+%   \item A non-compact U(1) gauge action, with covariant gauge fixing.
+%\end{itemize}
+
+Currently the \texttt{openQ*D} code supports only a compact U(1) gauge action, built with plaquettes and planar double-plaquettes. This is a trivial adaptation of the SU(3) gauge action. A non-compact U(1) gauge action, with covariant gauge fixing, will be included in a future release.
+
+The \texttt{openQ*D} code supports four types of boundary conditions for the gauge field in the time direction, i.e. open (type 0), SF (type 1), open-SF (type 2) or periodic (type 3), and C$^\star$ boundary conditions in the space direction. The choice of boundary conditions affects the definition of the gauge actions. For this reason a significant fraction of this document is devoted in fact to boundary conditions. C$^\star$ boundary conditions are only quickly reviewed here, while a detailed discussion can be found in \cite{cstar}.
+
+
+
+\section{Geometry of the global lattice and boundary conditions}
+\label{sec:lattice}
+
+The \textit{global lattice} is characterized by the set $\Lambda$ of its points, and the set $\mathcal{L}^+$ of its positively-oriented links. The set of negatively-oriented links $\mathcal{L}^-$ is obtained by reverting the orientation of the links in $\mathcal{L}^+$. The exact definition of $\Lambda$ and $\mathcal{L}^+$ depends on four parameters $N_\mu$ for $\mu=0,1,2,3$ and on the boundary conditions.
+
+The parameters $N_\mu$ (for $\mu=0,1,2,3$) are defined in terms of the parameters \texttt{L}$\mu$ and \texttt{NPROC}$\mu$, whose value are chosen at compile time by setting the values of the corresponding macros in the file \texttt{include/global.h}. In particular
+\begin{itemize}[nolistsep,noitemsep]
+   \item $\texttt{L0} \times \texttt{L1} \times \texttt{L2} \times \texttt{L3}$ is the size of the \textit{local lattice}, i.e. the portion of the global lattice that is represented in a single MPI process;
+   \item $\texttt{NPROC0} \times \texttt{NPROC1} \times \texttt{NPROC2} \times \texttt{NPROC3}$ is the size of the \textit{MPI-process grid};
+   \item $N_\mu = \texttt{L}\mu \cdot \texttt{NPROC}\mu$.
+\end{itemize}
+The boundary conditions are set at run time, and typically read from the input file. In particular
+\begin{itemize}[nolistsep,noitemsep]
+   \item The boundary conditions in time are set by chosing the value of the \texttt{type} parameter in the \texttt{[Boundary conditions]} section in the input file. Allowed values are: \texttt{open}, \texttt{SF}, \texttt{open-SF}, \texttt{periodic}.
+   \item The number $n_{\text{C}^\star}$ of spacial directions with C$^\star$ boundary conditions is set by choosing the value of the \texttt{cstar} parameter in the \texttt{[Boundary conditions]} section in the input file. Allowed values are: \texttt{0}, \texttt{1}, \texttt{2}, \texttt{3}.
+\end{itemize}
+
+Each point $x$ in $\Lambda$ is identified with its Cartesian coordinates $(x_0,x_1,x_2,x_3)$. The set of points $\Lambda$ is defined as follows:
+\begin{itemize}[nolistsep,noitemsep]
+   \item for open and periodic boundary conditions in time
+   \begin{gather}
+      \Lambda= \{ x \in \mathbb{Z}^4 \ : \ 0 \le x_\mu \le N_\mu-1 \ \text{for } \mu=0,1,2,3 \} \ ,
+   \end{gather}
+   \item for SF and open-SF boundary condition in time
+   \begin{gather}
+      \Lambda= \{ x \in \mathbb{Z}^4 \ : \ 0 \le x_0 \le N_0 \text{ and } 0 \le x_k \le N_k-1 \ \text{for } k=1,2,3 \} \ .
+   \end{gather}
+\end{itemize}
+It is useful to define the following subsets of $\Lambda$: the upper boundary $\partial^+ \Lambda$, the lower boundary $\partial^- \Lambda$, the bulk (or interior) $\Lambda^0$. The bulk is always defined as
+\begin{gather}
+   \Lambda^0 = \Lambda \setminus ( \partial^+ \Lambda \cup \partial^- \Lambda) \ .
+\end{gather}
+The definition of the boundary sets depends on the boundary conditions in time, i.e.
+\begin{itemize}[nolistsep,noitemsep]
+   \item for open boundary conditions in time
+   \begin{gather}
+      \partial^+ \Lambda = \{ x \in \Lambda \ : \ x_0 = N_0-1 \} \ , \qquad
+      \partial^- \Lambda = \{ x \in \Lambda \ : \ x_0 = 0 \} \ ,
+   \end{gather}
+   \item for SF or open-SF boundary conditions in time
+   \begin{gather}
+      \partial^+ \Lambda = \{ x \in \Lambda \ : \ x_0 = N_0 \} \ , \qquad
+      \partial^- \Lambda = \{ x \in \Lambda \ : \ x_0 = 0 \} \ ,
+   \end{gather}
+   \item for periodic boundary conditions in time
+   \begin{gather}
+      \partial^+ \Lambda = \partial^- \Lambda = \varnothing \ .
+   \end{gather}
+\end{itemize}
+
+The set of positively-oriented links $\mathcal{L}^+$ is constructed as follows:
+\begin{itemize}[nolistsep,noitemsep]
+   \item Every point $x \in \Lambda \setminus \partial^+ \Lambda$ of the lattice which is not in the upper boundary has exactly one outgoing link in the positive direction $0$, denoted by $(x,0)$.
+   \item Every point $x \in \Lambda$ of the lattice has exactly one outgoing link in the each of the positive directions $k=1,2,3$, denoted by $(x,k)$.
+\end{itemize}
+Notice that, in order to provide a complete definition of the links, it is necessary to specify their final points. Also notice that if $(x,\mu)$ is chosen as above, in general $x + \hat{\mu} \not\in \Lambda$. Essentially one needs to define how to close the lattice along the periodic directions. The final point of the link $(x,\mu)$ is defined to be $x + \hat{\mu}$ provided that points in $\mathbb{Z}^4$ are identified accordingly to the following equivalence relation
+\begin{gather}
+   x \sim y \ \Longleftrightarrow \ 
+   x = y + M n \text{ for some } n \in \mathbb{Z}^4 \ ,
+   \label{eq:identification}
+\end{gather}
+where $M$ is a $4 \times 4$ matrix that depends on the boundary conditions, and which has the following block structure
+\begin{gather}
+   M =
+   \begin{pmatrix}
+      m_t & 0 \\
+      0 & M_s
+   \end{pmatrix}
+   \ .
+\end{gather}
+The number $m_t$ depends on the time boundary conditions, i.e.
+\begin{gather}
+   m_t =
+   \begin{cases}
+      N_0 \qquad & \text{for periodic b.c.s in time} \\
+      0 \qquad & \text{otherwise}
+   \end{cases}
+   \ .
+\end{gather}
+The $3 \times 3$ matrix $M_s$ depends on the number $n_{\text{C}^\star}$ of spacial directions with C$^\star$ boundary conditions, i.e.
+\begin{alignat}{3}
+   & M_s =
+   \begin{pmatrix}
+      N_1 & & \\
+      & N_2 & \\
+      & & N_3
+   \end{pmatrix}
+   & \qquad & \text{if } n_{\text{C}^\star}=0,1 \ ,
+   \\
+   & M_s =
+   \begin{pmatrix}
+      N_1 & & \\
+      N_1/2 & N_2 & \\
+      & & N_3
+   \end{pmatrix}
+   & \qquad & \text{if } n_{\text{C}^\star}=2 \ ,
+   \\
+   & M_s =
+   \begin{pmatrix}
+      N_1 & & \\
+      N_1/2 & N_2 & \\
+      N_1/2 & & N_3
+   \end{pmatrix}
+   & \qquad & \text{if } n_{\text{C}^\star}=3 \ .
+\end{alignat}
+The particular form of the $M_s$ matrix for $n_{\text{C}^\star}=2,3$ produces a toroidal geometry with a non-trivial modulus (also known as \textit{shifted boundary conditions}). This choice of geometry is due to the fact that C$^\star$ boundary conditions are implemented in \texttt{openQ*D} by means of an orbifold construction, which is discussed in detail in ref.~\cite{cstar}.
+
+
+\section{Boundary conditions for the gauge fields}
+\label{sec:gaugefield}
+
+The gauge fields are associated as usual to the links of the lattice. Let $(x,\mu) \in \mathcal{L}^+$ be a positively-oriented link. The SU(3) gauge field in $(x,\mu)$ is an SU(3) matrix denoted by $U(x,\mu)$. The U(1) gauge field in $(x,\mu)$ is a real number denoted by $A(x,\mu)$.
+
+If $M$ is the matrix defined in section~\ref{sec:lattice}, then the gauge fields are assumed to satisfy the following boundary conditions
+\begin{alignat}{3}
+   & U_\mu(x + M n) = U_\mu(x) \ ,
+   & \qquad &
+   A_\mu(x + M n) = A_\mu(x) \ .
+\end{alignat}
+for any $n \in \mathbb{Z}^4$. More explicitly:
+\begin{itemize}[nolistsep,noitemsep]
+   \item If periodic boundary conditions in time are chosen
+   \begin{alignat}{3}
+      & U_\mu(x + N_0 \hat{0}) = U_\mu(x) \ ,
+      & \qquad &
+      A_\mu(x + N_0 \hat{0}) = A_\mu(x) \ .
+   \end{alignat}
+   \item If the number of C$^\star$ directions is $n_{\text{C}^\star}=0,1$ then, for $k=1,2,3$,
+   \begin{alignat}{3}
+      & U_\mu(x + N_k \hat{k}) = U_\mu(x) \ ,
+      & \qquad &
+      A_\mu(x + N_k \hat{k}) = A_\mu(x) \ .
+   \end{alignat}
+   \item If the number of C$^\star$ directions is $n_{\text{C}^\star}=2$ then
+   \begin{alignat}{3}
+      & U_\mu(x + N_1 \hat{1}) = U_\mu(x) \ ,
+      & \qquad &
+      A_\mu(x + N_1 \hat{1}) = A_\mu(x) \ , \\
+      & U_\mu(x + N_2 \hat{2}) = U_\mu(x + \tfrac{N_1}{2} \hat{1}) \ ,
+      & \qquad &
+      A_\mu(x + N_2 \hat{2}) = A_\mu(x + \tfrac{N_1}{2} \hat{1}) \ , \\
+      & U_\mu(x + N_3 \hat{3}) = U_\mu(x) \ .
+      & \qquad &
+      A_\mu(x + N_3 \hat{3}) = A_\mu(x) \ .
+   \end{alignat}
+   \item If the number of C$^\star$ directions is $n_{\text{C}^\star}=3$ then
+   \begin{alignat}{3}
+      & U_\mu(x + N_1 \hat{1}) = U_\mu(x) \ ,
+      & \qquad &
+      A_\mu(x + N_1 \hat{1}) = A_\mu(x) \ , \\
+      & U_\mu(x + N_2 \hat{2}) = U_\mu(x + \tfrac{N_1}{2} \hat{1}) \ ,
+      & \qquad &
+      A_\mu(x + N_2 \hat{2}) = A_\mu(x + \tfrac{N_1}{2} \hat{1}) \ , \\
+      & U_\mu(x + N_3 \hat{3}) = U_\mu(x + \tfrac{N_1}{2} \hat{1}) \ .
+      & \qquad &
+      A_\mu(x + N_3 \hat{3}) = A_\mu(x + \tfrac{N_1}{2} \hat{1}) \ .
+   \end{alignat}
+\end{itemize}
+   
+In case of SF or open-SF boundary conditions in time, the value of the gauge fields in the space directions is fixed on the SF boundaries.
+\begin{itemize}[nolistsep,noitemsep]
+   \item If SF boundary conditions in time are chosen then, for $k=1,2,3$ and $x\in \partial^- \Lambda$,
+   \begin{gather}
+      U(x,k) = \text{diag} \left( e^{\frac{i \phi_{\text{SU(3)},1}}{N_k}} , e^{\frac{i \phi_{\text{SU(3)},2}}{N_k}} , e^{-\frac{i [\phi_{\text{SU(3)},1}+\phi_{\text{SU(3)},2}]}{N_k}} \right)
+      \ , \\
+      A(x,k) = \frac{\phi_\text{U(1)}}{N_k} \ .
+   \end{gather}
+   \item If SF or open-SF boundary conditions in time are chosen then, for $k=1,2,3$ and $x\in \partial^+ \Lambda$,
+   \begin{gather}
+      U(x,k) = \text{diag} \left( e^{\frac{i \phi'_{\text{SU(3)},1}}{N_k}} , e^{\frac{i \phi'_{\text{SU(3)},2}}{N_k}} , e^{-\frac{i [\phi'_{\text{SU(3)},1}+\phi'_{\text{SU(3)},2}]}{N_k}} \right)
+      \ , \\
+      A(x,k) = \frac{\phi'_\text{U(1)}}{N_k} \ .
+   \end{gather}
+\end{itemize}
+
+
+
+
+
+\section{SU(3) and compact U(1) gauge actions}
+
+The SU(3) and compact U(1) gauge actions are
+\begin{gather}
+   S_{\text{G,SU(3)}} = \frac{\omega_{\text{C}^\star}}{g_0^2} \sum_{k=0}^1 c^\text{SU(3)}_k \sum_{\mathcal{C} \in \mathcal{S}_k} w^\text{SU(3)}_k(\mathcal{C}) \ \tr [ 1 - U(\mathcal{C}) ] \ ,
+   \label{eq:action:SU3} \\
+   S_{\text{G,U(1)}} = \frac{\omega_{\text{C}^\star}}{2 q_\text{el}^2 e_0^2} \sum_{k=0}^1 c^\text{U(1)}_k \sum_{\mathcal{C} \in \mathcal{S}_k} w^\text{U(1)}_k(\mathcal{C}) \ [ 1 - z(\mathcal{C}) ] \ .
+   \label{eq:action:U1}
+\end{gather}
+The meaning of the symbols appearing in these formulae is explained in the following.
+
+The compact U(1) field is defined in terms of the $A(x,\mu)$ field as
+\begin{gather}
+   z(x,\mu) = e^{i A(x,\mu)} \ .
+\end{gather}
+For numerical stability, the constraint $-\pi < A(x,\mu) \le \pi$ is imposed in this case.
+
+The parameter $g_0$ is the bare SU(3) gauge coupling, and $e_0$ is the bare U(1) gauge coupling in terms of which the bare fine-structure constant is given by
+\begin{gather}
+   \alpha_0 = \frac{e_0^2}{4\pi} \ .
+\end{gather}
+In the compact formulation of QED, all electric charges must be integer multiples of some elementary charge $q_\text{el}$ which is defined in units of the charge of the positron. As discussed in~\cite{Lucini:2015hfa}, $q_\text{el}$ appears as an overall factor in the gauge action and essentially sets the normalization of the U(1) gauge field in the continuum limit. Even though in infinite volume $q_\text{el}=1/3$ would be an appropriate choice in order to simulate quarks, in finite volume with C$^\star$ boundary conditions one needs to choose $q_\text{el}=1/6$ in order to construct gauge-invariant interpolating operators for charged hadrons.
+
+Given a path $\mathcal{C}$ on the lattice, $U(\mathcal{C})$ and $z(\mathcal{C})$ denote the SU(3) and U(1) parallel transports along $\mathcal{C}$. $\mathcal{S}_0$ is the set of all oriented plaquettes. In case of periodic boundary conditions in time, $\mathcal{S}_1$ is the set of all oriented $1 \times 2$ planar loops, and $w_k(\mathcal{C})=1$.
+The definition of $\mathcal{S}_1$ and $w_k(\mathcal{C})$ is different (for loops close to the boundaries) for different boundary conditions in time, and will be discussed case by case.
+The overall weight $\omega_{\text{C}^\star}$ is $1$ if no C$^\star$ boundary conditions are used, and $1/2$ otherwise because of the orbifold construction (see~\ref{cstar} for more details).
+The coefficients $c_{0,1}$ satisfy the relation
+\begin{gather}
+   c_0 + 8c_1 = 1 \ .
+\end{gather}
+The Wilson action is obtained by choosing
+\begin{gather}
+   c_0 = 1 \ , \qquad c_1 = 0 \ ,
+\end{gather}
+the L\"uscher-Weisz action is obtained by choosing
+\begin{gather}
+   c_0 = \tfrac{5}{3} \ , \qquad c_1 = -\tfrac{1}{12} \ ,
+\end{gather}
+and the Iwasaki action is obtained by choosing
+\begin{gather}
+   c_0 = 3.648 \ , \qquad c_1 = -0.331 \ .
+\end{gather}
+
+\subsection{Open boundary conditions}
+
+$\mathcal{S}_0$ is the set of all oriented plaquettes, and $\mathcal{S}_1$ is the set of all oriented $1 \times 2$ planar loops. The weights $w_k(\mathcal{C})$ are defined as follows:
+\begin{gather}
+   w_k(\mathcal{C}) =
+   \begin{cases}
+      \frac{1}{2} c_\text{G} \qquad & \text{if $\mathcal{C}$ is entirely contained in a boundary} \ , \\
+      1 & \text{otherwise} \ .
+   \end{cases}
+\end{gather}
+As previously discussed in~\cite{Luscher:2011kk}, the coefficient $c_\text{G}$ is required for $O(a)$ improvement of correlation functions involving local fields close to or at the boundaries of the lattice. In particular, setting $c_\text{G} = 1$ ensures on-shell improvement at tree-level of perturbation theory.
+
+\subsection{SF boundary conditions}
+
+$\mathcal{S}_0$ is the set of all oriented plaquettes. $\mathcal{S}_1$ is the set of all oriented $1 \times 2$ planar loops, and doubly-winding $1 \times 1$ plaquettes touching the boundaries. Notice that loops that are entirely contained in the boundaries contribute with an additive constant to the action (since the gauge fields are fixed on the boundaries) and will therefore be dropped from the two sets $\mathcal{S}_{0,1}$.
+
+Two variants of the SU(3) and compact U(1) gauge actions are implemented in this case, which affect the definition of the weights $w_1(\mathcal{C})$. Which of the two variants is simulated can be chosen by setting the value of the \texttt{SFtype} parameter in the \texttt{[Boundary conditions]} section in the input file. Allowed values are \texttt{0} (or the equivalent alisases \texttt{orbifold} and \texttt{openQCD-1.4}) and \texttt{1} (or the equivalent alisases \texttt{AFW-typeB} and \texttt{openQCD-1.2}).
+
+The choice $\texttt{SFtype}=\texttt{0}$ corresponds to the gauge action implemented in the \texttt{openQCD-1.4} and \texttt{openQCD-1.6} codes, and it is discussed also in ref.~\cite{openQCD:gauge_action}. For $\mathcal{C} \in \mathcal{S}_0$, the weights $w_0(\mathcal{C})$ are defined as follows:
+\begin{gather}
+   w_0(\mathcal{C}) =
+   \begin{cases}
+      c_\text{G} \quad & \text{if $\mathcal{C}$ has exactly one link on a boundary} \ , \\
+      1 & \text{otherwise} \ .
+   \end{cases}
+\end{gather}
+For $\mathcal{C} \in \mathcal{S}_1$, the weights $w_1(\mathcal{C})$ are defined as follows:
+\begin{gather}
+   w_1(\mathcal{C}) =
+   \begin{cases}
+      \frac{1}{2} \quad & \text{if $\mathcal{C}$ is a double-winding plaquette} \\
+      & \qquad \text{with exactly two links on a boundary} \ , \\
+      1 & \text{otherwise} \ .
+   \end{cases}
+\end{gather}
+
+The choice $\texttt{SFtype}=\texttt{1}$ corresponds to the gauge action implemented in the \texttt{openQCD-1.2} code. This choice was proposed by Aoki, Frezzotti and Weisz~\cite{Aoki:1998qd}, and referred to as type B in their paper. For $\mathcal{C} \in \mathcal{S}_0$, the weights $w_0(\mathcal{C})$ are defined as follows:
+\begin{gather}
+   w_0(\mathcal{C}) =
+   \begin{cases}
+      c_\text{G} \quad & \text{if $\mathcal{C}$ has exactly one link on a boundary} \ , \\
+      1 & \text{otherwise} \ .
+   \end{cases}
+\end{gather}
+For $\mathcal{C} \in \mathcal{S}_1$, the weights $w_1(\mathcal{C})$ are defined as follows:
+\begin{gather}
+   w_1(\mathcal{C}) =
+   \begin{cases}
+      0 \quad & \text{if $\mathcal{C}$ is a double-winding plaquette} \\
+      & \qquad \text{with exactly two links on a boundary} \ , \\
+      \frac{3}{2} \quad & \text{if $\mathcal{C}$ is a $2 \times 1$ loops with exactly} \\
+      & \qquad \text{two links on a boundary} \ , \\
+      1 & \text{otherwise} \ .
+   \end{cases}
+\end{gather}
+
+Notice that, in both variants, the improvement coefficient $c_\text{G}$ is the same on the two boundaries. In particular, setting $c_\text{G} = 1$ ensures on-shell improvement at tree-level of perturbation theory.
+
+\subsection{Open-SF boundary conditions}
+
+In this case the gauge actions are obtained by combining the actions with open and SF boundary conditions in the obvious way. Close to the lower boundary, the action density is chosen to be equal to the action density with open boundary conditions, with improvement coefficient $c_\text{G}$. Close to the upper boundary, the action density is chosen to be equal to the action density with SF boundary conditions, with improvement coefficient $c'_\text{G}$. Notice that the improvement coefficients are different on the two boundaries.
+
+
+%\section{Non-compact U(1) gauge action}
+
+
+
+
+
+
+
+\begin{thebibliography}{9}
+
+\bibitem{cstar}
+  A. Patella,
+  \textit{C$^\star$ boundary conditions}, code documentation,
+  \texttt{doc/cstar.pdf}.
+
+\bibitem{openQCD:gauge_action}
+  M.~Luscher,
+  \textit{Gauge actions in openQCD simulations}, code documentation,
+  \texttt{doc/openQCD-1.6/gauge\_action.pdf}.
+
+\bibitem{Lucini:2015hfa} 
+  B.~Lucini, A.~Patella, A.~Ramos and N.~Tantalo,
+  \textit{Charged hadrons in local finite-volume QED+QCD with C$^{⋆}$ boundary conditions},
+  JHEP {\bf 1602}, 076 (2016)
+  [arXiv:1509.01636 [hep-th]].
+
+\bibitem{Luscher:2011kk} 
+  M.~Luscher and S.~Schaefer,
+  \textit{Lattice QCD without topology barriers},
+  JHEP {\bf 1107}, 036 (2011)
+  [arXiv:1105.4749 [hep-lat]].
+
+\bibitem{Aoki:1998qd} 
+  S.~Aoki, R.~Frezzotti and P.~Weisz,
+  \textit{Computation of the improvement coefficient c(SW) to one loop with improved gluon actions},
+  Nucl.\ Phys.\ B {\bf 540}, 501 (1999)
+  [hep-lat/9808007].
+
+\end{thebibliography}
+
+\end{document}

@@ -19,7 +19,7 @@ if the option is not set). All other programs are insensitive to the boundary
 conditions.
 
 The programs check[1-3] accept the option -gg <gauge> that allows the gauge
-group (0=QCD, 1=QED, 2=QCD+QED) to be chosen at runtime. When the option is not
+group (1=QCD, 2=QED, 3=QCD+QED) to be chosen at runtime. When the option is not
 set, QCD is assumed.
 
 The programs check[1-3] accept the option -cs <cstar> that allows the number

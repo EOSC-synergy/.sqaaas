@@ -3,7 +3,7 @@
 *
 * File archive.c
 *
-* Copyright (C) 2017 Marina Marinkovic
+* Copyright (C) 2017 Marina Marinkovic, Agostino Patella
 *
 * Based on openQCD-1.6/modules/archive/archive.c
 * Copyright (C) 2005, 2007, 2009-2014 Martin Luescher
@@ -11,34 +11,45 @@
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
 *
-* Programs to read and write SU(3), U(1) and SU(3)+U(1) gauge-field configurations.
+* Programs to read and write SU(3), U(1) and SU(3)xU(1) gauge-field
+* configurations.
 *
 * The externally accessible functions are
 *
 *   void write_cnfg(char *out)
 *     Writes the lattice sizes, the process grid sizes, the coordinates of the
 *     calling process, the state of the random number generators, the local
-*     plaquette sums and the local double-precision (SU(3)+U(1) or U(1)/SU(3)
+*     plaquette sums and the local double-precision (SU(3)xU(1) or U(1)/SU(3)
 *     only) gauge field to the file "out".
 *
-*   void read_cnfg(char *in)
-*     Reads the local double-precision U(1) and/or SU(3) gauge field from the
-*     file "in", assuming it was written to the file by the program
-*     write_cnfg(). The program then resets the random number generator
-*     and checks that the restored field is compatible with the chosen
-*     boundary conditions.
+*   int read_cnfg(char *in)
+*     Detects the type of gauge configuration written in the file "in"
+*     (i.e. (SU(3)xU(1) or U(1)/SU(3) only). It reads only the gauge fields
+*     that are active, as returned by the gauge() program defined in
+*     'modules/flags/lat_parms.c'. The program then resets the random number
+*     generator and checks that the restored field is compatible with the chosen
+*     boundary conditions (see the notes). It returns 1 if "in" contains only
+*     the SU(3) field, 2 if "in" contains only the U(1) field, and 3 if "in"
+*     contains both. The program assumes that the file "in" was written by the
+*     program write_cnfg().
 *
 *   void export_cnfg(char *out)
 *     Writes the lattice sizes and the global double-precision U(1) and/or SU(3)
 *     gauge field to the file "out" from process 0 in the universal format
 *     specified below (see the notes).
 *
-*   void import_cnfg(char *in)
-*     Reads the global U(1) and/or SU(3) double-precision gauge field from the
-*     file "in" on process 0, assuming the field was written to the file in
-*     the universal format. The U(1) and SU(3) fields are periodically extended
-*     if needed and the program then checks that the configuration is compatible
-*     with the chosen boundary conditions (see the notes).
+*   int import_cnfg(char *in)
+*     Detects the type of gauge configuration written in the file "in"
+*     (i.e. (SU(3)xU(1) or U(1)/SU(3) only). It reads only the gauge fields
+*     that are active, as returned by the gauge() program defined in
+*     'modules/flags/lat_parms.c'. The program then resets the random number
+*     generator and checks that the restored field is compatible with the chosen
+*     boundary conditions. The U(1) and SU(3) fields are periodically extended
+*     if needed (see the notes). It returns 1 if "in" contains only the SU(3)
+*     field, 2 if "in" contains only the U(1) field, and 3 if "in" contains
+*     both. The program assumes that the file "in" was written by the program
+*     export_cnfg() in the universal format, and file "in" is accessed by
+*     process 0 only.
 *
 * Notes:
 *
@@ -86,6 +97,9 @@
 * configuration file. On exit both read_cnfg() and import_cnfg() set the
 * boundary values of the field (if any) to the ones stored in the parameter
 * data base so as to guarantee that they are bit-identical to the latter.
+*
+* While both active and inactive (i.e. as given by the gauge() program) gauge
+* fields are read, checks are performed only for active gauge fields.
 *
 * All programs in this module may involve global communications and must be
 * called simultaneously on all processes.
@@ -213,7 +227,7 @@ static int which_cnfg_type(char *in,int loc)
       
       fin=fopen(in,"rb");
       error_loc(fin==NULL,1,"which_cnfg_type [archive.c]",
-                "Unable to open configuration file");
+                "Unable to open configuration file from local disks");
       
       ir=fread(ldat,sizeof(int),16,fin);
 
@@ -259,7 +273,7 @@ static int which_cnfg_type(char *in,int loc)
       {
          fin=fopen(in,"rb");
          error_loc(fin==NULL,1,"which_cnfg_type [archive.c]",
-                   "Unable to open input file");
+                   "Unable to open exported configuration file");
       
          ir=fread(lsize,sizeof(stdint_t),4,fin);
          error_root(ir!=4,1,"which_cnfg_type [archive.c]","Incorrect read count (3)");
@@ -329,12 +343,12 @@ void write_cnfg(char *out)
 
    cnfg_type=gauge();
 
-   if (((cnfg_type)==1)||((cnfg_type)==3))
+   if ((cnfg_type&1)!=0)
    {
       udb=udfld();
       su3plaq=plaq_sum_dble(0);
    }
-   if (((cnfg_type)==2)||((cnfg_type)==3))
+   if ((cnfg_type&2)!=0)
    {
       adb=adfld();
       u1plaq=u1_plaq_sum_dble(0);
@@ -365,18 +379,18 @@ void write_cnfg(char *out)
    iw+=fwrite(state,sizeof(int),ns,fout);
    rlxd_get(state);
    iw+=fwrite(state,sizeof(int),nd,fout);
-   if (((cnfg_type)==1)||((cnfg_type)==3))
+   if ((cnfg_type&1)!=0)
    {
       iw+=fwrite(&su3plaq,sizeof(double),1,fout);
       iw+=fwrite(udb,sizeof(su3_dble),4*VOLUME,fout);
    }
-   if (((cnfg_type)==2)||((cnfg_type)==3))
+   if ((cnfg_type&2)!=0)
    {
       iw+=fwrite(&u1plaq,sizeof(double),1,fout);
       iw+=fwrite(adb,sizeof(double),4*VOLUME,fout);
    }
 
-   if (((cnfg_type)==1)||((cnfg_type)==2))
+   if (cnfg_type!=3)
       error_loc(iw!=(17+ns+nd+4*VOLUME),1,"write_cnfg [archive.c]",
                 "Incorrect write count");
    else
@@ -397,8 +411,6 @@ int read_cnfg(char *in)
       alloc_state();
 
    cnfg_type=which_cnfg_type(in,1);
-   error_root((gauge()+cnfg_type)==3,1,"read_cnfg [archive.c]",
-              "Attempt to read an inactive gauge field.");
 
    fin=fopen(in,"rb");
    ir=fread(ldat,sizeof(int),16,fin);
@@ -410,57 +422,68 @@ int read_cnfg(char *in)
    nplaq=(double)(6*L0*L1)*(double)(L2*L3);
    eps=sqrt(nplaq)*DBL_EPSILON;
 
-   if (((cnfg_type)==1)||((cnfg_type)==3))
+   udb=NULL;
+   if ((cnfg_type&1)!=0)
    {
       udb=udfld();
    }
-   if (((cnfg_type)==2)||((cnfg_type)==3))
+
+   adb=NULL;
+   if ((cnfg_type&2)!=0)
    {
       adb=adfld();
    }
 
    ie=1;
-   if (((cnfg_type)==1)||((cnfg_type)==3))
+   if ((cnfg_type&1)!=0)
    {
       ir+=fread(&su3plaq0,sizeof(double),1,fin);
       ir+=fread(udb,sizeof(su3_dble),4*VOLUME,fin);
       set_flags(UPDATED_UD);
-      ie|=check_bc(64.0*DBL_EPSILON);
-      error_root(ie!=1,1,"read_cnfg [archive.c]",
-                 "Incompatible boundary conditions of the SU(3) field");
-      ie=0;
-      su3plaq0/=nplaq;
-      su3plaq1=plaq_sum_dble(0)/nplaq;
-      ie|=(fabs(su3plaq1-su3plaq0)>eps);
-      set_bc();
-      su3plaq1=plaq_sum_dble(0)/nplaq;
-      ie|=(fabs(su3plaq1-su3plaq0)>eps);
-      error_loc(ie!=0,1,"read_cnfg [archive.c]",
-                "Incorrect average plaquette of the SU(3) field");
+      
+      if ((gauge()&1)!=0)
+      {
+         ie|=check_bc(64.0*DBL_EPSILON);
+         error_root(ie!=1,1,"read_cnfg [archive.c]",
+                    "Incompatible boundary conditions of the SU(3) field");
+         ie=0;
+         su3plaq0/=nplaq;
+         su3plaq1=plaq_sum_dble(0)/nplaq;
+         ie|=(fabs(su3plaq1-su3plaq0)>eps);
+         set_bc();
+         su3plaq1=plaq_sum_dble(0)/nplaq;
+         ie|=(fabs(su3plaq1-su3plaq0)>eps);
+         error_loc(ie!=0,1,"read_cnfg [archive.c]",
+                   "Incorrect average plaquette of the SU(3) field");
+      }
    }
 
    ie=1;
-   if (((cnfg_type)==2)||((cnfg_type)==3))
+   if ((cnfg_type&2)!=0)
    {
       ir+=fread(&u1plaq0,sizeof(double),1,fin);
       ir+=fread(adb,sizeof(double),4*VOLUME,fin);
       set_flags(UPDATED_AD);
-      ie|=check_ad_bc(64.0*DBL_EPSILON);
-      error_root(ie!=1,1,"read_cnfg [archive.c]",
-                 "Incompatible boundary conditions of the U(1) field");
-      ie=0;
-      u1plaq0/=nplaq;
-      u1plaq1=u1_plaq_sum_dble(0)/nplaq;
-      ie|=(fabs(u1plaq1-u1plaq0)>eps);
-      set_ad_bc();
-      u1plaq1=u1_plaq_sum_dble(0)/nplaq;
-      ie|=(fabs(u1plaq1-u1plaq0)>eps);
-      error_loc(ie!=0,1,"read_cnfg [archive.c]",
-                "Incorrect average plaquette of the U(1) field");
+      
+      if ((gauge()&2)!=0)
+      {
+         ie|=check_ad_bc(64.0*DBL_EPSILON);
+         error_root(ie!=1,1,"read_cnfg [archive.c]",
+                    "Incompatible boundary conditions of the U(1) field");
+         ie=0;
+         u1plaq0/=nplaq;
+         u1plaq1=u1_plaq_sum_dble(0)/nplaq;
+         ie|=(fabs(u1plaq1-u1plaq0)>eps);
+         set_ad_bc();
+         u1plaq1=u1_plaq_sum_dble(0)/nplaq;
+         ie|=(fabs(u1plaq1-u1plaq0)>eps);
+         error_loc(ie!=0,1,"read_cnfg [archive.c]",
+                   "Incorrect average plaquette of the U(1) field");
+      }
    }
    fclose(fin);
 
-   if (((cnfg_type)==1)||((cnfg_type)==2))
+   if (cnfg_type!=3)
       error_loc(ir!=(17+ns+nd+4*VOLUME),1,"read_cnfg [archive.c]",
                 "Incorrect read count");
    else
@@ -617,7 +640,7 @@ void export_cnfg(char *out)
 
    su3plaq=0.0;
    u1plaq=0.0;
-   if (((cnfg_type)==1)||((cnfg_type)==3))
+   if ((cnfg_type&1)!=0)
    {
       udb=udfld();
 
@@ -640,7 +663,7 @@ void export_cnfg(char *out)
       if (ubuf==NULL)
          alloc_ubuf(my_rank);
    }
-   if (((cnfg_type)==2)||((cnfg_type)==3))
+   if ((cnfg_type&2)!=0)
    {
       adb=adfld();
 
@@ -685,11 +708,11 @@ void export_cnfg(char *out)
       {
          bswap_int(4,lsize);
 
-         if (((cnfg_type)==1)||((cnfg_type)==3))
+         if ((cnfg_type&1)!=0)
          {
             bswap_double(1,&su3plaq);
          }
-         if (((cnfg_type)==2)||((cnfg_type)==3))
+         if ((cnfg_type&2)!=0)
             bswap_double(1,&u1plaq);
       }
 
@@ -700,7 +723,7 @@ void export_cnfg(char *out)
 
    iwa=0;
 
-   if (((cnfg_type)==1)||((cnfg_type)==3))
+   if ((cnfg_type&1)!=0)
    {
       if (my_rank==0)
       {
@@ -757,7 +780,7 @@ void export_cnfg(char *out)
       }
    }
 
-   if (((cnfg_type)==2)||((cnfg_type)==3))
+   if ((cnfg_type&2)!=0)
    {
       if (my_rank==0)
       {
@@ -840,18 +863,19 @@ int import_cnfg(char *in)
    MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
 
    cnfg_type=which_cnfg_type(in,0);
-   error((gauge()+cnfg_type)==3,1,"import_cnfg [archive.c]",
-         "Attempt to read an inactive gauge field.");
 
    check_machine();
 
-   if (((cnfg_type)==1)||((cnfg_type)==3))
+   udb=NULL;
+   if ((cnfg_type&1)!=0)
    {
       udb=udfld();
       if (ubuf==NULL)
          alloc_ubuf(my_rank);
    }
-   if (((cnfg_type)==2)||((cnfg_type)==3))
+
+   adb=NULL;
+   if ((cnfg_type&2)!=0)
    {
       adb=adfld();
       if (abuf==NULL)
@@ -872,7 +896,7 @@ int import_cnfg(char *in)
       ir=fread(lsize,sizeof(stdint_t),4,fin);
       error_root(ir!=4,1,"import_cnfg [archive.c]","Incorrect read count");
 
-      if (((cnfg_type)==1)||((cnfg_type)==3))
+      if ((cnfg_type&1)!=0)
       {
          ir=fread(&su3plaq0,sizeof(double),1,fin);
          error_root(ir!=1,1,"import_cnfg [archive.c]","Incorrect read count");
@@ -918,7 +942,7 @@ int import_cnfg(char *in)
 
    MPI_Bcast(np,4,MPI_INT,0,MPI_COMM_WORLD);
 
-   if (((cnfg_type)==1)||((cnfg_type)==3))
+   if ((cnfg_type&1)!=0)
       MPI_Bcast(&su3plaq0,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
 
@@ -933,7 +957,7 @@ int import_cnfg(char *in)
    nc3=N3/n3;
    ira=0;
 
-   if (((cnfg_type)==1)||((cnfg_type)==3))
+   if ((cnfg_type&1)!=0)
    {
       for (ix=0;ix<(n0*n1*n2);ix++)
       {
@@ -1004,7 +1028,7 @@ int import_cnfg(char *in)
       set_flags(UPDATED_UD);
    }
 
-   if (((cnfg_type)==2)||((cnfg_type)==3))
+   if ((cnfg_type&2)!=0)
    {
       if (my_rank==0)
       {
@@ -1096,7 +1120,7 @@ int import_cnfg(char *in)
    nplaq=(double)(6*N0*N1)*(double)(N2*N3);
    eps=sqrt(nplaq)*DBL_EPSILON;
 
-   if (((cnfg_type)==1)||((cnfg_type)==3))
+   if (((cnfg_type&1)!=0)&&((gauge()&1)!=0))
    {
       ie=check_bc(64.0*DBL_EPSILON);
       error_root(ie!=1,1,"import_cnfg [archive.c]",
@@ -1111,7 +1135,7 @@ int import_cnfg(char *in)
                  "Incorrect average plaquette for the SU(3) gauge field");
    }
 
-   if (((cnfg_type)==2)||((cnfg_type)==3))
+   if (((cnfg_type&2)!=0)&&((gauge()&2)!=0))
    {
       ie=check_ad_bc(64.0*DBL_EPSILON);
       error_root(ie!=1,1,"import_cnfg [archive.c]",
@@ -1128,13 +1152,13 @@ int import_cnfg(char *in)
    
    if ((bc_cstar()!=0))
    {
-      if (((cnfg_type)==1)||((cnfg_type)==3))
+      if ((cnfg_type&1)!=0)
       {
          if (cpr[1]>=NPROC1/2)
             cstar_su3_dble(4*VOLUME,udb);
          set_flags(UPDATED_UD);
       }
-      if (((cnfg_type)==2)||((cnfg_type)==3))
+      if ((cnfg_type&2)!=0)
       {
          if (cpr[1]>=NPROC1/2)
             cstar_double(4*VOLUME,adb);

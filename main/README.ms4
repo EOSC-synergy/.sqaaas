@@ -71,16 +71,21 @@ cstar        0                     # Number of spatial directions with
                                    #   1: C* b.c.s in X
                                    #   2: C* b.c.s in XY
                                    #   3: C* b.c.s in XYZ
-phi          0.12 -0.56            # Boundary values of the SU(3) gauge field
+su3phi       0.12 -0.56            # Boundary values of the SU(3) gauge field
                                    # at time 0
-phi'         0.92 0.76             # Boundary values of the SU(3) gauge field
+su3phi'      0.92 0.76             # Boundary values of the SU(3) gauge field
+                                   # at time NPROC0*L0
+u1phi        0.43                  # Boundary values of the U(1) gauge field
+                                   # at time 0
+u1phi'       -1.32                 # Boundary values of the U(1) gauge field
                                    # at time NPROC0*L0
 
 [Dirac operator]
 qhat         -2                    # Electric charge in units of the elementary
                                    # electric charge used to generate the
                                    # imported configuration
-kappa        0.1300                # Hopping parameters
+kappa        0.1300                # Hopping parameter
+mu           0.2                   # Twisted mass
 su3csw       1.234                 # Coefficient of the SU(3) SW term
 u1csw        0.89                  # Coefficient of the U(1) SW term
 cF           0.95                  # Fermion action improvement coefficient
@@ -97,8 +102,7 @@ nsrc         12                    # Number of gaussian random source fields
                                    # to be generated per gauge configuration
 
 Then follows a description of the solver for the Dirac equation to be used (see
-doc/openQCD-1.6/parms.pdf, to be updated). The supported solvers are CGNE,
-SAP_GCR and DFL_SAP_GCR.
+doc/parms.pdf). The supported solvers are CGNE, SAP_GCR and DFL_SAP_GCR.
 
 Setting the source time x0 to 0 or NPROC0*L0-1 is not permitted if the chosen
 boundary conditions require the quark fields to vanish there. Superfluous

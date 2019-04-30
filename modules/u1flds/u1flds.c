@@ -174,6 +174,7 @@ complex_dble *u1dfld(u1lat_t lat)
    size_t n;
    int *lk,*lkm;
 
+   a=adfld();
    if (u1db==NULL)
    {
       alloc_u1d();
@@ -193,7 +194,6 @@ complex_dble *u1dfld(u1lat_t lat)
   	   n=size;
 	}
 
-   a=adfld();
    u1m=u1db+n;
    for (u1=u1db;u1<u1m;u1++)
    {

@@ -19,6 +19,10 @@ u1fcom.c       Communication of the U(1) force variables residing at the
 
 md_cstar.c     Apply C* boundary conditions to the MD auxiliary fields.
 
+u1mom_facc.c   Gauge-field propagator and generation of random gauge potentials
+
+u1mom_map.c    Reordering of the U(1) momentum variables in a form suitable 
+               for the FFT.
 
 Include file
 ------------
@@ -107,3 +111,24 @@ void orbi_cpy_u1mom(void)
 void orbi_add_u1frc(void)
   The U(1) force field on each process is added to the cstar-transform of
   the force field on the mirror process.
+
+void gather_u1mom(double* inmom,complex_dble **mom)
+  Gathers the momemta inmom, stored in the "gauge friendly" format, and
+  assigns them to the complex array elements mom[mu][ix],
+  mu=0,..,3, ix=0,..,VOLUME, as described in the notes.
+
+void scatter_u1mom(complex_dble **mom,double* outmom)
+  Inverse of the operation performed by gather_u1mom().
+
+void u1mom_Delta_no0(int flag,double* inmom,double* outmom)
+  The double array inmom is assumed to contain a vector field IN_mu(x)
+  stored as the U(1) gauge potentials and to include the corresponding 
+  communication buffers. Similarly, the double array outmom will contain
+  the vector field OUT_mu(x) where 
+    OUT_mu(x)= Delta_no0 G IN_mu(x)               if flag=0,
+    OUT_mu(x)= G^{-1} Delta_no0^{-1} IN_mu(x)     if flag=1,
+    OUT_mu(x)= Delta_no0^{1/2} G^{-1/2} IN_mu(x)  if flag=2,
+    OUT_mu(x)= G^{1/2} Delta_no0^{-1/2} IN_mu(x)  if flag=3.
+    OUT_mu(x)= IN_mu(x)                           otherwise.
+  The operators Delta_no0 and G are described in the notes below.
+  The pointers inmom and outmom may be equal.

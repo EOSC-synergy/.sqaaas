@@ -10,12 +10,14 @@ cnfg_dir     /data/iso1/cnfg
 
 [Configurations]
 first        1
-last         4
+last         2
 step         1
 
 [Boundary conditions]
-type         2
-cstar        0
+type         open-SF
+cstar        1
+su3phi       0.12 -0.56
+u1phi        1.43
 
 [U(1) action]
 invqel       6.0

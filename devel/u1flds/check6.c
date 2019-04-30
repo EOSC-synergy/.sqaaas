@@ -64,7 +64,8 @@ int main(int argc,char *argv[])
 {
    int bc,cs,my_rank,n,t,s[4];
    static double asl1[N0],asl2[N0];
-   double phi[2],phi_prime[2];
+   double su3phi[2],su3phi_prime[2];
+   double u1phi,u1phi_prime;
    double act1,nplaq1,nplaq2,p1,p2;
    double d1,d2,d3;
    FILE *flog=NULL;
@@ -102,11 +103,18 @@ int main(int argc,char *argv[])
 
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
-   phi[0]=0.0;
-   phi[1]=0.0;
-   phi_prime[0]=0.0;
-   phi_prime[1]=0.0;
-   set_bc_parms(bc,0,cs,phi,phi_prime);
+   su3phi[0]=0.0;
+   su3phi[1]=0.0;
+   su3phi_prime[0]=0.0;
+   su3phi_prime[1]=0.0;
+   u1phi=0.0;
+   u1phi_prime=0.0;
+   if (cs==0)
+   {
+      u1phi=0.573;
+      u1phi_prime=-1.827;
+   }
+   set_bc_parms(bc,cs,su3phi,su3phi_prime,u1phi,u1phi_prime);
    print_bc_parms();
 
    start_ranlux(0,12345);
@@ -130,14 +138,34 @@ int main(int argc,char *argv[])
       nplaq1=(double)((6*N0+3)*N1)*(double)(N2*N3);
       nplaq2=(double)(6*N0*N1)*(double)(N2*N3);
    }
+   d1=0.0;
+   d2=0.0;
+
+   if (bc==1)
+   {
+      d1=cos(u1phi/(double)(N1))+
+         cos(u1phi/(double)(N2))+
+         cos(u1phi/(double)(N3));
+
+      d1=(d1-3.0)*(double)(N1*N2*N3);
+   }
+
+   if ((bc==1)||(bc==2))
+   {
+      d2=cos(u1phi_prime/(double)(N1))+
+         cos(u1phi_prime/(double)(N2))+
+         cos(u1phi_prime/(double)(N3));
+
+      d2=(d2-3.0)*(double)(N1*N2*N3);
+   }
 
    if (my_rank==0)
    {
       printf("After field initialization:\n");
       printf("Deviation from expected value (plaq_sum)  = %.1e\n",
-             fabs(1.0-p1/nplaq1));
+             fabs(1.0-p1/(nplaq1+d1+d2)));
       printf("Deviation from expected value (plaq_wsum) = %.1e\n\n",
-             fabs(1.0-p2/nplaq2));
+             fabs(1.0-p2/(nplaq2+d1+d2)));
    }
 
    print_flags();

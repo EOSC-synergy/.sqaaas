@@ -214,7 +214,7 @@ int main(int argc,char *argv[])
    set_flds_parms(3,0);
    print_flds_parms();
 
-   set_bc_parms(bc,0,0,phi,phi_prime);
+   set_bc_parms(bc,0,phi,phi_prime,0.0,0.0);
    print_bc_parms();
    
    if ((gauge()&2)==0)

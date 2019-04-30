@@ -27,9 +27,9 @@ BLOCK = block blk_grid map_u2blk map_sw2blk map_s2blk
 
 DIRAC = Dw_dble Dw Dw_bnd
 
-DFL = dfl_geometry dfl_subspace
+DFL = dfl_geometry dfl_multiple dfl_subspace
 
-FLAGS = flags dirac_parms lat_parms sap_parms dfl_parms parms_utils
+FLAGS = flags dirac_parms lat_parms sap_parms dfl_parms
 
 LATTICE = bcnds ftidx uidx geometry cstar
 
@@ -53,13 +53,13 @@ TCHARGE = ftcom ftensor
 
 UFLDS = plaq_sum shift uflds udcom ud_cstar
 
-U1FLDS = adflds adcom u1flds ad_shift ad_bcnds u1fcts ad_cstar
+U1FLDS = adflds adcom u1flds ad_shift ad_bcnds u1fcts ad_cstar u1_plaq_sum
 
 U1FTENSOR = u1ftcom u1ftensor u1fluxes mxw_action
 
 HFLDS = hflds
 
-UTILS = endian error hsum mutils utils wspace
+UTILS = endian error hsum ioutils mutils utils wspace
 
 VFLDS = vflds vinit vcom vdcom
 

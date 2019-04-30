@@ -5,6 +5,12 @@ check1        Check boundary conditions of random SU(3) momentum.
 
 check2        Check boundary conditions of random U(1) momentum.
 
+check3        Check of the programs gather_u1mom() and scatter_u1mom().
+
+check4        Check of the program u1mom_Delta_no0 with plane waves.
+
+check5        Check of the program u1mom_Delta_no0.
+
 All programs accept the option -bc <type> that allows the type of boundary
 condition to be chosen. When the option is not set, open boundary conditions
 are assumed.

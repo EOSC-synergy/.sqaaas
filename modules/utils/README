@@ -11,9 +11,11 @@ Files
 
 endian.c       Byte swapping programs
 
-error.c        Error handling functions.
+error.c        Error handling functions
 
-hsum.c         Hierarchical summation programs.
+hsum.c         Hierarchical summation programs
+
+ioutils.c      Basic I/O utility functions
 
 mutils.c       Utility functions used in main programs
 
@@ -92,6 +94,109 @@ void global_hsum(int id,double *sx)
   Same as local_hsum(), but additionally sums the results over all
   MPI processes. The calculated sums are guaranteed to be exactly
   the same on all processes.
+
+int write_little_dble(int blocking,FILE *fdat,int nargs,...)
+  Attempts to write the variables passed as [...] in the fdat file in
+  little endian. A number of nargs double arguments is expected instead
+  of [...].
+  If iw==narg, where iw is the number of double values successfully written,
+  the program returns iw and the value of blocking is irrelevant.
+  If iw!=narg, the behaviour of the program depends on the value of
+  blocking. If blocking==0 then the program returns iw, otherwise it
+  terminates with an error.
+
+int write_little_int(int blocking,FILE *fdat,int nargs,...)
+  Attempts to write the variables passed as [...] in the fdat file in
+  little endian. A number of nargs int arguments is expected instead
+  of [...].
+  If iw==narg, where iw is the number of int values successfully written,
+  the program returns iw and the value of blocking is irrelevant.
+  If iw!=narg, the behaviour of the program depends on the value of
+  blocking. If blocking==0 then the program returns iw, otherwise it
+  terminates with an error.
+
+int write_little_dblearray(int blocking,FILE *fdat,int size,double *data)
+  Attempts to write to write the array data[size] in the fdat file in
+  little endian.
+  If iw==size, where iw is the number of double values successfully written,
+  the program returns iw and the value of blocking is irrelevant.
+  If iw!=size, the behaviour of the program depends on the value of
+  blocking. If blocking==0 then the program returns iw, otherwise it
+  terminates with an error.
+
+int write_little_intarray(int blocking,FILE *fdat,int size,int *data)
+  Attempts to write to write the array data[size] in the fdat file in
+  little endian.
+  If iw==size, where iw is the number of int values successfully written,
+  the program returns iw and the value of blocking is irrelevant.
+  If iw!=size, the behaviour of the program depends on the value of
+  blocking. If blocking==0 then the program returns iw, otherwise it
+  terminates with an error.
+
+int read_little_dble(int blocking,FILE *fdat,int nargs,...)
+  Attempts to read the next nargs double values from the file fdat, and
+  stores them in the variables pointed by the pointers passed as [...].
+  A number of nargs double* arguments is expected instead of [...].
+  If ir==narg, where ir is the number of double values successfully read,
+  the program returns ir and the value of blocking is irrelevant.
+  If ir!=narg, the behaviour of the program depends on the value of
+  blocking. If blocking==0 then the program returns ir, otherwise it
+  terminates with an error.
+
+int read_little_int(int blocking,FILE *fdat,int nargs,...)
+  Attempts to read the next nargs int values from the file fdat, and
+  stores them in the variables pointed by the pointers passed as [...].
+  A number of nargs int* arguments is expected instead of [...].
+  If ir==narg, where ir is the number of int values successfully read,
+  the program returns ir and the value of blocking is irrelevant.
+  If ir!=narg, the behaviour of the program depends on the value of
+  blocking. If blocking==0 then the program returns ir, otherwise it
+  terminates with an error.
+
+int read_little_dblearray(int blocking,FILE *fdat,int size,double *data)
+  Attempts to read the next size double values from the file fdat, and
+  stores them in the array data[size].
+  If ir==size, where ir is the number of double values successfully read,
+  the program returns ir and the value of blocking is irrelevant.
+  If ir!=size, the behaviour of the program depends on the value of
+  blocking. If blocking==0 then the program returns ir, otherwise it
+  terminates with an error.
+
+int read_little_intarray(int blocking,FILE *fdat,int size,int *data)
+  Attempts to read the next size int values from the file fdat, and
+  stores them in the array data[size].
+  If ir==size, where ir is the number of int values successfully read,
+  the program returns ir and the value of blocking is irrelevant.
+  If ir!=size, the behaviour of the program depends on the value of
+  blocking. If blocking==0 then the program returns ir, otherwise it
+  terminates with an error.
+
+void check_little_dble(const char fnm[256],FILE *fdat,int nargs,...)
+  Reads the next nargs double values from the file fdat and checks that
+  they match the values of the variables passed as [...]. A number of nargs
+  double arguments is expected instead of [...]. The string fnm is expected
+  to contain the name of the function that calls the test (used in the error
+  message).
+
+void check_little_int(const char fnm[256],FILE *fdat,int nargs,...)
+  Reads the next nargs int values from the file fdat and checks that
+  they match the values of the variables passed as [...]. A number of nargs
+  double arguments is expected instead of [...]. The string fnm is expected
+  to contain the name of the function that calls the test (used in the error
+  message).
+
+void check_little_dblearray(const char fnm[256],FILE *fdat,int size,
+                          double *data)
+  Reads the next size double values from the file fdat and checks that
+  they match the values of the array data[size]. The string fnm is expected
+  to contain the name of the function that calls the test (used in the error
+  message).
+
+void check_little_intarray(const char fnm[256],FILE *fdat,int size,int *data)
+  Reads the next size int values from the file fdat and checks that
+  they match the values of the array data[size]. The string fnm is expected
+  to contain the name of the function that calls the test (used in the error
+  message).
 
 int find_opt(int argc,char *argv[],char *opt)
   On process 0, this program compares the string opt with the arguments
@@ -203,6 +308,28 @@ int mpi_tag(void)
 void message(char *format,...)
   Prints a message from process 0 to stdout. The usage and argument
   list is the same as in the case of the printf function
+
+void check_global_dble(const char fnm[256],int nargs,...)
+  Checks if all variables passed as [...] take the same value in all MPI
+  processes. A number of nargs double arguments is expected instead of
+  [...]. The string fnm is expected to contain the name of the function
+  that calls the test (used in the error message).
+
+void check_global_dblearray(const char fnm[256],int size,double *data)
+  Checks if the array data[size] contains the same values in all MPI
+  processes. The string fnm is expected to contain the name of the function
+  that calls the test (used in the error message).
+
+void check_global_int(const char fnm[256],int nargs,...)
+  Checks if all variables passed as [...] take the same value in all MPI
+  processes. A number of nargs int arguments is expected instead of [...].
+  The string fnm is expected to contain the name of the function that calls
+  the test (used in the error message).
+
+void check_global_intarray(const char fnm[256],int size,int *data)
+  Checks if the array data[size] contains the same values in all MPI
+  processes. The string fnm is expected to contain the name of the function
+  that calls the test (used in the error message).
 
 su3_dble **reserve_wud(int n)
   Reserves a new workspace of n global double-precision SU(3) gauge fields

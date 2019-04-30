@@ -82,7 +82,7 @@ static void ftplaq(int *x,int mu,int nu,double *ftp)
       sm-=afld(x,mu);
       x[nu]-=1;
 
-      phi=bcp.phi[0];
+      phi=bcp.phi3[0];
       om[0]=sm-phi[0]*inp[nu];
       om[1]=sm-phi[1]*inp[nu];
       om[2]=-2.0*sm-phi[2]*inp[nu];
@@ -94,7 +94,7 @@ static void ftplaq(int *x,int mu,int nu,double *ftp)
       sm-=afld(x,mu);
       x[nu]-=1;
 
-      phi=bcp.phi[1];
+      phi=bcp.phi3[1];
       om[0]=sm+phi[0]*inp[nu];
       om[1]=sm+phi[1]*inp[nu];
       om[2]=-2.0*sm+phi[2]*inp[nu];
@@ -362,7 +362,7 @@ int main(int argc,char *argv[])
    phi[1]=-0.534;
    phi_prime[0]=0.912;
    phi_prime[1]=0.078;
-   set_bc_parms(bc,0,0,phi,phi_prime);
+   set_bc_parms(bc,0,phi,phi_prime,0.573,-1.827);
    print_bc_parms();
 
    start_ranlux(0,123);

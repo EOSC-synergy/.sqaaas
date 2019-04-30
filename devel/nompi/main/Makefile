@@ -19,20 +19,22 @@ all: rmxeq mkdep mkxeq
 
 # main programs and required modules
 
-MAIN = read.iso1 read.qcd1 read.ms1 read.ms3 read.ms5
+MAIN = read.iso1 read.qcd1 read.ms1 read.ms3 read.ms5 read.ms6
 
 EXTRAS = stat
 
+RANDOM = gauss ranlxd ranlxs
+
 UTILS = utils mutils endian
 
-MODULES = $(EXTRAS) $(UTILS)
+MODULES = $(EXTRAS) $(UTILS) $(RANDOM)
 
 
 # search path for modules
 
 MDIR = ../../../modules
 
-VPATH = .:$(MDIR)/nompi/extras:$(MDIR)/nompi/utils
+VPATH = .:$(MDIR)/nompi/extras:$(MDIR)/nompi/utils:$(MDIR)/nompi/random
 
 
 # additional include directories

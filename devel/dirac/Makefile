@@ -26,7 +26,7 @@ BLOCK = block blk_grid map_u2blk map_sw2blk map_s2blk
 
 DIRAC = Dw_dble Dw Dw_bnd
 
-FLAGS = flags dirac_parms lat_parms sap_parms dfl_parms parms_utils
+FLAGS = flags dirac_parms lat_parms sap_parms dfl_parms
 
 HFLDS = hflds
 
@@ -52,7 +52,7 @@ U1FTENSOR = u1ftcom u1ftensor u1fluxes mxw_action
 
 UFLDS = plaq_sum shift uflds udcom ud_cstar
 
-UTILS = endian error hsum mutils utils wspace
+UTILS = endian error hsum ioutils mutils utils wspace
 
 SHARE = gflds_utils sflds_utils
 

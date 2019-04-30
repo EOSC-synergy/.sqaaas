@@ -46,6 +46,15 @@
 *     on MPI process 0, assuming the latter were written to the file by
 *     the program write_sap_parms().
 *
+*   void read_sap_parms(void)
+*     On process 0, this program reads the following section from the stdin,
+*     as explained in more details in doc/parms.pdf
+*
+*       [SAP]
+*       bs        <int> <int> <int> <int>
+*
+*     After reading the stdin, the SAP parameters are set with 'set_sap_parms'.
+*
 * Notes:
 *
 * To ensure the consistency of the data base, the parameters must be set
@@ -168,14 +177,31 @@ void print_sap_parms(int ipr)
 
 void write_sap_parms(FILE *fdat)
 {
-   write_little_int(fdat,7,sap.bs[0],sap.bs[1],sap.bs[2],sap.bs[3],
+   write_little_int(1,fdat,7,sap.bs[0],sap.bs[1],sap.bs[2],sap.bs[3],
                     sap.isolv,sap.nmr,sap.ncy);
 }
 
 
 void check_sap_parms(FILE *fdat)
 {
-   check_fpar_int("check_sap_parms",fdat,7,
+   check_little_int("check_sap_parms",fdat,7,
                   sap.bs[0],sap.bs[1],sap.bs[2],sap.bs[3],
                   sap.isolv,sap.nmr,sap.ncy);
+}
+
+
+void read_sap_parms(void)
+{
+   int my_rank,bs[4];
+
+   MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
+
+   if (my_rank==0)
+   {
+      find_section("SAP");
+      read_line("bs","%d %d %d %d",bs,bs+1,bs+2,bs+3);
+   }
+
+   MPI_Bcast(bs,4,MPI_INT,0,MPI_COMM_WORLD);
+   set_sap_parms(bs,1,4,5);
 }

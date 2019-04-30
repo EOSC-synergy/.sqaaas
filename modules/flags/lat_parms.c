@@ -31,7 +31,7 @@
 *     the above parameters.
 *
 *   su3lat_parms_t set_su3lat_parms(double beta,double c0,
-*                                   double cG,double cG_prime)
+*                                   double cG,double cG_prime,int SFtype)
 *     Sets the parameters for the SU(3) gauge action. The parameters are
 *
 *       beta           Inverse SU(3) bare coupling (beta=6/g0^2).
@@ -42,13 +42,16 @@
 *       cG,            SU(3) gauge action improvement coefficients at time 0
 *       cG_prime       and T, respectively.
 *
+*       SFtype         Type of SF boundary for Luescher-Weisz actions
+*                      (0: orbifold constuction - 1: Aoki-Frezzotti-Weisz)
+*
 *   su3lat_parms_t su3lat_parms(void)
 *     Returns the current SU(3) gauge action parameters in a structure that
 *     contains the above parameters.
 *
 *   u1lat_parms_t set_u1lat_parms(int type,double alpha,double invqel,
 *                                 double lambda,double c0,
-*                                 double cG,double cG_prime)
+*                                 double cG,double cG_prime,int SFtype)
 *     Sets the parameters for the U(1) gauge action. The parameters are
 *
 *       type           Type of U(1) gauge action (0: compact, 1: non-compact)
@@ -68,6 +71,9 @@
 *       cG,            U(1) gauge action improvement coefficients at time 0
 *       cG_prime       and T, respectively (relevant only for the compact
 *                      formulation).
+*
+*       SFtype         Type of SF boundary for Luescher-Weisz actions
+*                      (0: orbifold constuction - 1: Aoki-Frezzotti-Weisz)
 *
 *   u1lat_parms_t u1lat_parms(void)
 *     Returns the current U(1) gauge action parameters in a structure that
@@ -115,30 +121,34 @@
 *     assuming the latter were written to the file by the program
 *     write_flds_bc_lat_parms().
 *
-*   bc_parms_t set_bc_parms(int type,int SFtype,int cstar,
-*                           double *phi,double *phi_prime)
+*   bc_parms_t set_bc_parms(int type,int cstar,
+*                           double *phi3,double *phi3_prime,
+*                           double phi1,double phi1_prime)
 *     Sets the boundary conditions and the associated parameters of the
 *     action. The parameters are
 *
 *       type           Chosen type of time boundary condition (0: open, 1: SF,
 *                      2: open-SF, 3: periodic).
 *
-*       SFtype         Type of SF boundary for Luescher-Weisz actions
-*                      (0: orbifold constuction - 1: Aoki-Frezzotti-Weisz)
-*
 *       cstar          Number of spatial directions with C-periodic boundary
 *                      conditions.
 *
-*       phi[0],        First two angles that define the boundary values of
-*       phi[1]         the gauge field at time 0.
+*       phi3[0],       First two angles that define the boundary values of
+*       phi3[1]        the SU(3) gauge field at time 0.
 *
-*       phi_prime[0],  First two angles that define the boundary values of
-*       phi_prime[1]   the gauge field at time T.
+*       phi3_prime[0], First two angles that define the boundary values of
+*       phi3_prime[1]  the SU(3) gauge field at time T.
+*
+*       phi1           Angle that defines the boundary values of the U(1)
+*                      gauge field at time 0.
+*
+*       phi1_prime     Angle that defines the boundary values of the U(1)
+*                      gauge field at time T.
 *
 *     The return value is a structure that contains these parameters plus
-*     the third angles. In this structure, the angles are stored in the form of
-*     arrays phi[2][3], where phi[0][] and phi[1][] are the parameters at
-*     time 0 and T, respectively.
+*     the third SU(3) angles. In this structure, the angles are stored in the
+*     form of arrays phi3[2][3], where phi3[0][] and phi3[1][] are the
+*     parameters at time 0 and T, respectively.
 *
 *   bc_parms_t bc_parms(void)
 *     Returns a structure that contains the boundary parameters.
@@ -149,6 +159,79 @@
 *   int bc_type(void)
 *     Returns the type of the chosen boundary conditions (0: open, 1: SF,
 *     2: open-SF, 3: periodic).
+*
+*   void read_bc_parms(void)
+*     On process 0, this program reads the following section from the stdin,
+*     as explained in more details in doc/parms.pdf
+*
+*       [Boundary conditions]
+*       type      <string|int>
+*       cstar     <int>
+*       su3phi    <double> <double>
+*       su3phi'   <double> <double>
+*       u1phi     <double>
+*       u1phi'    <double>
+*
+*     This program assumes that 'set_flds_parms' has been already called.
+*     Depending on the the gauge group selected with 'set_flds_parms', some
+*     lines are not read and can be omitted in the input file. After reading
+*     the stdin, the boundary conditions parameters are set with 'set_bc_parms'.
+*
+*   void read_glat_parms(void)
+*     On process 0, this program reads a number of sections from the stdin
+*     with the parameters of the gauge actions, as explained in more details
+*     in doc/parms.pdf. This program assumes that 'set_flds_parms' and
+*     'set_bc_parms' have been already called. If the SU(3) gauge field is
+*     active, the program reads the following section
+*
+*       [SU(3) action]
+*       beta         <double>
+*       c0           <double>
+*       SFtype       <string|int>
+*       cG           <double>
+*       cG'          <double>
+*
+*     Depending on the boundary conditions, some lines are not read and can be
+*     omitted in the input file. After reading the stdin, the SU(3) action
+*     parameters are set with 'set_su3lat_parms'.
+*
+*     If the U(1) gauge field is active, the program reads the following section
+*    
+*       [U(1) action]
+*       type         <string|int>
+*       alpha        <double>
+*       invqel       <double>
+*       c0           <double>
+*       SFtype       <string|int>
+*       cG           <double>
+*       cG'          <double>
+*
+*     Depending on the boundary conditions, some lines are not read and can be
+*     omitted in the input file. After reading the stdin, the U(1) action
+*     parameters are set with 'set_u1lat_parms'.
+*
+*   void read_qlat_parms(void)
+*     On process 0, this program reads a number of sections from the stdin
+*     with the parameters of the quark actions, as explained in more details
+*     in doc/parms.pdf. This program assumes that 'set_flds_parms' and
+*     'set_bc_parms' have been already called.
+*
+*     If nfl is the number of quark flavours set with the 'set_flds_parms'
+*     program, for each ifl=0,...,nfl-1, the program reads the following
+*     sections
+*       
+*       [Flavour ifl]
+*       qhat         <int>
+*       kappa        <double>
+*       su3csw       <double>
+*       u1csw        <double>
+*       cF           <double>
+*       cF'          <double>
+*       theta        <double>
+*
+*     Depending on the boundary conditions and the active gauge, some lines are
+*     not read and can be omitted in the input file. After reading the stdin,
+*     the quark flavour parameters are set with 'set_qlat_parms'.
 *
 * Notes:
 *
@@ -169,6 +252,7 @@
 *       beta           0.0
 *       c0             1.0
 *       cG=cG'         1.0
+*       SFtype         0: orbifold construction
 * The default values for the U(1) gauge action parameters are
 *       type           0: compact
 *       alpha          DBL_MAX
@@ -177,6 +261,7 @@
 *       lambda         0.0
 *       c0             1.0
 *       cG=cG'         1.0
+*       SFtype         0: orbifold construction
 * The default values for the quark parameters are
 *       m0             DBL_MAX
 *       qhat           0
@@ -186,9 +271,9 @@
 *       th1=th2=th3    0.0
 * The default values for the boundary condition parameters are
 *       type           0: open
-*       SFtype         0: orbifold construction
 *       cstar          0
-*       phi=phi'       0.0
+*       su3phi=su3phi' 0.0
+*       u1phi=u1phi'   0.0
 *
 * See the notes doc/gauge_action.pdf and doc/dirac.pdf for the detailed
 * description of the lattice action and the boundary conditions.
@@ -201,6 +286,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <float.h>
+#include <string.h>
 #include "mpi.h"
 #include "utils.h"
 #include "flags.h"
@@ -213,11 +299,11 @@
 
 static int flg_flds=0,flg_su3lat=0,flg_u1lat=0,flg_bc=0,*flg_qlat=NULL;
 static flds_parms_t flds={1,0};
-static su3lat_parms_t su3lat={0.0,1.0,0.0,{1.0,1.0}};
-static u1lat_parms_t u1lat={0,DBL_MAX,1.0,0.0,0.0,1.0,0.0,{1.0,1.0}};
+static su3lat_parms_t su3lat={0,0.0,1.0,0.0,{1.0,1.0}};
+static u1lat_parms_t u1lat={0,0,DBL_MAX,1.0,0.0,0.0,1.0,0.0,{1.0,1.0}};
 static double *qkappa=NULL;
 static dirac_parms_t *qlat=NULL;
-static bc_parms_t bc={0,0,0,{{0.0,0.0,0.0},{0.0,0.0,0.0}},{0.0,0.0}};
+static bc_parms_t bc={0,0,{{0.0,0.0,0.0},{0.0,0.0,0.0}},{0.0,0.0}};
 
 
 flds_parms_t set_flds_parms(int gauge,int nfl)
@@ -275,13 +361,8 @@ flds_parms_t set_flds_parms(int gauge,int nfl)
 }
 
 
-bc_parms_t set_bc_parms(int type,int SFtype,int cstar,
-                        double *phi,double *phi_prime)
+bc_parms_t set_bc_parms(int type,int cstar,double *phi3,double *phi3_prime,double phi1, double phi1_prime)
 {
-   double ad,ad_prime;
-   
-   ad=ad_prime=0.0;
-
    error(flg_bc!=0,1,"set_bc_parms [lat_parms.c]",
          "Attempt to reset the boundary conditions");
 
@@ -289,61 +370,53 @@ bc_parms_t set_bc_parms(int type,int SFtype,int cstar,
          "Geometry arrays are already set");
 
 
-   check_global_int("set_bc_parms",3,type,SFtype,cstar);
-   check_global_dble("set_bc_parms",6,phi[0],phi[1],phi_prime[0],phi_prime[1],
-                                      ad,ad_prime);
+   check_global_int("set_bc_parms",2,type,cstar);
+   check_global_dble("set_bc_parms",6,phi3[0],phi3[1],phi3_prime[0],phi3_prime[1],
+                                      phi1,phi1_prime);
 
    error_root((type<0)||(type>3),1,"set_bc_parms [lat_parms.c]",
               "Unknown type of time boundary condition");
-
-   error_root((SFtype<0)||(SFtype>1),1,"set_bc_parms [lat_parms.c]",
-              "Unknown type of SF boundary condition");
 
    error_root((cstar<0)||(cstar>3),1,"set_bc_parms [lat_parms.c]",
               "Invalid number of directions with Cstar boundary conditions");
 
    bc.type=type;
-   bc.SFtype=0;
    bc.cstar=cstar;
 
    if (type==1)
    {
-      bc.SFtype=SFtype;
-
       if (cstar==0)
       {
          if ((flds.gauge&1)!=0)
          {
-            bc.phi[0][0]=phi[0];
-            bc.phi[0][1]=phi[1];
-            bc.phi[0][2]=-phi[0]-phi[1];
+            bc.phi3[0][0]=phi3[0];
+            bc.phi3[0][1]=phi3[1];
+            bc.phi3[0][2]=-phi3[0]-phi3[1];
 
-            bc.phi[1][0]=phi_prime[0];
-            bc.phi[1][1]=phi_prime[1];
-            bc.phi[1][2]=-phi_prime[0]-phi_prime[1];
+            bc.phi3[1][0]=phi3_prime[0];
+            bc.phi3[1][1]=phi3_prime[1];
+            bc.phi3[1][2]=-phi3_prime[0]-phi3_prime[1];
          }
          if ((flds.gauge&2)!=0)
          {
-            bc.ad[0]=ad;
-            bc.ad[1]=ad_prime;
+            bc.phi1[0]=phi1;
+            bc.phi1[1]=phi1_prime;
          }
       }
    }
    else if (type==2)
    {
-      bc.SFtype=SFtype;
-
       if(cstar==0)
       {
          if ((flds.gauge&1)!=0)
          {
-            bc.phi[1][0]=phi_prime[0];
-            bc.phi[1][1]=phi_prime[1];
-            bc.phi[1][2]=-phi_prime[0]-phi_prime[1];
+            bc.phi3[1][0]=phi3_prime[0];
+            bc.phi3[1][1]=phi3_prime[1];
+            bc.phi3[1][2]=-phi3_prime[0]-phi3_prime[1];
          }
          if ((flds.gauge&2)!=0)
          {
-            bc.ad[1]=ad_prime;
+            bc.phi1[1]=phi1_prime;
          }
       }
    }
@@ -354,7 +427,8 @@ bc_parms_t set_bc_parms(int type,int SFtype,int cstar,
 }
 
 
-su3lat_parms_t set_su3lat_parms(double beta,double c0,double cG,double cG_prime)
+su3lat_parms_t set_su3lat_parms(double beta,double c0,
+                                double cG,double cG_prime,int SFtype)
 {
    error(flg_flds==0,1,"set_su3lat_parms [lat_parms.c]",
          "Field parameters must be set first");
@@ -368,6 +442,7 @@ su3lat_parms_t set_su3lat_parms(double beta,double c0,double cG,double cG_prime)
    error(flg_bc==0,1,"set_su3lat_parms [lat_parms.c]",
          "Boundary conditions must be set first");
 
+   check_global_int("set_bc_parms",1,SFtype);
    check_global_dble("set_su3lat_parms",4,beta,c0,cG,cG_prime);
 
    error_root(beta<=0.0,1,"set_su3lat_parms [lat_parms.c]",
@@ -376,6 +451,9 @@ su3lat_parms_t set_su3lat_parms(double beta,double c0,double cG,double cG_prime)
    error_root(c0<=0.0,1,"set_su3lat_parms [lat_parms.c]",
               "Parameter c0 must be positive");
 
+   error_root((SFtype<0)||(SFtype>1),1,"set_su3lat_parms [lat_parms.c]",
+              "Unknown type of SF boundary condition");
+   
 
    if ((flds.gauge&1)!=0)
    {
@@ -392,6 +470,10 @@ su3lat_parms_t set_su3lat_parms(double beta,double c0,double cG,double cG_prime)
          else if (bc.type==2)
             su3lat.cG[1]=cG_prime;
       }
+      if ((bc.type>=1)&&(bc.type<=2)&&(c0!=1.0))
+      {
+         su3lat.SFtype=SFtype;
+      }
 
       flg_su3lat=1;
    }
@@ -401,7 +483,7 @@ su3lat_parms_t set_su3lat_parms(double beta,double c0,double cG,double cG_prime)
 
 
 u1lat_parms_t set_u1lat_parms(int type,double alpha,double invqel,double lambda,
-                              double c0,double cG,double cG_prime)
+                              double c0,double cG,double cG_prime,int SFtype)
 {
    error(flg_flds==0,1,"set_u1lat_parms [lat_parms.c]",
          "Field parameters must be set first");
@@ -412,7 +494,7 @@ u1lat_parms_t set_u1lat_parms(int type,double alpha,double invqel,double lambda,
    error(flg_bc==0,1,"set_u1lat_parms [lat_parms.c]",
          "Boundary conditions must be set first");
 
-   check_global_int("set_u1lat_parms",1,type);
+   check_global_int("set_u1lat_parms",2,type,SFtype);
    check_global_dble("set_u1lat_parms",6,alpha,invqel,lambda,c0,cG,cG_prime);
 
    error_root((type<0)||(type>1),1,"set_u1lat_parms [lat_parms.c]",
@@ -430,6 +512,9 @@ u1lat_parms_t set_u1lat_parms(int type,double alpha,double invqel,double lambda,
    error_root(lambda<0.0,1,"set_u1lat_parms [lat_parms.c]",
               "Parameter lambda must be positive");
 
+   error_root((SFtype<0)||(SFtype>1),1,"set_u1lat_parms [lat_parms.c]",
+              "Unknown type of SF boundary condition");
+   
 
    if ((flds.gauge&2)!=0)
    {
@@ -455,6 +540,10 @@ u1lat_parms_t set_u1lat_parms(int type,double alpha,double invqel,double lambda,
             else if (bc.type==2)
                u1lat.cG[1]=cG_prime;
          }
+      }
+      if ((bc.type>=1)&&(bc.type<=2)&&(type==0)&&(c0!=1.0))
+      {
+         u1lat.SFtype=SFtype;
       }
 
       flg_u1lat=1;
@@ -654,57 +743,49 @@ void print_bc_parms(void)
       {
          printf("SF boundary conditions in time\n");
          printf("Physical lattice %dx%dx%dx%d\n",N[0],N[1],N[2],N[3]);
-         if (bc.SFtype==0)
-            printf("Orbifold-type SF boundary\n");
-         else
-            printf("AFW-typeB SF boundary\n");
 
          if ((flds.gauge&1)!=0)
          {
-            n[0]=fdigits(bc.phi[0][0]);
-            n[1]=fdigits(bc.phi[0][1]);
-            n[2]=fdigits(bc.phi[0][2]);
-            printf("phi = %.*f,%.*f,%.*f\n",IMAX(n[0],1),bc.phi[0][0],
-                   IMAX(n[1],1),bc.phi[0][1],IMAX(n[2],1),bc.phi[0][2]);
+            n[0]=fdigits(bc.phi3[0][0]);
+            n[1]=fdigits(bc.phi3[0][1]);
+            n[2]=fdigits(bc.phi3[0][2]);
+            printf("su3phi = %.*f,%.*f,%.*f\n",IMAX(n[0],1),bc.phi3[0][0],
+                   IMAX(n[1],1),bc.phi3[0][1],IMAX(n[2],1),bc.phi3[0][2]);
 
-            n[0]=fdigits(bc.phi[1][0]);
-            n[1]=fdigits(bc.phi[1][1]);
-            n[2]=fdigits(bc.phi[1][2]);
-            printf("phi' = %.*f,%.*f,%.*f\n",IMAX(n[0],1),bc.phi[1][0],
-                   IMAX(n[1],1),bc.phi[1][1],IMAX(n[2],1),bc.phi[1][2]);
+            n[0]=fdigits(bc.phi3[1][0]);
+            n[1]=fdigits(bc.phi3[1][1]);
+            n[2]=fdigits(bc.phi3[1][2]);
+            printf("su3phi' = %.*f,%.*f,%.*f\n",IMAX(n[0],1),bc.phi3[1][0],
+                   IMAX(n[1],1),bc.phi3[1][1],IMAX(n[2],1),bc.phi3[1][2]);
          }
          
          if ((flds.gauge&2)!=0)
          {
-            n[0]=fdigits(bc.ad[0]);
-            printf("ad = %.*f\n",IMAX(n[0],1),bc.ad[0]);
+            n[0]=fdigits(bc.phi1[0]);
+            printf("u1phi = %.*f\n",IMAX(n[0],1),bc.phi1[0]);
             
-            n[0]=fdigits(bc.ad[1]);
-            printf("ad' = %.*f\n",IMAX(n[0],1),bc.ad[1]);
+            n[0]=fdigits(bc.phi1[1]);
+            printf("u1phi' = %.*f\n",IMAX(n[0],1),bc.phi1[1]);
          }
       }
       else if (bc.type==2)
       {
          printf("Open-SF boundary conditions in time\n");
          printf("Physical lattice %dx%dx%dx%d\n",N[0],N[1],N[2],N[3]);
-         if (bc.SFtype==0)
-            printf("Orbifold-type SF boundary\n");
-         else
-            printf("AFW-typeB SF boundary\n");
 
          if ((flds.gauge&1)!=0)
          {
-            n[0]=fdigits(bc.phi[1][0]);
-            n[1]=fdigits(bc.phi[1][1]);
-            n[2]=fdigits(bc.phi[1][2]);
-            printf("phi' = %.*f,%.*f,%.*f\n",IMAX(n[0],1),bc.phi[1][0],
-                   IMAX(n[1],1),bc.phi[1][1],IMAX(n[2],1),bc.phi[1][2]);
+            n[0]=fdigits(bc.phi3[1][0]);
+            n[1]=fdigits(bc.phi3[1][1]);
+            n[2]=fdigits(bc.phi3[1][2]);
+            printf("su3phi' = %.*f,%.*f,%.*f\n",IMAX(n[0],1),bc.phi3[1][0],
+                   IMAX(n[1],1),bc.phi3[1][1],IMAX(n[2],1),bc.phi3[1][2]);
          }
          
          if ((flds.gauge&2)!=0)
          {
-            n[0]=fdigits(bc.ad[1]);
-            printf("ad' = %.*f\n",IMAX(n[0],1),bc.ad[1]);
+            n[0]=fdigits(bc.phi1[1]);
+            printf("u1phi' = %.*f\n",IMAX(n[0],1),bc.phi1[1]);
          }
       }
       else
@@ -742,6 +823,12 @@ void print_lat_parms(void)
          if (bc.type==2) {
             n=fdigits(su3lat.cG[1]);
             printf("cG' = %.*f\n",IMAX(n,1),su3lat.cG[1]);
+         }
+         if (((bc.type==1)||(bc.type==2))&&(su3lat.c0!=1.0)) {
+            if (su3lat.SFtype==0)
+               printf("Orbifold-type SF boundary\n");
+            else
+               printf("AFW-typeB SF boundary\n");
          }
          printf("\n");
       }
@@ -785,6 +872,12 @@ void print_lat_parms(void)
             if (bc.type==2) {
                n=fdigits(u1lat.cG[1]);
                printf("cG' = %.*f\n",IMAX(n,1),u1lat.cG[1]);
+            }
+            if (((bc.type==1)||(bc.type==2))&&(u1lat.c0!=1.0)) {
+               if (u1lat.SFtype==0)
+                  printf("Orbifold-type SF boundary\n");
+               else
+                  printf("AFW-typeB SF boundary\n");
             }
          }
          printf("\n");
@@ -852,29 +945,31 @@ void write_flds_bc_lat_parms(FILE *fdat)
 {
    int ifl;
    
-   write_little_int(fdat,6,N0,N1,N2,N3,flds.gauge,flds.nfl);
+   write_little_int(1,fdat,6,N0,N1,N2,N3,flds.gauge,flds.nfl);
 
-   write_little_int(fdat,3,bc.type,bc.SFtype,bc.cstar);
-   write_little_dble(fdat,8,bc.phi[0][0],bc.phi[0][1],bc.phi[0][2],
-                     bc.phi[1][0],bc.phi[1][1],bc.phi[1][2],
-                     bc.ad[0],bc.ad[1]);
+   write_little_int(1,fdat,2,bc.type,bc.cstar);
+   write_little_dble(1,fdat,8,bc.phi3[0][0],bc.phi3[0][1],bc.phi3[0][2],
+                     bc.phi3[1][0],bc.phi3[1][1],bc.phi3[1][2],
+                     bc.phi1[0],bc.phi1[1]);
    
    if ((flds.gauge&1)!=0)
    {
-      write_little_dble(fdat,5,su3lat.beta,su3lat.c0,su3lat.c1,
+      write_little_int(1,fdat,1,su3lat.SFtype);
+      write_little_dble(1,fdat,5,su3lat.beta,su3lat.c0,su3lat.c1,
                                su3lat.cG[0],su3lat.cG[1]);
    }
 
    if ((flds.gauge&2)!=0)
    {
-      write_little_dble(fdat,7,u1lat.alpha,u1lat.invqel,u1lat.lambda,
+      write_little_int(1,fdat,2,u1lat.type,u1lat.SFtype);
+      write_little_dble(1,fdat,7,u1lat.alpha,u1lat.invqel,u1lat.lambda,
                                u1lat.c0,u1lat.c1,u1lat.cG[0],u1lat.cG[1]);
    }
    
    for (ifl=0;ifl<flds.nfl;ifl++)
    {
-      write_little_int(fdat,1,qlat[ifl].qhat);
-      write_little_dble(fdat,8,qkappa[ifl],
+      write_little_int(1,fdat,1,qlat[ifl].qhat);
+      write_little_dble(1,fdat,8,qkappa[ifl],
                       qlat[ifl].su3csw,qlat[ifl].u1csw,
                       qlat[ifl].cF[0],qlat[ifl].cF[1],
                       qlat[ifl].theta[0],qlat[ifl].theta[1],qlat[ifl].theta[2]);
@@ -886,33 +981,284 @@ void check_flds_bc_lat_parms(FILE *fdat)
 {
    int ifl;
 
-   check_fpar_int("check_flds_bc_lat_parms",fdat,6,N0,N1,N2,N3,flds.gauge,flds.nfl);
+   check_little_int("check_flds_bc_lat_parms",fdat,6,N0,N1,N2,N3,flds.gauge,flds.nfl);
 
-   check_fpar_int("check_bc_parms",fdat,3,bc.type,bc.SFtype,bc.cstar);
-   check_fpar_dble("check_bc_parms",fdat,8,
-                     bc.phi[0][0],bc.phi[0][1],bc.phi[0][2],
-                     bc.phi[1][0],bc.phi[1][1],bc.phi[1][2],
-                     bc.ad[0],bc.ad[1]);
+   check_little_int("check_flds_bc_lat_parms",fdat,2,bc.type,bc.cstar);
+   check_little_dble("check_flds_bc_lat_parms",fdat,8,
+                     bc.phi3[0][0],bc.phi3[0][1],bc.phi3[0][2],
+                     bc.phi3[1][0],bc.phi3[1][1],bc.phi3[1][2],
+                     bc.phi1[0],bc.phi1[1]);
    
    if ((flds.gauge&1)!=0)
    {
-      check_fpar_dble("check_flds_bc_lat_parms",fdat,5,su3lat.beta,su3lat.c0,su3lat.c1,
+      check_little_int("check_flds_bc_lat_parms",fdat,1,su3lat.SFtype);
+      check_little_dble("check_flds_bc_lat_parms",fdat,5,su3lat.beta,su3lat.c0,su3lat.c1,
                                su3lat.cG[0],su3lat.cG[1]);
    }
 
    if ((flds.gauge&2)!=0)
    {
-      check_fpar_dble("check_flds_bc_lat_parms",fdat,7,u1lat.alpha,u1lat.invqel,
+      check_little_int("check_flds_bc_lat_parms",fdat,2,u1lat.type,u1lat.SFtype);
+      check_little_dble("check_flds_bc_lat_parms",fdat,7,u1lat.alpha,u1lat.invqel,
                                u1lat.lambda,u1lat.c0,u1lat.c1,
                                u1lat.cG[0],u1lat.cG[1]);
    }
    
    for (ifl=0;ifl<flds.nfl;ifl++)
    {
-      check_fpar_int("check_flds_bc_lat_parms",fdat,1,qlat[ifl].qhat);
-      check_fpar_dble("check_flds_bc_lat_parms",fdat,8,qkappa[ifl],
+      check_little_int("check_flds_bc_lat_parms",fdat,1,qlat[ifl].qhat);
+      check_little_dble("check_flds_bc_lat_parms",fdat,8,qkappa[ifl],
                       qlat[ifl].su3csw,qlat[ifl].u1csw,
                       qlat[ifl].cF[0],qlat[ifl].cF[1],
                       qlat[ifl].theta[0],qlat[ifl].theta[1],qlat[ifl].theta[2]);
+   }
+}
+
+
+
+
+void read_bc_parms(void)
+{
+   int my_rank;
+   int gg,bc,cs;
+   double phi3[2],phi3_prime[2];
+   double phi1,phi1_prime;
+   char line[NAME_SIZE];
+
+   MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
+
+   error(flg_flds==0,1,"read_bc_parms [lat_parms.c]",
+         "Field parameters must be set first");
+
+   gg=gauge();
+   
+   if (my_rank==0)
+   {
+      find_section("Boundary conditions");
+      read_line("type","%s",&line);
+      bc=4;
+      if ((strcmp(line,"open")==0)||(strcmp(line,"0")==0))
+         bc=0;
+      else if ((strcmp(line,"SF")==0)||(strcmp(line,"1")==0))
+         bc=1;
+      else if ((strcmp(line,"open-SF")==0)||(strcmp(line,"2")==0))
+         bc=2;
+      else if ((strcmp(line,"periodic")==0)||(strcmp(line,"3")==0))
+         bc=3;
+      else
+         error_root(1,1,"read_bc_parms [main.c]",
+                    "Unknown time boundary condition type %s",line);
+      
+      read_line("cstar","%d",&cs);
+
+      phi3[0]=0.0;
+      phi3[1]=0.0;
+      phi3_prime[0]=0.0;
+      phi3_prime[1]=0.0;
+      phi1=0.0;
+      phi1_prime=0.0;
+      if ((cs==0)&&(((gg&1)!=0)||(flg_flds==0)))
+      {
+         if (bc==1)
+            read_dprms("su3phi",2,phi3);
+         if ((bc==1)||(bc==2))
+            read_dprms("su3phi'",2,phi3_prime);
+      }
+      if ((cs==0)&&(((gg&2)!=0)||(flg_flds==0)))
+      {
+         if (bc==1)
+            read_line("u1phi","%lf",&phi1);
+         if ((bc==1)||(bc==2))
+            read_line("u1phi'","%lf",&phi1_prime);
+      }
+   }
+   
+   MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
+   MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
+   MPI_Bcast(phi3,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(phi3_prime,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(&phi1,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(&phi1_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+   set_bc_parms(bc,cs,phi3,phi3_prime,phi1,phi1_prime);
+}
+
+
+void read_glat_parms(void)
+{
+   int my_rank;
+   int gg,bc,sf;
+   int type;
+   double beta,c0,cG,cG_prime;
+   double alpha,lambda,invqel;
+   char line[NAME_SIZE];
+
+   MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
+
+   error(flg_flds==0,1,"read_glat_parms [lat_parms.c]",
+         "Field parameters must be set first");
+
+   error(flg_bc==0,1,"read_glat_parms [lat_parms.c]",
+         "Boundary conditions must be set first");
+   
+   gg=gauge();
+   bc=bc_type();
+   
+   if((gg&1)!=0)
+   {
+      if (my_rank==0)
+      {
+         find_section("SU(3) action");
+         read_line("beta","%lf",&beta);
+         read_line("c0","%lf",&c0);
+
+         cG=1.0;
+         cG_prime=1.0;
+         if (bc!=3)
+            read_line("cG","%lf",&cG);
+         if (bc==2)
+            read_line("cG'","%lf",&cG_prime);
+         
+         sf=0;
+         if (((bc==1)||(bc==2))&&(c0!=1.0))
+         {
+            read_line("SFtype","%s",&line);
+            if ((strcmp(line,"orbifold")==0)||
+                (strcmp(line,"openQCD-1.4")==0)||(strcmp(line,"0")==0))
+               sf=0;
+            else if ((strcmp(line,"AFW-typeB")==0)||
+                     (strcmp(line,"openQCD-1.2")==0)||(strcmp(line,"1")==0))
+               sf=1;
+            else
+               error_root(1,1,"read_glat_parms [main.c]",
+                          "Unknown SF type %s in SU(3) action",line);
+         }
+      }
+      
+      MPI_Bcast(&sf,1,MPI_INT,0,MPI_COMM_WORLD);
+      MPI_Bcast(&beta,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&c0,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&cG,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&cG_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+      set_su3lat_parms(beta,c0,cG,cG_prime,sf);
+   }
+
+   if((gg&2)!=0)
+   {
+      if (my_rank==0)
+      {
+         find_section("U(1) action");
+         read_line("type","%s",line);
+
+         type=0;
+         if ((strcmp(line,"compact")==0)||(strcmp(line,"0")==0))
+            type=0;
+         else if ((strcmp(line,"non-compact")==0)||(strcmp(line,"1")==0))
+            type=1;
+         else
+            error_root(1,1,"read_flds_bc_lat_parms [main.c]",
+                       "Unknown U(1) action type %s",line);
+      
+         read_line("alpha","%lf",&alpha);
+         read_line("invqel","%lf",&invqel);
+
+         lambda=c0=cG=cG_prime=0.0;
+         if(type==0)
+         {
+            read_line("c0","%lf",&c0);
+            if (bc!=3) read_line("cG","%lf",&cG);
+            if (bc==2) read_line("cG'","%lf",&cG_prime);
+         }
+         else
+         {
+            read_line("lambda","%lf",&lambda);
+         }
+
+         sf=0;
+         if (((bc==1)||(bc==2))&&(type==0)&&(c0!=1.0))
+         {
+            read_line("SFtype","%s",&line);
+            if ((strcmp(line,"orbifold")==0)||
+                (strcmp(line,"openQCD-1.4")==0)||(strcmp(line,"0")==0))
+               sf=0;
+            else if ((strcmp(line,"AFW-typeB")==0)||
+                     (strcmp(line,"openQCD-1.2")==0)||(strcmp(line,"1")==0))
+               sf=1;
+            else
+               error_root(1,1,"read_glat_parms [main.c]",
+                          "Unknown SF type %s in U(1) action",line);
+         }
+      }
+      
+      MPI_Bcast(&type,1,MPI_INT,0,MPI_COMM_WORLD);
+      MPI_Bcast(&sf,1,MPI_INT,0,MPI_COMM_WORLD);
+      MPI_Bcast(&alpha,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&invqel,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&lambda,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&c0,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&cG,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&cG_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+      set_u1lat_parms(type,alpha,invqel,lambda,c0,cG,cG_prime,sf);
+   }
+}
+
+
+void read_qlat_parms(void)
+{
+   int my_rank;
+   int gg,bc,cs;
+   int ifl,qhat;
+   double kappa,su3csw,u1csw,cF,cF_prime,th1,th2,th3;
+   char line[NAME_SIZE];
+
+   MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
+
+   error(flg_flds==0,1,"read_qlat_parms [lat_parms.c]",
+         "Field parameters must be set first");
+
+   error(flg_bc==0,1,"read_qlat_parms [lat_parms.c]",
+         "Boundary conditions must be set first");
+   
+   gg=gauge();
+   bc=bc_type();
+   cs=bc_cstar();
+   
+   for (ifl=0;ifl<flds.nfl;ifl++)
+   {
+      qhat=0;
+      su3csw=u1csw=0.0;
+      cF=cF_prime=0.0;
+      th1=th2=th3=0.0;
+
+      sprintf(line,"Flavour %d",ifl);
+      if (my_rank==0)
+      {
+         find_section(line);
+         read_line("kappa","%lf",&kappa);
+         if ((gg&2)!=0)
+         {
+            read_line("qhat","%d",&qhat);
+            read_line("u1csw","%lf",&u1csw);
+         }
+         if ((gg&1)!=0)
+            read_line("su3csw","%lf",&su3csw);
+         if (bc!=3) read_line("cF","%lf",&cF);
+         if (bc==2) read_line("cF'","%lf",&cF_prime);
+         if (cs==0) read_line("theta","%lf %lf %lf",&th1,&th2,&th3);
+      }
+      
+      MPI_Bcast(&qhat,1,MPI_INT,0,MPI_COMM_WORLD);
+      MPI_Bcast(&kappa,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&su3csw,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&u1csw,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&cF,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&cF_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&th1,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&th2,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&th3,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+      set_qlat_parms(ifl,kappa,qhat,su3csw,u1csw,cF,cF_prime,th1,th2,th3);
    }
 }

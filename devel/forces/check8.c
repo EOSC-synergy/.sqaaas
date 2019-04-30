@@ -36,7 +36,7 @@
 static int my_rank,bc,first,last,step;
 static int nmu,nmx,qhat;
 static double kappa,su3csw,u1csw,*mu,cF,cF_prime;
-static double uphi[2],uphi_prime[2],theta[3],m0,*res;
+static double phi3[2],phi3_prime[2],phi1,phi1_prime,theta[3],m0,*res;
 static char cnfg_dir[NAME_SIZE],cnfg_file[NAME_SIZE],nbase[NAME_SIZE];
 
 
@@ -77,18 +77,28 @@ int main(int argc,char *argv[])
       read_line("type","%d",&bc);
       read_line("cstar","%d",&cs);
 
-      uphi[0]=0.0;
-      uphi[1]=0.0;
-      uphi_prime[0]=0.0;
-      uphi_prime[1]=0.0;
-      cF=1.0;
-      cF_prime=1.0;
+      phi3[0]=0.0;
+      phi3[1]=0.0;
+      phi3_prime[0]=0.0;
+      phi3_prime[1]=0.0;
+      phi1=0.0;
+      phi1_prime=0.0;
 
       if (bc==1)
-         read_dprms("uphi",2,uphi);
+      {
+         read_dprms("su3phi",2,phi3);
+         read_line("u1phi","%lf",&phi1);
+      }
 
       if ((bc==1)||(bc==2))
-         read_dprms("uphi'",2,uphi_prime);
+      {
+         read_dprms("su3phi'",2,phi3_prime);
+         read_line("u1phi'","%lf",&phi1_prime);
+      }
+
+
+      cF=1.0;
+      cF_prime=1.0;
 
       find_section("Dirac parameters");
       read_line("qhat","%d",&qhat);
@@ -140,8 +150,10 @@ int main(int argc,char *argv[])
 
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(uphi,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(uphi_prime,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(phi3,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(phi3_prime,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(&phi1,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(&phi1_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
    MPI_Bcast(mu,nmu,MPI_DOUBLE,0,MPI_COMM_WORLD);
    MPI_Bcast(&nmx,1,MPI_INT,0,MPI_COMM_WORLD);
@@ -150,7 +162,7 @@ int main(int argc,char *argv[])
    set_flds_parms(3,0);
    print_flds_parms();
 
-   set_bc_parms(bc,0,cs,uphi,uphi_prime);
+   set_bc_parms(bc,cs,phi3,phi3_prime,phi1,phi1_prime);
    print_bc_parms();
 
    start_ranlux(0,1234);

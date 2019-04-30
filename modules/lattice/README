@@ -83,6 +83,10 @@ void plaq_ftidx(int n,int ix,int *ip)
   with label ix. The indices (mu,nu) are determined by the parameter
   n=0,..,5 (see the notes).
 
+int link_offset(int ix,int mu)
+  Returns ip[0], i.e. the memory offset of the link variable at (x,mu)
+  (see notes).
+
 int ipr_global(int n[])
   This program returns the number of the process with cartesian
   coordinates n[0],..,n[3] in the process grid

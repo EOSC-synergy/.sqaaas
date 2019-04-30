@@ -3,6 +3,7 @@
 *
 * File mdflds.c
 *
+* Copyright (C) 2017 Nazario Tantalo
 * Copyright (C) 2016 Agostino Patella
 * Copyright (C) 2011, 2012, 2013 Martin Luescher
 *
@@ -56,9 +57,9 @@
 * The arrays *.su3mom, *.u1mom, *.su3frc and *.u1frc in the structure
 * returned by mflds() are the molecular-dynamics momentum and force fields.
 * Their elements are ordered in the same way as the link variables
-* (see main/README.global). Moreover, the force field includes space for
-* 7*(BNDRY/4) additional links as do the gauge fields (see
-* lattice/README.uidx).
+* (see main/README.global). Moreover, the su3 and u1 force fields and the u1
+* momenta include space for 7*(BNDRY/4) additional links, as do the gauge 
+* fields (see lattice/README.uidx). 
 *
 * Before the momentum and force fields are allocated, the geometry arrays
 * must be set. The sets of static and active links depend on the chosen
@@ -99,7 +100,7 @@ static mdflds_t *mdfs=NULL;
 
 static void alloc_mdflds(void)
 {
-   int npf,ipf;
+   int npf,ipf,size;
    su3_alg_dble *su3mom;
    double *u1mom;
    spinor_dble **pp,*p;
@@ -114,7 +115,10 @@ static void alloc_mdflds(void)
 
    mdfs=malloc(sizeof(*mdfs));
    su3mom=amalloc((8*VOLUME+7*(BNDRY/4))*sizeof(*su3mom),ALIGN);
-   u1mom=amalloc((8*VOLUME+7*(BNDRY/4))*sizeof(*u1mom),ALIGN);
+
+   size=4*VOLUME+7*(BNDRY/4);
+
+   u1mom=amalloc(2*size*sizeof(*u1mom),ALIGN);
    error((mdfs==NULL)||(su3mom==NULL)||(u1mom==NULL),1,"alloc_mdflds [mdflds.c]",
          "Unable to allocate momentum and force fields");
 
@@ -122,9 +126,9 @@ static void alloc_mdflds(void)
    (*mdfs).su3mom=su3mom;
    (*mdfs).su3frc=su3mom+4*VOLUME;
 
-   set_dvec2zero(8*VOLUME+7*(BNDRY/4),u1mom);
+   set_dvec2zero(2*size,u1mom);
    (*mdfs).u1mom=u1mom;
-   (*mdfs).u1frc=u1mom+4*VOLUME;
+   (*mdfs).u1frc=u1mom+size;
 
    hmc=hmc_parms();
    npf=hmc.npf;

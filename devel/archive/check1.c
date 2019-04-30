@@ -348,7 +348,7 @@ int main(int argc,char *argv[])
    set_flds_parms(gg,0);
    print_flds_parms();
 
-   set_bc_parms(bc,0,cs,phi,phi_prime);
+   set_bc_parms(bc,cs,phi,phi_prime,0.573,-1.827);
    print_bc_parms();
 
    start_ranlux(0,123456);

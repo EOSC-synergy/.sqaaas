@@ -4,7 +4,7 @@
 * File dfl_parms.c
 *
 * Copyright (C) 2009, 2010, 2011, 2013 Martin Luescher
-*                                 2017 Agostino Patella
+*               2017, 2019 Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -14,7 +14,7 @@
 * The externally accessible functions are
 *
 *   dfl_parms_t set_dfl_parms(int *bs,int Ns)
-*     Sets the parameters of the deflation subspace. The parameters are
+*     Sets the parameters of the deflation subspaces. The parameters are
 *
 *       bs[4]          Sizes of the blocks in DFL_BLOCKS block grid.
 *
@@ -46,13 +46,15 @@
 *     Returns the parameters currently set for the deflation projectors in
 *     the deflated solver program dfl_sap_gcr().
 *
-*   dfl_gen_parms_t set_dfl_gen_parms(double kappa,double mu,
+*   dfl_gen_parms_t set_dfl_gen_parms(int idfl,double kappa,double mu,
 *                                     int qhat,double su3csw,double u1csw,
 *                                     double cF,double cF_prime,
 *                                     double th1,double th2,double th3,
 *                                     int ninv,int nmr,int ncy)
 *     Sets the parameters of the inverse iteration procedure that generates
-*     the deflation subspace. The parameters are
+*     the deflation subspaces. The parameters are
+*
+*       idfl           Index of the deflation subspace to be used.
 *
 *       kappa          Hopping parameter of the Dirac operator.
 *
@@ -79,9 +81,9 @@
 *     The return value is a structure that contains the above parameters and
 *     the bare mass m0 that corresponds to the hopping parameter kappa.
 *
-*   dfl_gen_parms_t dfl_gen_parms(void)
+*   dfl_gen_parms_t dfl_gen_parms(int idfl)
 *     Returns the parameters currently set for the generation of the deflation
-*     subspace plus the corresponding bare mass m0.
+*     subspace with index idfl.
 *
 *   dfl_upd_parms_t set_dfl_upd_parms(double dtau,int nsm)
 *     Sets the parameters of the deflation subspace update scheme. The
@@ -116,6 +118,48 @@
 *     written to the file by the program write_dfl_parms() (mismatches of
 *     maximal solver iteration numbers are not considered to be an error).
 *
+*   void read_dfl_parms(int idfl)
+*     On process 0, this program reads the following sections from the stdin,
+*     as explained in more details in doc/parms.pdf.
+*
+*     If 'idfl<0' the program reads the following sections
+*
+*       [Deflation subspace]
+*       bs        <int> <int> <int> <int>
+*       Ns        <int>
+*
+*       [Deflation projection]
+*       nkv       <int>
+*       nmx       <int>
+*       res       <double>
+**       
+*     If 'idfl=-2', then also the following section is read
+*
+*       [Deflation update scheme]
+*       dtau      <double>
+*       nsm       <int>
+
+*     If 'idfl>=0' then 'idfl' is interpreted as the index of a deflation
+*     subspace the following section is read
+*       
+*       [Deflation subspace generation idfl]
+*       kappa     <double>
+*       qhat      <int>
+*       mu        <double>
+*       su3csw    <double>
+*       u1csw     <double>
+*       cF        <double>
+*       cF'       <double>
+*       theta     <double> <double> <double>
+*       ninv      <int>
+*       nmr       <int>
+*       ncy       <int>
+*
+*     Depending on the the active gauge group and on the boundary conditions,
+*     some lines are not read and can be omitted in the input file. After
+*     reading the stdin, the deflation parameters are set with 'set_dfl_parms',
+*     'set_dfl_pro_parms', 'set_dfl_gen_parms', 'set_dfl_upd_parms'.
+*
 * Notes:
 *
 * To ensure the consistency of the data base, the parameters must be set
@@ -135,11 +179,27 @@
 #include "flags.h"
 #include "global.h"
 
+#define DFLMAX 32
+
 static dfl_parms_t dfl={{0,0,0,0},0};
 static dfl_pro_parms_t dfl_pro={0,0,1.0};
-static dfl_gen_parms_t dfl_gen={0,0,0,0.0,0.0,
-                        {0,DBL_MAX,0.0,0.0,{0.0,0.0},{0.0,0.0,0.0}}};
+static dfl_gen_parms_t dfl_gen[DFLMAX+1]={{DFL_OUTOFRANGE,0,0,0,0.0,0.0,
+                        {0,DBL_MAX,0.0,0.0,{0.0,0.0},{0.0,0.0,0.0}}}};
 static dfl_upd_parms_t dfl_upd={0,0.0};
+
+
+static void init_dfl(void)
+{
+   static int init=0;
+   int i;
+   
+   if (init==1) return;
+   
+   for (i=1;i<=DFLMAX;i++)
+      dfl_gen[i]=dfl_gen[0];
+
+   init=1;
+}
 
 
 static void check_block_size(int *bs)
@@ -188,6 +248,8 @@ dfl_parms_t set_dfl_parms(int *bs,int Ns)
    error_root((Ns<2)||(Ns&0x1),1,"set_dfl_parms [dfl_parms.c]",
               "Improper value of Ns");
    
+   init_dfl();
+
    dfl.bs[0]=bs[0];
    dfl.bs[1]=bs[1];
    dfl.bs[2]=bs[2];
@@ -200,6 +262,8 @@ dfl_parms_t set_dfl_parms(int *bs,int Ns)
 
 dfl_parms_t dfl_parms(void)
 {
+   init_dfl();
+
    return dfl;
 }
 
@@ -212,6 +276,8 @@ dfl_pro_parms_t set_dfl_pro_parms(int nkv,int nmx,double res)
    error_root((nkv<1)||(nmx<1)||(res<=DBL_EPSILON),1,
               "set_dfl_pro_parms [dfl_parms.c]","Improper parameter values");
    
+   init_dfl();
+   
    dfl_pro.nkv=nkv;
    dfl_pro.nmx=nmx;
    dfl_pro.res=res;
@@ -222,74 +288,103 @@ dfl_pro_parms_t set_dfl_pro_parms(int nkv,int nmx,double res)
 
 dfl_pro_parms_t dfl_pro_parms(void)
 {
+   init_dfl();
+
    return dfl_pro;
 }
 
 
-dfl_gen_parms_t set_dfl_gen_parms(double kappa,double mu,
+dfl_gen_parms_t set_dfl_gen_parms(int idfl,double kappa,double mu,
                                   int qhat,double su3csw,double u1csw,
                                   double cF,double cF_prime,
                                   double th1,double th2,double th3,
                                   int ninv,int nmr,int ncy)
 {
-   check_global_int("set_dfl_gen_parms",4,qhat,ninv,nmr,ncy);
+   int i;
+   
+   check_global_int("set_dfl_gen_parms",5,idfl,qhat,ninv,nmr,ncy);
    check_global_dble("set_dfl_gen_parms",9,kappa,mu,su3csw,u1csw,cF,cF_prime,
                                            th1,th2,th3);
+
+   error_root((idfl<0)||(idfl>=DFLMAX),1,"set_dfl_gen_parms [dfl_parms.c]",
+              "Parameter idfl is out of range");
 
    error_root((ninv<4)||(nmr<1)||(ncy<1)||(kappa<0.0),1,
               "set_dfl_gen_parms [dfl_parms.c]","Parameters are out of range");
    
-   dfl_gen.ninv=ninv;
-   dfl_gen.nmr=nmr;
-   dfl_gen.ncy=ncy;
+   init_dfl();
 
-   dfl_gen.kappa=kappa;
-   dfl_gen.mu=mu;
+   error_root(dfl_gen[idfl].status==DFL_DEF,1,
+              "set_dfl_gen_parms [dfl_parms.c]","Parameters for generation of deflation subspace %d are already set",idfl);
 
-   dfl_gen.dp.qhat=0;
-   dfl_gen.dp.su3csw=0.0;
-   dfl_gen.dp.u1csw=0.0;
-   dfl_gen.dp.cF[0]=0.0;
-   dfl_gen.dp.cF[1]=0.0;
-   dfl_gen.dp.theta[0]=0.0;
-   dfl_gen.dp.theta[1]=0.0;
-   dfl_gen.dp.theta[2]=0.0;
+   dfl_gen[idfl].status=DFL_DEF;
+
+   dfl_gen[idfl].ninv=ninv;
+   dfl_gen[idfl].nmr=nmr;
+   dfl_gen[idfl].ncy=ncy;
+
+   dfl_gen[idfl].kappa=kappa;
+   dfl_gen[idfl].mu=mu;
+
+   dfl_gen[idfl].dp.qhat=0;
+   dfl_gen[idfl].dp.su3csw=0.0;
+   dfl_gen[idfl].dp.u1csw=0.0;
+   dfl_gen[idfl].dp.cF[0]=0.0;
+   dfl_gen[idfl].dp.cF[1]=0.0;
+   dfl_gen[idfl].dp.theta[0]=0.0;
+   dfl_gen[idfl].dp.theta[1]=0.0;
+   dfl_gen[idfl].dp.theta[2]=0.0;
    if ((gauge()&2)!=0)
    {
-      dfl_gen.dp.qhat=qhat;
-      dfl_gen.dp.u1csw=u1csw;
+      dfl_gen[idfl].dp.qhat=qhat;
+      dfl_gen[idfl].dp.u1csw=u1csw;
    }
    if ((gauge()&1)!=0)
-      dfl_gen.dp.su3csw=su3csw;
+      dfl_gen[idfl].dp.su3csw=su3csw;
    if ((bc_type()>=0)&&(bc_type()<3))
    {
-      dfl_gen.dp.cF[0]=cF;
+      dfl_gen[idfl].dp.cF[0]=cF;
       if (bc_type()==0)
-         dfl_gen.dp.cF[1]=cF;
+         dfl_gen[idfl].dp.cF[1]=cF;
       else if (bc_type()==1)
-         dfl_gen.dp.cF[1]=cF;
+         dfl_gen[idfl].dp.cF[1]=cF;
       else if (bc_type()==2)
-         dfl_gen.dp.cF[1]=cF_prime;
+         dfl_gen[idfl].dp.cF[1]=cF_prime;
    }
    if (bc_cstar()==0)
    {
-      dfl_gen.dp.theta[0]=th1;
-      dfl_gen.dp.theta[1]=th2;
-      dfl_gen.dp.theta[2]=th3;
+      dfl_gen[idfl].dp.theta[0]=th1;
+      dfl_gen[idfl].dp.theta[1]=th2;
+      dfl_gen[idfl].dp.theta[2]=th3;
    }
 
    if (kappa!=0.0)
-      dfl_gen.dp.m0=1.0/(2.0*kappa)-4.0;
+      dfl_gen[idfl].dp.m0=1.0/(2.0*kappa)-4.0;
    else
-      dfl_gen.dp.m0=DBL_MAX;
+      dfl_gen[idfl].dp.m0=DBL_MAX;
    
-   return dfl_gen;
+   for (i=0;i<idfl;i++)
+   {
+      if (dfl_gen[i].status==DFL_OUTOFRANGE)
+         dfl_gen[i].status=DFL_UNDEF;
+   }
+   
+   return dfl_gen[idfl];
 }
 
 
-dfl_gen_parms_t dfl_gen_parms(void)
+dfl_gen_parms_t dfl_gen_parms(int idfl)
 {
-   return dfl_gen;
+   init_dfl();
+
+   if ((idfl>=0)&&(idfl<DFLMAX))
+      return dfl_gen[idfl];
+   else
+   {
+      error_loc(1,1,"dfl_gen_parms [dfl_parms.c]",
+                "Deflation index is out of range");
+      return dfl_gen[DFLMAX];
+   }
 }
 
 
@@ -301,6 +396,8 @@ dfl_upd_parms_t set_dfl_upd_parms(double dtau,int nsm)
    error_root((dtau<0.0)||(nsm<0),1,
               "set_dfl_upd_parms [dfl_parms.c]","Improper parameter values");
    
+   init_dfl();
+
    dfl_upd.dtau=dtau;
    dfl_upd.nsm=nsm;
    
@@ -310,13 +407,15 @@ dfl_upd_parms_t set_dfl_upd_parms(double dtau,int nsm)
 
 dfl_upd_parms_t dfl_upd_parms(void)
 {
+   init_dfl();
+
    return dfl_upd;
 }
 
 
 void print_dfl_parms(int ipr)
 {
-   int my_rank,n;
+   int my_rank,n,idfl;
 
    MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
    
@@ -331,44 +430,50 @@ void print_dfl_parms(int ipr)
       printf("nmx = %d\n",dfl_pro.nmx);
       printf("res = %.1e\n\n",dfl_pro.res);
 
-      printf("Deflation subspace generation:\n");
-      n=fdigits(dfl_gen.kappa);
-      printf("kappa = %.*f\n",IMAX(n,1),dfl_gen.kappa);
-      n=fdigits(dfl_gen.mu);
-      printf("mu = %.*f\n",IMAX(n,1),dfl_gen.mu);
-      if ((gauge()&2)!=0)
+      for (idfl=0;idfl<DFLMAX;idfl++)
       {
-         printf("qhat = %d\n",dfl_gen.dp.qhat);
+         if (dfl_gen[idfl].status==DFL_DEF)
+         {
+            printf("Deflation subspace generation %d:\n",idfl);
+            n=fdigits(dfl_gen[idfl].kappa);
+            printf("kappa = %.*f\n",IMAX(n,1),dfl_gen[idfl].kappa);
+            n=fdigits(dfl_gen[idfl].mu);
+            printf("mu = %.*f\n",IMAX(n,1),dfl_gen[idfl].mu);
+            if ((gauge()&2)!=0)
+            {
+               printf("qhat = %d\n",dfl_gen[idfl].dp.qhat);
+            }
+            if ((gauge()&1)!=0)
+            {
+               n=fdigits(dfl_gen[idfl].dp.su3csw);
+               printf("su3csw = %.*f\n",IMAX(n,1),dfl_gen[idfl].dp.su3csw);
+            }
+            if ((gauge()&2)!=0)
+            {
+               n=fdigits(dfl_gen[idfl].dp.u1csw);
+               printf("u1csw = %.*f\n",IMAX(n,1),dfl_gen[idfl].dp.u1csw);
+            }
+            if (bc_type()!=3)
+            {
+               n=fdigits(dfl_gen[idfl].dp.cF[0]);
+               printf("cF = %.*f\n",IMAX(n,1),dfl_gen[idfl].dp.cF[0]);
+            }
+            if (bc_type()==2)
+            {
+               n=fdigits(dfl_gen[idfl].dp.cF[1]);
+               printf("cF' = %.*f\n",IMAX(n,1),dfl_gen[idfl].dp.cF[1]);
+            }
+            n=fdigits(dfl_gen[idfl].dp.theta[0]);
+            printf("theta = %.*f,",IMAX(n,1),dfl_gen[idfl].dp.theta[0]);
+            n=fdigits(dfl_gen[idfl].dp.theta[1]);
+            printf("%.*f,",IMAX(n,1),dfl_gen[idfl].dp.theta[1]);
+            n=fdigits(dfl_gen[idfl].dp.theta[2]);
+            printf("%.*f\n",IMAX(n,1),dfl_gen[idfl].dp.theta[2]);
+            printf("ninv = %d\n",dfl_gen[idfl].ninv);
+            printf("nmr = %d\n",dfl_gen[idfl].nmr);
+            printf("ncy = %d\n\n",dfl_gen[idfl].ncy);
+         }
       }
-      if ((gauge()&1)!=0)
-      {
-         n=fdigits(dfl_gen.dp.su3csw);
-         printf("su3csw = %.*f\n",IMAX(n,1),dfl_gen.dp.su3csw);
-      }
-      if ((gauge()&2)!=0)
-      {
-         n=fdigits(dfl_gen.dp.u1csw);
-         printf("u1csw = %.*f\n",IMAX(n,1),dfl_gen.dp.u1csw);
-      }
-      if (bc_type()!=3)
-      {
-         n=fdigits(dfl_gen.dp.cF[0]);
-         printf("cF = %.*f\n",IMAX(n,1),dfl_gen.dp.cF[0]);
-      }
-      if (bc_type()==2)
-      {
-         n=fdigits(dfl_gen.dp.cF[1]);
-         printf("cF' = %.*f\n",IMAX(n,1),dfl_gen.dp.cF[1]);
-      }
-      n=fdigits(dfl_gen.dp.theta[0]);
-      printf("theta = %.*f,",IMAX(n,1),dfl_gen.dp.theta[0]);
-      n=fdigits(dfl_gen.dp.theta[1]);
-      printf("%.*f,",IMAX(n,1),dfl_gen.dp.theta[1]);
-      n=fdigits(dfl_gen.dp.theta[2]);
-      printf("%.*f\n",IMAX(n,1),dfl_gen.dp.theta[2]);
-      printf("ninv = %d\n",dfl_gen.ninv);
-      printf("nmr = %d\n",dfl_gen.nmr);
-      printf("ncy = %d\n\n",dfl_gen.ncy);
 
       if (ipr)
       {
@@ -385,27 +490,155 @@ void print_dfl_parms(int ipr)
 
 void write_dfl_parms(FILE *fdat)
 {
-   write_little_int(fdat,12,
+   int idfl;
+   
+   write_little_int(1,fdat,8,
       dfl.bs[0],dfl.bs[1],dfl.bs[2],dfl.bs[3],
-      dfl.Ns,dfl_pro.nkv,dfl_pro.nmx,dfl_gen.ninv,
-      dfl_gen.nmr,dfl_gen.ncy,dfl_gen.dp.qhat,dfl_upd.nsm);
-   write_little_dble(fdat,11,dfl_pro.res,
-      dfl_gen.kappa,dfl_gen.mu,dfl_gen.dp.su3csw,dfl_gen.dp.u1csw,
-      dfl_gen.dp.cF[0],dfl_gen.dp.cF[1],
-      dfl_gen.dp.theta[0],dfl_gen.dp.theta[1],dfl_gen.dp.theta[2],
-      dfl_upd.dtau);
+      dfl.Ns,dfl_pro.nkv,dfl_pro.nmx,dfl_upd.nsm);
+   
+   write_little_dble(1,fdat,2,dfl_pro.res,dfl_upd.dtau);
+   
+   for(idfl=0;idfl<DFLMAX;idfl++)
+   {
+      write_little_int(1,fdat,5,dfl_gen[idfl].status,
+         dfl_gen[idfl].ninv,dfl_gen[idfl].nmr,dfl_gen[idfl].ncy,
+         dfl_gen[idfl].dp.qhat);
+      
+      write_little_dble(1,fdat,9,
+         dfl_gen[idfl].kappa,dfl_gen[idfl].mu,dfl_gen[idfl].dp.su3csw,
+         dfl_gen[idfl].dp.u1csw,dfl_gen[idfl].dp.cF[0],dfl_gen[idfl].dp.cF[1],
+         dfl_gen[idfl].dp.theta[0],dfl_gen[idfl].dp.theta[1],
+         dfl_gen[idfl].dp.theta[2]);
+   }
 }
 
 
 void check_dfl_parms(FILE *fdat)
 {
-   check_fpar_int("check_dfl_parms",fdat,12,
+   int idfl;
+   
+   check_little_int("check_dfl_parms",fdat,8,
       dfl.bs[0],dfl.bs[1],dfl.bs[2],dfl.bs[3],
-      dfl.Ns,dfl_pro.nkv,dfl_pro.nmx,dfl_gen.ninv,
-      dfl_gen.nmr,dfl_gen.ncy,dfl_gen.dp.qhat,dfl_upd.nsm);
-   check_fpar_dble("check_dfl_parms",fdat,11,dfl_pro.res,
-      dfl_gen.kappa,dfl_gen.mu,dfl_gen.dp.su3csw,dfl_gen.dp.u1csw,
-      dfl_gen.dp.cF[0],dfl_gen.dp.cF[1],
-      dfl_gen.dp.theta[0],dfl_gen.dp.theta[1],dfl_gen.dp.theta[2],
-      dfl_upd.dtau);
+      dfl.Ns,dfl_pro.nkv,dfl_pro.nmx,dfl_upd.nsm);
+   
+   check_little_dble("check_dfl_parms",fdat,2,dfl_pro.res,dfl_upd.dtau);
+   
+   for(idfl=0;idfl<DFLMAX;idfl++)
+   {
+      check_little_int("check_dfl_parms",fdat,5,dfl_gen[idfl].status,
+         dfl_gen[idfl].ninv,dfl_gen[idfl].nmr,dfl_gen[idfl].ncy,
+         dfl_gen[idfl].dp.qhat);
+      
+      check_little_dble("check_dfl_parms",fdat,9,
+         dfl_gen[idfl].kappa,dfl_gen[idfl].mu,dfl_gen[idfl].dp.su3csw,
+         dfl_gen[idfl].dp.u1csw,dfl_gen[idfl].dp.cF[0],dfl_gen[idfl].dp.cF[1],
+         dfl_gen[idfl].dp.theta[0],dfl_gen[idfl].dp.theta[1],
+         dfl_gen[idfl].dp.theta[2]);
+   }
+}
+
+
+void read_dfl_parms(int idfl)
+{
+   int my_rank;
+   int gg,bc,cs;
+   int bs[4],Ns;
+   int ninv,nmr,ncy,nkv,nmx,nsm,qhat;
+   double kappa,mu,su3csw,u1csw,cF,cF_prime,th1,th2,th3,res,dtau;
+   char line[NAME_SIZE];
+
+   check_global_int("read_dfl_parms",1,idfl);
+
+   MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
+
+   gg=gauge();
+   bc=bc_type();
+   cs=bc_cstar();
+
+   if(idfl<0)
+   {
+      if (my_rank==0)
+      {
+         find_section("Deflation subspace");
+         read_line("bs","%d %d %d %d",bs,bs+1,bs+2,bs+3);
+         read_line("Ns","%d",&Ns);
+      }
+
+      MPI_Bcast(bs,4,MPI_INT,0,MPI_COMM_WORLD);
+      MPI_Bcast(&Ns,1,MPI_INT,0,MPI_COMM_WORLD);
+      set_dfl_parms(bs,Ns);
+
+      if (my_rank==0)
+      {
+         find_section("Deflation projection");
+         read_line("nkv","%d",&nkv);
+         read_line("nmx","%d",&nmx);
+         read_line("res","%lf",&res);
+      }
+
+      MPI_Bcast(&nkv,1,MPI_INT,0,MPI_COMM_WORLD);
+      MPI_Bcast(&nmx,1,MPI_INT,0,MPI_COMM_WORLD);
+      MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      set_dfl_pro_parms(nkv,nmx,res);
+   }
+
+   if (idfl==-2)
+   {
+      if (my_rank==0)
+      {
+         find_section("Deflation update scheme");
+         read_line("dtau","%lf",&dtau);
+         read_line("nsm","%d",&nsm);
+      }
+
+      MPI_Bcast(&dtau,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&nsm,1,MPI_INT,0,MPI_COMM_WORLD);
+      set_dfl_upd_parms(dtau,nsm);
+   }
+
+   if (idfl>=0)
+   {
+      qhat=0;
+      su3csw=u1csw=0.0;
+      cF=cF_prime=0.0;
+      th1=th2=th3=0.0;
+
+      if (my_rank==0)
+      {
+         sprintf(line,"Deflation subspace generation %d",idfl);
+         find_section(line);
+         read_line("kappa","%lf",&kappa);
+         if ((gg&2)!=0)
+         {
+            read_line("qhat","%d",&qhat);
+            read_line("u1csw","%lf",&u1csw);
+         }
+         if ((gg&1)!=0)
+            read_line("su3csw","%lf",&su3csw);
+         if (bc!=3) read_line("cF","%lf",&cF);
+         if (bc==2) read_line("cF'","%lf",&cF_prime);
+         if (cs==0) read_line("theta","%lf %lf %lf",&th1,&th2,&th3);
+      
+         read_line("mu","%lf",&mu);
+      
+         read_line("ninv","%d",&ninv);
+         read_line("nmr","%d",&nmr);
+         read_line("ncy","%d",&ncy);
+      }
+
+      MPI_Bcast(&kappa,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&qhat,1,MPI_INT,0,MPI_COMM_WORLD);
+      MPI_Bcast(&mu,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&su3csw,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&u1csw,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&cF,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&cF_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&th1,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&th2,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&th3,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(&ninv,1,MPI_INT,0,MPI_COMM_WORLD);
+      MPI_Bcast(&nmr,1,MPI_INT,0,MPI_COMM_WORLD);
+      MPI_Bcast(&ncy,1,MPI_INT,0,MPI_COMM_WORLD);
+      set_dfl_gen_parms(idfl,kappa,mu,qhat,su3csw,u1csw,cF,cF_prime,th1,th2,th3,ninv,nmr,ncy);
+   }
 }

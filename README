@@ -250,7 +250,7 @@ BUG REPORTS
 If a bug is discovered, please send a report to rcstar.collaboration@cern.ch .
 
 
-ALTERNATIVE PACKAGES AND COMPLEMENTARY PROGRAMS
+ALTERNATIVE PACKAGES
 
 Simulations of the gauge group SU(3) with periodic boundary conditions in
 space do not require the openQ*D extensions and can also be performed with
@@ -260,10 +260,3 @@ http://luscher.web.cern.ch/luscher/openQCD
 
 Notice that if a simulation can be performed with both the openQCD and the
 openQ*D packages, the results will be in most of the cases bit-wise identical.
-
-In order to simulate a generic fractional power of the fermion determinant one
-has to pass to the openQ*D input file the coefficients of the corresponding
-rational approximation. These can be obtained, in the format required by the
-openQ*D package, by using the MinMax program,
-
-http://rcstar.web.cern.ch

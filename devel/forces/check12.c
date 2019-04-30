@@ -117,10 +117,10 @@ int main(int argc,char *argv[])
    phi[1]=-0.534;
    phi_prime[0]=0.912;
    phi_prime[1]=0.078;
-   set_bc_parms(bc,sf,cs,phi,phi_prime);
+   set_bc_parms(bc,cs,phi,phi_prime,0.573,-1.827);
    print_bc_parms();
 
-   set_u1lat_parms(0,1.5,1.2,0.0,0.482,0.87,0.57);
+   set_u1lat_parms(0,1.5,1.2,0.0,0.482,0.87,0.57,sf);
    print_lat_parms();
 
    start_ranlux(0,1234);

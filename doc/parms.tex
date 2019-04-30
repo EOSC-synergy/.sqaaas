@@ -1,0 +1,1325 @@
+\documentclass[11pt,fleqn]{article}
+
+\usepackage[left=34mm,right=34mm,top=45mm,bottom=60mm,centering]{geometry}
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{mathtools}
+\usepackage{bm}
+\usepackage{framed}
+\usepackage{hyperref}
+
+\usepackage{tikz} 
+\usetikzlibrary{arrows}
+
+\usepackage{sectsty}
+\sectionfont{\sffamily\normalsize}
+\subsectionfont{\normalfont\itshape\sffamily\normalsize}
+\chapterfont{\sffamily}
+
+\newtheorem{definition}{Definition}
+
+\newcommand{\tr}{\mathrm{tr}\,}
+\newcommand{\Tr}{\mathrm{Tr}\,}
+\renewcommand{\vec}[1]{\mathbf{#1}}
+\renewcommand{\overline}[1]{\bar{#1}}
+\renewcommand{\Re}[0]{\operatorname{Re}}
+\renewcommand{\Im}[0]{\operatorname{Im}}
+\renewcommand{\d}{\mathrm{d}}
+
+\newcommand{\Rmu}{R}
+\newcommand{\R}{\tilde{R}}
+
+
+\setlength\parindent{0pt}
+\setlength{\parskip}{4mm plus2mm minus2mm}
+
+
+\usepackage{tocloft}
+\renewcommand{\cfttoctitlefont}{\sffamily\bfseries\large}
+%\renewcommand{\cftchapfont}{\scshape}
+
+\renewcommand{\cftsecfont}{\normalsize\sffamily}
+%\renewcommand{\cftsecleader}{\hfill}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsecpagefont}{\cftsecfont}
+
+\renewcommand{\cftsubsecfont}{\small\sffamily}
+\renewcommand{\cftsubsecleader}{\hfill}
+\renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsubsecpagefont}{\cftsubsecfont}
+
+
+
+\begin{document}
+
+\vspace*{20mm}
+
+{
+\sffamily
+\huge
+\textbf{Parameters of the \texttt{openQ*D} main programs}
+\\
+\rule{\textwidth}{1pt}
+\\[2mm]
+\large
+adapted by: Agostino Patella, RC$^*$ collaboration
+\hfill
+March 2018
+\\[10mm]
+\normalsize
+heavily based on: M. L\"uscher, \textit{Parameters of the openQCD main programs}, June 2016, \texttt{doc/openQCD-1.6/rhmc.pdf}
+}
+
+
+%\vspace{30mm}
+
+%\FloatBarrier
+
+
+\pagebreak
+
+\tableofcontents
+
+\pagebreak
+
+
+
+\section{Introduction}
+
+The \texttt{openQ*D} main programs have many adjustable parameters. Most
+parameter values are passed to the programs at run time through a human-readable
+parameter file. The only parameters that must be specified at compilation time
+are the lattice sizes and the MPI process grid (see \texttt{include/global.h}
+and \texttt{main/README.global}). Each program also has a few command-line
+options.
+
+Some of the parameters are of a fairly trivial kind and are omitted in this note
+(see, instead, the \texttt{README} files that come with each program). Details
+about the simulation algorithm and the exact normalization conventions employed
+can be found in the documentation files in the \texttt{doc} directory.
+
+Only the parameters used by the programs that generate configurations
+(\texttt{iso1}, \texttt{qcd1}, \texttt{ym1}, \texttt{mxw1}) are discussed in
+these notes. For explanations of the parameters used by the other programs
+(\texttt{ms*}), the reader is referred to the corresponding \texttt{README}
+files.
+
+
+
+\section{Preliminaries}
+
+The input parameter files are divided into sections such as
+%
+\begin{verbatim}
+  [Solver 3]
+  solver CGNE
+  nmx 256
+  res 1.0e-10
+\end{verbatim}
+%
+In this case, the section describes the solver number 3 for the Dirac equation.
+The solver program is \texttt{CGNE}, the conjugate-gradient (CG) algorithm for
+the normal Dirac equation, while \texttt{nmx} specifies the maximal number of CG
+iterations that may be performed and \texttt{res} the desired relative residue
+of the calculated solutions.
+
+Sections start with a title in square brackets \texttt{[...]} and the lines
+within a section can be ordered arbitrarily. The section quoted above, for
+example, could equivalently be written as
+%
+\begin{verbatim}
+  [Solver 3]
+  res 1.0e-10
+  solver CGNE   # Should try a better solver
+  nmx 256
+\end{verbatim}
+%
+Any text appearing to the right of the number sign \texttt{\#} is considered to
+be a comment. A section is delimited by its headline (the text in square
+brackets) and the headline of the next section. Blank lines are ignored and
+sections can appear in any order in the input file.
+
+Once the program has read the parameter file, the data are entered into a
+parameter database and can, from there, be retrieved by the subprograms that
+depend on some of the parameter values. The database is administered by a set
+of modules in the directory \texttt{modules/flags}. In case the exact meaning of
+a particular parameter is unclear, it may be helpful to read the explanations on
+the top of these program files.
+
+
+\section{Actions}
+\label{sec:actions}
+
+
+The lattice theory is defined by the lattice sizes, the field content, the total
+action and the boundary conditions. A description of the latter and, in the case
+of the simulation programs, of all parts of the action must be included in the
+parameter file.
+
+\subsection{Field content}
+\label{subsec:actions:fields}
+
+The \texttt{openQ*D} program can simulate the SU(3)$\times$U(1), SU(3) or U(1)
+gauge group, with or without dynamical fermions. The relevant main programs are
+listed below with their respective field content.
+%
+\begin{center}
+\begin{tabular}{r|cc}
+  Program & Gauge group & Fermions \\
+  \hline
+  \hline
+  \texttt{iso1} & SU(3)$\times$U(1) & yes \\
+  \texttt{qcd1} & SU(3) & yes \\
+  \texttt{ym1} & SU(3) & no \\
+  \texttt{mxw1} & U(1) & no
+\end{tabular}
+\end{center}
+% In some of the main programs the gauge group can be chosen in the input file,
+% while for others the gauge group is fixed.
+% %
+% \begin{itemize}
+%   \item \texttt{iso1} -- The gauge group is fixed to be SU($3$)$\times$U($1$).
+% 
+%   \item \texttt{qcd1}, \texttt{ym1}, \texttt{ms3} -- The gauge group is fixed to
+%   be SU($3$).
+% 
+%   \item \texttt{mxw1}, \texttt{ms5} -- The gauge group is fixed to be U($1$).
+% 
+%   \item \texttt{ms1} -- The gauge group can be chosen in a section of the form
+% %
+% \begin{verbatim}
+%   [Field parameters]
+%   gauge SU(3)xU(1)         # Gauge group: SU(3), U(1), SU(3)xU(1)
+% \end{verbatim}
+% %
+% 
+%   \item \texttt{ms2}, \texttt{ms4}, \texttt{ms6} -- The gauge group can be
+%   chosen in a section of the form
+% %
+% \begin{verbatim}
+%   [Gauge group]
+%   gauge SU(3)xU(1)         # Gauge group: SU(3), U(1), SU(3)xU(1)
+% \end{verbatim}
+% %
+% 
+% \end{itemize}
+
+
+\subsection{Boundary conditions}
+\label{subsec:actions:bc}
+
+
+The boundary conditions for the gauge fields are defined in a dedicated section.
+For instance
+%
+\begin{verbatim}
+  [Boundary conditions]
+  type    3               # (equivalently) type periodic
+  cstar   1
+\end{verbatim}
+%
+selects periodic boundary conditions in time and C$^\star$ boundary conditions
+in one space direction (and periodic in the others).
+
+The value of the parameter \texttt{cstar} must be a number from 0 to 3, equal to
+the number of spatial directions with C$^\star$ boundary conditions
+\cite{cstar}. The gauge field is periodic in the remaining spatial direction.
+
+Boundary conditions in time \cite{gauge_action} are chosen by setting the value
+of the parameter \texttt{type}. If a SF boundary exists, then the phases
+determining the value of the fields at the boundary need to be provided as well.
+In the case of open boundary conditions and no C$^\star$ boundary conditions,
+the section should be
+%
+\begin{verbatim}
+  [Boundary conditions]
+  type    0               # (equivalently) type open
+  cstar   0
+\end{verbatim}
+%
+If SF boundary conditions are chosen, the parameter section
+%
+\begin{verbatim}
+  [Boundary conditions]
+  type    1               # (equivalently) type SF
+  cstar   0
+  su3phi  1.57 0.0        # relevant only if the SU(3) field is used
+  su3phi’ 2.75 -1.89      # relevant only if the SU(3) field is used
+  u1phi   1.2             # relevant only if the U(1) field is used
+  u1phi'  -0.3            # relevant only if the U(1) field is used
+\end{verbatim}
+%
+must include:
+\begin{itemize}
+  %
+  \item the angles $\phi_\text{SU(3),1}$, $\phi_\text{SU(3),1}$ defining the
+  boundary values of the SU(3) gauge field at time $0$ as the two values of the
+  parameter \texttt{su3phi}; this line can be skipped if the SU(3) field is not
+  used;
+  %
+  \item the angles $\phi'_\text{SU(3),1}$, $\phi'_\text{SU(3),1}$ defining the
+  boundary values of the SU(3) gauge field at time $T$ as the two values of the
+  parameter \texttt{su3phi'}; this line can be skipped if the SU(3) field is not
+  used;
+  %
+  \item the angle $\phi_\text{U(1)}$ defining the boundary values of the U(1)
+  gauge field at time $0$ as value of the parameter \texttt{u1phi}; this line
+  can be skipped if the U(1) field is not used;
+  %
+  \item the angle $\phi'_\text{U(1)}$ defining the boundary values of the U(1)
+  gauge field at time $T$ as value of the parameter \texttt{u1phi'}; this line
+  can be skipped if the U(1) field is not used.
+  %
+\end{itemize}
+%
+If open-SF boundary conditions are chosen, the boundary values of the gauge
+fields at time $T$ must be specified as before. The
+parameter section then looks like
+%
+\begin{verbatim}
+  [Boundary conditions]
+  type    2               # (equivalently) type open-SF
+  cstar   0
+  su3phi’ 2.75 -1.89      # relevant only if the SU(3) field is used
+  u1phi'  -0.3            # relevant only if the U(1) field is used
+\end{verbatim}
+%
+
+
+\subsection{Gauge action parameters}
+\label{subsec:actions:gaugeparms}
+
+
+If the SU(3) field is used, the parameters of the SU(3) gauge action have to be
+defined in the parameter section
+%
+\begin{verbatim}
+  [SU(3) action]
+  beta    6.0            # Inverse SU(3) gauge coupling
+  c0      1.6667         # Coefficient of the plaquette term
+                         # in the SU(3) gauge action
+  cG      1.10           # SU(3) gauge action improvement coefficient
+                         # at time 0
+  cG'     1.05           # SU(3) gauge action improvement coefficient
+                         # at time NPROC0*L0
+  SFtype  0              # Type of SF boundary (this affects the
+                         # LW gauge action):
+                         #   0|orbifold|openQCD-1.4
+                         #   1|AFW-typeB|openQCD-1.2
+\end{verbatim}
+%
+where \texttt{beta} is the parameter $\beta = 6/g_0^2$, \texttt{c0} is the $c_0$
+parameter appearing in the L\"uscher-Weisz action, \texttt{cG} and \texttt{cG'}
+are the boundary-improvement coefficients $c_\text{G}$ and $c'_\text{G}$
+respectively, \texttt{SFtype} determines the particular form of the
+double-plaquettes at the SF boundary if the L\"uscher-Weisz action is used. More
+details on these parameters can be found in \cite{gauge_action}.
+
+Which paramters are requested depend on the choice of boundary conditions in
+time: with periodic boundary conditions
+%
+\begin{verbatim}
+  [SU(3) action]
+  beta    6.0
+  c0      1.6667
+\end{verbatim}
+%
+with open boundary conditions
+%
+\begin{verbatim}
+  [SU(3) action]
+  beta    6.0
+  c0      1.6667
+  cG      1.10    
+\end{verbatim}
+%
+with SF boundary conditions and L\"uscher-Weisz action
+%
+\begin{verbatim}
+  [SU(3) action]
+  beta    6.0
+  c0      1.6667
+  cG      1.10
+  SFtype  orbifold
+\end{verbatim}
+%
+with open-SF boundary conditions and L\"uscher-Weisz action
+%
+\begin{verbatim}
+  [SU(3) action]
+  beta    6.0
+  c0      1.6667
+  cG      1.10
+  cG'     1.05
+  SFtype  orbifold
+\end{verbatim}
+
+
+If the U(1) field is used, the parameters of the U(1) gauge action have to be
+defined in the parameter section
+%
+\begin{verbatim}
+  [U(1) action]
+  type    0              # Type of U(1) actions:
+                         #   0|compact
+                         #   1|non-compact
+  alpha   0.05           # Fine-structure constant
+  invqel  6.0            # Inverse of the elementary charge used in
+                         # in the simulation. Quark electric charges
+                         # must be even integer multiples of the
+                         # elementary charge.
+  c0      1.6667         # Coefficient of the plaquette term
+                         # in the compact U(1) gauge action
+  cG      1.10           # U(1) gauge action improvement coefficient
+                         # at time 0
+  cG'     1.05           # U(1) gauge action improvement coefficient
+                         # at time NPROC0*L0
+  SFtype  0              # Type of SF boundary (this affects the
+                         # LW gauge action):
+                         #   0|orbifold|openQCD-1.4
+                         #   1|AFW-typeB|openQCD-1.2
+\end{verbatim}
+%
+In the current version of the code, only the compact U(1) action is available
+(parameter \texttt{type}). The value of \texttt{alpha} determines the
+fine-structure constant $\alpha = e_0^2/(4\pi)$, the value of \texttt{invqel}
+determines the parameter $q_\text{el}^{-1}$ which determines the normalization
+of the U(1) gauge action, and consequently the quantum of electric charge.
+\texttt{c0} is the $c_0$ parameter appearing in the L\"uscher-Weisz action,
+\texttt{cG} and \texttt{cG'} are the boundary-improvement coefficients
+$c_\text{G}$ and $c'_\text{G}$ respectively, \texttt{SFtype} determines the
+particular form of the double-plaquettes at the SF boundary if the
+L\"uscher-Weisz action is used. More details on these parameters can be found in
+\cite{gauge_action}. As for the SU(3) gauge action, some parameters can be
+omitted depending on the boundary conditions in time.
+
+
+
+\subsection{Quark parameters}
+\label{subsec:actions:quarkparms}
+
+
+In the terminology of the \texttt{openQ*D} code, a \textit{quark flavour} is
+identified by all adjustable parameters that define the Dirac operator. For
+instance, in a simulation in the isospin symmetric limit, the up and down quark
+count as a single \textit{quark flavour}. The number of quark flavours in this
+sense is defined in the parameter section
+%
+\begin{verbatim}
+  [Quark action]
+  nfl          3
+\end{verbatim}
+%
+Each quark flavour is identified by an integer in the range
+$0,\dots,\texttt{nfl}-1$. The parameters defining the flavour 2 are defined in
+the parameter section
+%
+\begin{verbatim}
+  [Flavour 2]
+\end{verbatim}
+%
+In case of periodic boundary conditions in time and space for the gauge field,
+the quarks satisfy anti-periodic boundary conditions in time and phase-periodic
+boundary conditions in space. The following parameter section has to be included
+in case of a QCD simulation
+%
+\begin{verbatim}
+  [Flavour 2]
+  kappa        0.1300
+  su3csw       1.234
+  theta        0.5 1.0 -0.5
+\end{verbatim}
+%
+where \texttt{kappa} is the hopping parameter, \texttt{su3csw} is the SW
+coefficient $c_\text{sw}^\text{SU(3)}$, and the three values in \texttt{theta}
+define the phase-periodic boundary conditions in the three special directions.
+More details about these parameters are given in \cite{dirac}. If C$^\star$
+boundary conditions are chosen in any of the spatial directions, the
+\texttt{theta} parameters should be omitted. For a QCD+QED simulation with
+(anti-)periodic boundary conditions in time and C$^\star$ boundary conditions in
+space, the following parameter section has to be included
+%
+\begin{verbatim}
+  [Flavour 2]
+  qhat         -2
+  kappa        0.1300
+  su3csw       1.234
+  u1csw        0.89
+\end{verbatim}
+%
+where \texttt{qhat} is the electric charge in units of $q_\text{el}$ (defined in
+the gauge action parameters) and \texttt{u1csw} is the SW coefficient
+$c_\text{sw}^\text{U(1)}$.
+
+If different boundary conditions in time are chosen, one needs to include also
+the parameters \texttt{cF} and/or \texttt{cF'} defining the boundary improvement
+coefficients $c_\text{F}$ and/or $c'_\text{F}$ respectively. For intance, a QCD
+simulation with SF or open boundary conditions in time and C$^\star$ boundary
+conditions in space should include
+%
+\begin{verbatim}
+  [Flavour 2]
+  kappa        0.1300
+  su3csw       1.234
+  cF           0.95
+\end{verbatim}
+%
+Instead a QCD+QED simulation with open-SF boundary conditions in time and
+C$^\star$ boundary conditions in space should include
+%
+\begin{verbatim}
+  [Flavour 2]
+  qhat         -2
+  kappa        0.1300
+  su3csw       1.234
+  u1csw        0.89
+  cF           0.95
+  cF'          0.90
+\end{verbatim}
+
+
+
+
+\subsection{Gauge actions}
+\label{subsec:actions:gauge}
+
+
+Currently the supported gauge actions include the Wilson plaquette action, the
+tree-level improved Symanzik action and, more generally, any linear combination
+of these \cite{gauge_action}, both for the SU(3) and U(1) gauge field. Since the
+parameters of the gauge actions are already specified in the \texttt{Boundary
+conditions}, \texttt{SU(3) action} and \texttt{U(1) action} sections, it is
+enough to include the lines
+%
+\begin{verbatim}
+  [Action 0]
+  action ACG_SU3
+\end{verbatim}
+%
+in the parameter file to instruct the program that the total action of the
+theory includes the SU(3) gauge action. This section is the first example of an
+action section. It has a single line containing the parameter \texttt{action}
+with value \texttt{ACG\_SU3}, which specifies that the action number 0 is the
+SU(3) gauge action. Similarly it is enough to include the lines
+%
+\begin{verbatim}
+  [Action 1]
+  action ACG_U1
+\end{verbatim}
+%
+in the parameter file to instruct the program that the total action of the
+theory includes the U(1) gauge action as action number 1.
+
+
+\subsection{Twisted-mass pseudo-fermion actions}
+\label{subsec:actions:tm}
+
+Pseudo-fermion actions
+%
+\begin{gather}
+   S_\text{pf} = ( \phi, (D^\dag D + \mu_0^2)^{-1} \phi )
+   \label{eq:action:tw1}
+\end{gather}
+%
+with a single twisted-mass parameter $\mu_0$ are described by an action section
+%
+\begin{verbatim}
+  [Action 2]
+  action       ACF_TM1
+  ipf          0
+  ifl          2
+  imu          1
+  isp          0
+\end{verbatim}
+%
+The number in the headline is an index that serves as a tag for the different
+actions. It can be chosen arbitrarily in the range $0,1,\dots,31$, but must be
+unambiguous, i.e. there may be at most one action section in the parameter file
+with a given index. The action \eqref{eq:action:tw1} depends on the
+pseudo-fermion field $\phi$, the quark flavour index \texttt{ifl} and the
+twisted mass $\mu_0$. Pseudo-fermion fields are distinguished by an index
+$\texttt{ipf}=0,1,\dots,\texttt{npf}-1$, where \texttt{npf} is the total number
+of these fields. The quark flavour index \texttt{ifl} is a number in the range
+$0,1,\dots,\texttt{nfl}-1$, and determines that the Dirac-operator parameters to
+be used for this action are the ones defined in the corresponding
+\texttt{Flavour} section. Twisted masses are specified by giving their index
+\texttt{imu} in an array of values defined elsewhere in the parameter section
+\texttt{HMC parameters} (see subsect. \ref{subsec:md:hmc}). The last parameter in
+the section, \texttt{isp}, is the index of the solver for the Dirac equation,
+which is to be used by the program that computes the action
+\eqref{eq:action:tw1} (see sect. \ref{sec:solvers} for the list of the available
+solvers).
+
+Hasenbusch pseudo-fermion actions
+%
+\begin{gather}
+   S_\text{pf} = ( \phi, (D^\dag D + \mu_1^2) (D^\dag D + \mu_0^2)^{-1} \phi )
+   \label{eq:action:tw2}
+\end{gather}
+%
+with two twisted-mass parameters $\mu_0$ and $\mu_1$ are described by an action
+section
+%
+\begin{verbatim}
+  [Action 3]
+  action ACF_TM2
+  ipf 1
+  ifl 0
+  imu 0 1
+  isp 1 0
+\end{verbatim}
+%
+As explained in the notes \cite{openQCD:forces}, these actions arise when the
+light-quark determinant is split into several factors. The two masses correspond
+to the two entries on the lines with tag \texttt{imu} and \texttt{isp}. Note
+that one needs to specify two solvers, the first for the Dirac equation with
+twisted mass $\mu_0$ and the second for the equation with twisted mass $\mu_1$
+(which must be solved when $\phi$ is generated at the beginning of the
+molecular-dynamics trajectories).
+
+
+
+
+\subsection{Even-odd preconditioned pseudo-fermion actions}
+
+When even-odd preconditioning is used, the pseudo-fermion action
+\eqref{eq:action:tw1} gets replaced by
+%
+\begin{gather}
+   S_\text{pf} = ( \phi, (\hat{D}^\dag \hat{D} + \mu_0^2)^{-1} \phi ) - 2\ln \det D_\text{oo}
+   \label{eq:action:eotw1}
+   \ ,
+\end{gather}
+%
+where $\hat{D}$ is the even-odd preconditioned Dirac operator and $D_\text{oo}$
+the odd-odd part of the Dirac operator \cite{openQCD:dirac}. The factor $\det
+D_\text{oo}$ is referred to as the \text{small determinant} and it is understood
+that the pseudo-fermion field $\phi$ vanishes on the odd sites of the lattice.
+
+Apart from the action line, the parameter section
+%
+\begin{verbatim}
+  [Action 4]
+  action ACF_TM1_EO_SDET
+  ipf 2
+  ifl 0
+  imu 0
+  isp 3
+\end{verbatim}
+%
+describing the action \eqref{eq:action:eotw1} look the same as the ones
+describing the actions without even-odd preconditioning. The same comment
+applies to the section
+%
+\begin{verbatim}
+  [Action 5]
+  action ACF_TM2_EO
+  ipf 3
+  ifl 0
+  imu 0 1
+  isp 1 0
+\end{verbatim}
+%
+that describe the even-odd preconditioned version 
+%
+\begin{gather}
+   S_\text{pf} = ( \phi, (\hat{D}^\dag \hat{D} + \mu_1^2) (\hat{D}^\dag \hat{D} + \mu_0^2)^{-1} \phi )
+   \label{eq:action:eotw2}
+\end{gather}
+%
+of the Hasenbusch pseudo-fermion action (there is no small-determinant
+contribution in this case).
+
+
+\subsection{Rational function actions}
+
+The RHMC algorithm is based on the rational approximation of the operator
+$(\hat{D}^\dag \hat{D} + \hat{\mu}^2)^\alpha$ (see ref.~\cite{rhmc} for detailed
+explanations). If $\alpha=-1/2$, then the code calculates the Zolotarev rational
+functions internally. Such rational functions are defined by a section
+%
+\begin{verbatim}
+  [Rational 0]
+  power   -1 2
+  degree 10
+  range 0.025 6.02
+  mu 0.01
+\end{verbatim}
+%
+that specifies the degree (number of poles) of the function, the approximation
+range on the axis of eigenvalues of $(\hat{D}^\dag \hat{D})^{1/2}$, and the
+twisted mass $\hat{\mu}$. The range should be sufficiently large to include,
+with probability practically equal to 1, the whole spectrum of the operator.
+Rational approximations with $\alpha = p/q$ where $p$ and $q$ are integers are
+defined by a section
+%
+\begin{verbatim}
+  [Rational 1]
+  power            -1 4
+  degree           3
+  range            2.74000000e-02 6.29000000e+00
+  mu               1.00000000e-02
+  delta            1.6178479482115836e-02
+  A                3.27355183713657515998e-01
+  nu[0]            4.00031119921775957238e+00
+  mu[0]            2.35403583930007442859e+00
+  nu[1]            5.44609163341205237963e-01
+  mu[1]            3.37080943797074983337e-01
+  nu[2]            7.85762611113028086596e-02
+  mu[2]            4.69405290534691196913e-02
+  x[0]             7.50760000000000055770e-04
+  x[1]             1.88538259325339335910e-03
+  x[2]             1.06896142321669003483e-02
+  x[3]             7.11451548372154934929e-02
+  x[4]             4.72348110596534420669e-01
+  x[5]             3.11953320147559853837e+00
+  x[6]             1.69536291736011719422e+01
+  x[7]             3.95641000000000033765e+01
+\end{verbatim}
+%
+The two values of \texttt{power} are two integers $p$ and $q$ such that $\alpha
+= p/q$, the two values of \texttt{range} are the extrema of the approximation
+range on the axis of eigenvalues of $(\hat{D}^\dag \hat{D})^{1/2}$, the value of
+\texttt{mu} is the twisted mass $\hat{\mu}$, the value of \texttt{degree} is the
+number of poles. All other values specify the rational function. This section
+should not be filled by hand, instead it should be produced with the
+\texttt{MinMax} code (in the \texttt{minmax} directory of the \texttt{openQ*D}
+code) which implements the minmax approximation algorithm in multiple precision.
+The general rational functions accepted by the \texttt{openQ*D} code are
+described in \cite{rhmc}. A full documentation of the \texttt{MinMax} program
+can be found in its \texttt{README} file.
+
+The poles and zeros of the rational functions are ordered such that the larger
+ones come first. For reasons of stability and performance, the rational function
+should be split into a product of factors, each including a range of poles and
+zeros \cite{rhmc}. The pseudo-fermion action associated with such a factor is
+described by a section
+%
+\begin{verbatim}
+  [Action 6]
+  action ACF_RAT
+  ipf 4
+  im0 1
+  irat 0 7 9
+  isp 1
+\end{verbatim}
+%
+The parameters \texttt{ipf}, \texttt{ifl} and \texttt{isp} in this section have
+the same meaning as in the case of the twisted-mass pseudo-fermion actions,
+while \texttt{irat} specifies the index of the rational function and the range
+of poles included in the factor. Poles are counted from zero and pole ranges are
+inclusive, i.e. \texttt{irat 0 7 9} selects the poles number 7, 8 and 9 from the
+rational function with index 0.
+
+Since even-odd preconditioning is used for the RHMC, the associated quark
+determinants contain the small determinant $\det D_\text{oo}$. It is convenient
+to combine this factor with the rational factor that contains the largest poles.
+The corresponding section is
+%
+\begin{verbatim}
+  [Action 7]
+  action ACF_RAT_SDET
+  ipf 5
+  im0 1
+  irat 0 0 6
+  isp 4
+\end{verbatim}
+%
+For a given rational function and flavour index \texttt{ifl}, the action
+sections must be such that all poles and the small determinant are included
+once. In the example discussed here, this is achieved with two factors, but one
+is free to split the rational functions in more factors. Note that for each
+factor a different pseudo-fermion field must be used.
+
+
+
+
+\section{Molecular-dynamics parameters}
+\label{sec:md}
+
+The simulation algorithm implemented in the \texttt{openQ*D} package involves a
+numerical integration of the molecular-dynamics equations that derive from the
+chosen action. Apart from the action, this requires the integration scheme (the
+\textit{integrator}) to be specified as well as the solvers used for the
+computation of the various pseudo-fermion forces.
+
+\subsection{HMC parameters}
+\label{subsec:md:hmc}
+
+Some basic parameters of the algorithm are collected in the section
+%
+\begin{verbatim}
+  [HMC parameters]
+  actions 0 1 2
+  npf 6
+  mu 0.015 0.2 1.0
+  nlv 2
+  tau 1.0
+  facc 1
+\end{verbatim}
+%
+The numbers on the action line are the indices of the actions that are to be
+included in the molecular-dynamics Hamilton function. If some of these actions
+depend on twisted mass parameters, their values must be listed on the line with
+tag \texttt{mu}. As already mentioned, the some of the action sections refer to
+these values by quoting their position \texttt{imu} (counting from 0) in the
+array. The parameter \texttt{facc} specifies whether the Fourier acceleration
+should be used for the U(1) field. The parameter \texttt{npf} specifies the
+total number of pseudo-fermion fields that must be allocated. The last two
+parameters, \texttt{nlv} and \texttt{tau}, define the number of integrator
+levels and the molecular-dynamics trajectory length (see ref.
+\cite{openQCD:forces} for the normalization of the latter; the integration
+scheme is discussed in subsect. \ref{subsec:md:integrator}).
+
+
+
+\subsection{Forces}
+\label{subsec:md:forces}
+
+The forces that derive from the actions
+\texttt{ACG\_SU3},...,\texttt{ACF\_RAT\_SDET} discussed in sect.
+\ref{sec:actions} are distinguished by the symbols
+\texttt{FRG\_SU3},...,\texttt{FRF\_RAT\_SDET}. The corresponding sections are
+%
+\begin{verbatim}
+  [Force 0]
+  force FRG_SU3
+\end{verbatim}
+
+\begin{verbatim}
+  [Force 1]
+  force FRG_U1
+\end{verbatim}
+
+\begin{verbatim}
+  [Force 2]
+  force FRF_TM1
+  isp 6
+  ncr 4
+\end{verbatim}
+
+\begin{verbatim}
+  [Force 3]
+  force FRF_TM2
+  isp 7
+  ncr 0
+\end{verbatim}
+
+\begin{verbatim}
+  [Force 4]
+  force FRF_TM1_EO_SDET
+  isp 6
+  ncr 4
+\end{verbatim}
+
+\begin{verbatim}
+  [Force 5]
+  force FRF_TM2_EO
+  isp 7
+  ncr 0
+\end{verbatim}
+
+\begin{verbatim}
+  [Force 6]
+  force FRF_RAT
+  isp 8
+\end{verbatim}
+
+\begin{verbatim}
+  [Force 7]
+  force FRF_RAT_SDET
+  isp 9
+\end{verbatim}
+%
+In each case, the index in the headline must match the index of the associated
+action. The force tags (such as \texttt{FRF\_TM2\_EO}) could be inferred from
+the corresponding action sections, but are required in order to improve the
+readability of the input parameter files.
+
+Most parameters of the forces are inherited from those of the associated
+actions. The solver parameter sets selected by the indices \texttt{isp} may
+however be different. In the case of the forces \texttt{FRF\_TM2} and
+\texttt{FRF\_TM2\_EO}, the specified solver is used for the solution of the
+Dirac equation with twisted mass $\mu_0$. No solver is needed here for the
+second twisted mass $\mu_1$.
+
+The parameter \texttt{ncr} controls the chronological propagation of the
+solutions of the Dirac equation along the molecular-dynamics trajectories. If
+\texttt{ncr} is set to a positive value, the simulation program attempts to
+reduce the number of solver iterations required for the computation of the
+specified force by extrapolating the previous \texttt{ncr} solutions in
+molecular-dynamics time. The feature is switched off if \texttt{ncr} is set to
+zero.
+
+
+
+
+
+\subsection{Integration scheme}
+\label{subsec:md:integrator}
+
+The numerical integration of the molecular-dynamics equations makes use of a
+hierarchical integrator that can be specified on the input parameter file.
+Currently three elementary integration schemes are supported, the leapfrog, the
+2nd order Omelyan–Mryglod–Folk (OMF) and a 4th order OMF integrator. They are
+distinguished by the symbols \texttt{LPFR}, \texttt{OMF2} and \texttt{OMF4}.
+
+Hierarchical integrators have several levels with increasing integration step
+sizes. They are described by the total integration time tau, the number nlv of
+levels, the elementary integrators used at each level and the forces integrated
+there. The parameters tau and nlv are part of the HMC parameter set (see
+subsect. \ref{subsec:md:hmc}). Each level is then described by a section like
+%
+\begin{verbatim}
+  [Level 2]
+  integrator LPFR
+  nstep 12
+  forces 2 4 5
+\end{verbatim}
+%
+In this example, the simulation program is instructed to use the leapfrog
+integrator at the third level (levels are counted from 0). The elementary
+leapfrog integration step is to be applied 12 times and the forces integrated at
+this level are the ones with index 2, 4 and 5. If the level is the top level,
+the integration step size for these forces is thus \texttt{tau}/12.
+
+An example of a complete integrator description is provided by the following
+three sections:
+%
+\begin{verbatim}
+  [Level 0]
+  integrator OMF4
+  nstep 1
+  forces 0
+\end{verbatim}
+
+\begin{verbatim}
+  [Level 1]
+  integrator OMF4
+  nstep 1
+  forces 1 2 3
+\end{verbatim}
+
+\begin{verbatim}
+  [Level 2]
+  integrator OMF2
+  lambda 0.16667
+  nstep 6
+  forces 4
+\end{verbatim}
+%
+There are three levels in this case, with average step sizes equal to
+\texttt{tau}/300, \texttt{tau}/60 and \texttt{tau}/12 at level 0, 1 and 2,
+respectively (note that the \texttt{OMF2} and \texttt{OMF4} integrators update
+the gauge field 2 and 5 times per application). The OMF2 integrator depends on a
+parameter \texttt{lambda}, whose value must be given at each level where this
+integrator is used. See \texttt{modules/update/README.mdint} for further
+explanations.
+
+
+
+\section{Solver parameters}
+\label{sec:solvers}
+
+
+All solvers referred to in the action and force sections must be described in
+the input parameter file. The solvers are labeled by an index \texttt{isp} in
+the range 0,1,...,31 in much the same way as flavours, actions and forces. There
+is no one-to-one correspondence between solver programs and solver sections in
+the parameter file. One may, for example, have two sections
+%
+\begin{verbatim}
+  [Solver 3]
+  solver CGNE
+  nmx 256
+  res 1.0e-10
+\end{verbatim}
+
+\begin{verbatim}
+  [Solver 4]
+  solver CGNE
+  nmx 256
+  res 1.0e-8
+\end{verbatim}
+%
+where the only difference is the value of the desired residue \texttt{res}. By
+setting $\texttt{isp}=3$ or $\texttt{isp}=4$ in an action or force section, the
+numerical accuracy of the action and force computations can then be individually
+controlled.
+
+
+\subsection{Conjugate gradient solvers}
+\label{subsec:solvers:cg}
+
+There are two conjugate gradient solvers, the ordinary CG algorithm for the
+normal Dirac equations,
+%
+\begin{gather}
+   (D^\dag D + \mu^2) \psi = \eta \quad \text{and} \quad (\hat{D}^\dag \hat{D} + \mu^2) \psi = \eta \ ,
+\end{gather}
+%
+and the mult-shift CG algorithm for the even-odd preconditioned simultaneous
+equations \cite{openQCD:mscg}
+%
+\begin{gather}
+   (\hat{D}^\dag \hat{D} + \mu_k^2) \psi_k = \eta \qquad k=0,1,\dots,n-1 \ .
+\end{gather}
+%
+Examples of parameter sections describing solvers based on the former have
+already appeared in this note. The parameter sections
+%
+\begin{verbatim}
+  [Solver 3]
+  solver MSCG
+  nmx 256
+  res 1.0e-10
+\end{verbatim}
+%
+for the multi-shift solver look practically the same. Note that this solver can
+only be used for rational function actions and forces.
+
+
+
+\subsection{SAP preconditioned solvers}
+\label{subsec:solvers:sap}
+
+There are currently two solvers that make use of the Schwarz Alternating
+Procedure (SAP) as preconditioner for the GCR algorithm. When these solvers are
+used, the block size bs of the SAP block grid needs to be specified in a
+separate section
+%
+\begin{verbatim}
+  [SAP]
+  bs 4 6 6 4
+\end{verbatim}
+%
+The ordinary SAP preconditioned GCR algorithm is then described by a parameter
+section
+%
+\begin{verbatim}
+  [Solver 7]
+  solver SAP_GCR
+  nkv 16
+  isolv 1
+  nmr 4
+  ncy 5
+  nmx 24
+  res 1.0e-8
+\end{verbatim}
+%
+where \texttt{nkv} is the maximal number of Krylov vectors that may be generated
+before the GCR algorithm is restarted, while \texttt{nmx} is the maximal total
+number of generated Krylov vectors and res the desired relative residue of the
+calculated solutions. All other parameters in the section describe the
+particular SAP preconditioner to be used, namely \texttt{ncy} and \texttt{nmr}
+specify the number of SAP cycles and block solver iterations to be applied and
+the flag \texttt{isolv} indicates whether the block solver is even-odd
+preconditioned (\texttt{isolv}=1) or not (\texttt{isolv}!=1).
+
+The other solver that makes use of the SAP is the deflated SAP preconditioned
+GCR solver. This solver is described by a section
+%
+\begin{verbatim}
+  [Solver 8]
+  solver DFL_SAP_GCR
+  idfl 0
+  nkv 16
+  isolv 1
+  nmr 4
+  ncy 5
+  nmx 24
+  res 1.0e-8
+\end{verbatim}
+%
+that coincides with the section for the ordinary SAP preconditioned solver
+except for the solver symbol, and for the parameter \texttt{idfl} which
+specifies which deflation subspace should be used (see
+subsect.~\ref{subsec:solvers:dfl}).
+
+
+\subsection{Deflation parameters}
+\label{subsec:solvers:dfl}
+
+When the deflated solver is used, the parameters related to the deflation
+subspace must be specified in a few further sections.
+
+In contrast to \texttt{openQCD}, the \texttt{openQ*D} package can use seveal
+deflation subspaces simultaneously. This is useful in QCD+QED simulation, since
+quarks with different electric charges must use different deflation subspaces.
+The deflation subspaces are labeled by an index \texttt{idfl} in the range
+0,1,...,31 in much the same way as flavours, actions, forces and solvers. In
+practice this index is used only in the parameters sections of the
+\texttt{DFL\_SAP\_GCR} solver (see subsect.~\ref{subsec:solvers:sap}). The
+deflation parameters are distributed in four different sections. The of them,
+\texttt{Deflation subspace}, \texttt{Deflation projection} and \texttt{Deflation
+update scheme} are common to all deflation subspaces, while \texttt{Deflation
+subspace generation} must appear as many times as the number of requested
+deflation subspaces.
+
+The block size \texttt{bs} of the deflation block grid and the number
+\texttt{Ns} of deflation modes per block are set by including the section
+%
+\begin{verbatim}
+  [Deflation subspace]
+  bs 8 4 4 4
+  Ns 20
+\end{verbatim}
+
+For the generation of the deflation subspace, approximate eigenvalues of the
+Dirac operator are calculated. Each deflation subspace can use different
+parameters for the Dirac operator and different values for the twisted mass
+\texttt{mu}, which need to be specified in the section
+%
+\begin{verbatim}
+  [Deflation subspace generation 2]
+  qhat     0             # Dirac operator parameters start here
+  kappa    0.128
+  su3csw   1.234
+  u1csw    0.000
+  cF       0.95
+  cF'      1.0
+  theta    0.2 -0.4 0.5  # Dirac operator parameters end here
+  mu       0.02
+  ninv     5
+  nmr      4
+  ncy      5
+\end{verbatim}
+%
+The other parameters set in this section include the number \texttt{ninv} of
+inverse iteration steps to be applied and the numbers \texttt{ncy} and
+\texttt{nmr} of SAP cycles and block solver iterations to be used when the SAP
+preconditioner is invoked.
+
+In the course of the inverse iteration, and in each iteration of the deflated
+solver, a deflation projection is applied that requires the little Dirac
+equation to be solved with low precision. The section
+%
+\begin{verbatim}
+  [Deflation projection]
+  nkv 24
+  nmx 256
+  res 1.0e-2
+\end{verbatim}
+%
+sets the parameters of the GCR solver used for this task. As usual,
+\texttt{nkv}, \texttt{nmx} and \texttt{res} are, respectively, the number of
+Krylov vectors generated before the GCR algorithm is restarted, the maximal
+total number of vectors that may be generated and the desired relative residue
+of the calculated solution.
+
+Along the molecular-dynamics trajectories, the deflation subspace looses its
+efficiency and must therefore be refreshed from time to time. This feature is
+controlled by the parameter section
+%
+\begin{verbatim}
+  [Deflation update scheme]
+  dtau 0.091
+  nsm 1
+\end{verbatim}
+%
+where \texttt{dtau} sets the interval in molecular-dynamics time after which the
+subspace is updated and \texttt{nsm} the number of smoothing steps to be applied
+in this process. The subspace updates can be turned off by setting
+\texttt{nsm}=0. Clearly, the section is not needed in measurement programs,
+where the deflated solver may be used for quark propagator calculations, for
+example.
+
+
+
+
+\section{Reweighting factors}
+\label{sec:rw}
+
+In general, the ensembles of field configurations generated in \texttt{openQ*D}
+simulations must be reweighted. For example, the rational approximation requires
+reweighting in order to correct for the approximation error. In the case of the
+light quarks, reweighting is required if a twisted mass term was added as
+infrared regulator. For a given ensemble of field configurations, the program
+\texttt{ms1} computes stochastic estimates of the reweighting factors specified
+in a parameter file.
+
+
+\subsection{Twisted-mass reweighting factors for doublets}
+
+In ref. \cite{Luscher:2008tw}, two kinds of twisted-mass regularizations of the
+determinant $\det \{ D^\dag D \}$ were proposed which amount to replacing
+%
+\begin{gather}
+   \det \{ D^\dag D \} \rightarrow \det \{ D^\dag D + \mu^2 \}
+\end{gather}
+and
+\begin{gather}
+   \det \{ D^\dag D \} \rightarrow \det \{ (D^\dag D + \mu^2)^2 (D^\dag D + 2\mu^2)^{-1} \}
+\end{gather}
+%
+respectively. The twisted mass parameter $\mu > 0$ provides the desired infrared
+regularization and is usually set to a value on the order of light quark mass.
+
+The associated reweighting factors,
+%
+\begin{gather}
+   W_1 = \det \det \{ D^\dag D  (D^\dag D + \mu^2)^{-1} \} \ , \\
+   W_2 = \det \{ D^\dag D (D^\dag D + 2\mu^2) (D^\dag D + \mu^2)^{-2} \}
+\end{gather}
+%
+can be estimated stochastically using Gaussian random quark fields. The input
+files parameters for these reweigthing factors are identical to the
+\texttt{openQCD} package and are described in sect. 6.1 of \cite{openQCD:parms}.
+
+
+
+\subsection{Reweighting factors for RHMC}
+
+Let $\R$ and $\Rmu$ be the optimal rational approximations of order $[n,n]$ for
+$(\hat{D}^\dag \hat{D})^{-\alpha}$ and $(\hat{D}^\dag \hat{D} +
+\hat{\mu}^2)^{-\alpha}$ respectively. As explained in \cite{rhmc}, two
+reweighting factors are needed to correct for the twisted mass in the rational
+approximation ($W_\text{rtm}$), and for the error due to the rational
+approximation itself ($W_\text{rat}$).
+
+
+The calculation of the reweighting factor
+%
+\begin{gather}
+   W_\text{rtm} = \det [ \R^{-1} \Rmu ]
+   \label{eq:Wtm}
+\end{gather}
+%
+requires two rational functions, $\Rmu$ and $\R$, that need to be defined in two
+parameter sections of the type
+%
+\begin{verbatim}
+  [Rational 0]
+  power        -1 2
+  degree       12
+  range        0.02 6.05
+  mu           0.0
+\end{verbatim}
+
+\begin{verbatim}
+  [Rational 1]
+  power        -1 2
+  degree       12
+  range        0.02 6.05
+  mu           0.02
+\end{verbatim}
+%
+The parameter section for the reweighting factor $W_\text{rtm}$ looks like
+%
+\begin{verbatim}
+  [Reweighting factor 2]
+  rwfact       RWRTM
+  ifl          1
+  irp          1 0
+  np           6 4 2
+  isp          1 0 2
+  nsrc         4
+\end{verbatim}
+%
+The parameter \texttt{ifl} is used to specify which flavour needs to be used.
+The line \texttt{irp} declares that the rational approximation 1 is used for
+$\Rmu$, and the rational approximation 0 is used for $\R$. It is required that
+the two functions have the same degree (12 in this case). The operator
+$\Rmu^{-1} \R$ is also a rational function of $\hat{Q}^2=\hat{D}^\dag \hat{D}$,
+which can broken up in factors as explained in \cite{rhmc}. The line \texttt{np}
+specifies that the first factor contains the first group of 6 poles and zeroes,
+the second factor contains the second group of 4 poles and zeroes, and finally
+the third factor contains the third group of 2 poles and zeroes, according to
+the formula
+%
+\begin{gather}
+   W_\text{rtm} = \text{constant} \times \det \tilde{P}_{1,5}^{-1} \ \det \tilde{P}_{6,10}^{-1} \ \det \tilde{P}_{11,12}^{-1} \ .
+\end{gather}
+%
+The calculation of each determinant requires the solution of the Dirac equation.
+Solvers can be chosen independently for each factor by setting the values of
+\texttt{isp}. Each determinant is evaluated stochastically, using \texttt{nsrc}
+stochastic sources.
+
+
+The parameters for the reweighting factor
+\begin{gather}
+   W_\text{rat} = \det [ (\hat{D}^\dag \hat{D})^{\alpha} \R ]
+   \label{eq:Wrat}
+\end{gather}
+are specified in a section of the type
+%
+\begin{verbatim}
+  [Reweighting factor 1]
+  rwfact       RWRAT
+  ifl          1
+  irp          0
+  np           6 4 2
+  isp          1 0 2
+  nsrc         2
+\end{verbatim}
+%
+The parameter \texttt{ifl} is used to specify which flavour needs to be used.
+The rational function for $\R$ is specified in \texttt{irp}. Notice that the
+exponent $\alpha$ is inherited from the rational function. The reweighting
+factor is estimated stochastically with a procedure described in detail in
+\cite{rhmc}. \texttt{nsrc} stochastic sources are used for this determination.
+Every time the operator $\R$ needs to be applied to a stochastic sources, the
+rational function is broken up in factors pretty much in the same way as in the
+discussion for $W_\text{rtm}$. The splitting is defined in the line \texttt{np}.
+For each factor, the solvers to be used are chosen independently in the line
+\texttt{isp}.
+
+
+
+
+\begin{thebibliography}{9}
+
+\bibitem{cstar}
+  A. Patella,
+  \textit{C$^\star$ boundary conditions}, code documentation,
+  \texttt{doc/cstar.pdf}.
+
+\bibitem{gauge_action}
+  A. Patella,
+  \textit{Gauge actions}, code documentation,
+  \texttt{doc/gauge\_action.pdf}.
+
+\bibitem{dirac} 
+  A.~Patella,
+  \textit{Dirac operator}, code documentation,
+  \texttt{doc/dirac.pdf}.
+
+\bibitem{openQCD:forces} 
+  M.~Luscher,
+  \textit{Molecular-dynamics quark forces}, code documentation,
+  \texttt{doc/openQCD-1.6/forces.pdf}.
+
+\bibitem{openQCD:dirac} 
+  M.~Luscher,
+  \textit{Implementation of the lattice Dirac operator}, code documentation,
+  \texttt{doc/openQCD-1.6/dirac.pdf}.
+
+\bibitem{rhmc} 
+  A. Patella,
+  \textit{RHMC algorithm in \texttt{openQ*D}}, code documentation,
+  \texttt{doc/rhmc.pdf}.
+
+\bibitem{openQCD:mscg} 
+  M.~Luscher,
+  \textit{Multi-shift conjugate gradient algorithm}, code documentation,
+  \texttt{doc/openQCD-1.6/mscg.pdf}.
+
+\bibitem{Luscher:2008tw} 
+  M.~Luscher and F.~Palombi,
+  \textit{Fluctuations and reweighting of the quark determinant on large lattices},
+  PoS LATTICE {\bf 2008}, 049 (2008)
+  [arXiv:0810.0946 [hep-lat]].
+
+\bibitem{openQCD:parms} 
+  M.~Luscher,
+  \textit{Parameters of the openQCD main programs}, code documentation,
+  \texttt{doc/openQCD-1.6/parms.pdf}.
+
+\end{thebibliography}
+
+
+
+\end{document}

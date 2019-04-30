@@ -5,7 +5,7 @@
 *
 * Copyright (C) 2005, 2007, 2009-2013, Martin Luescher, Filippo Palombi,
 *               2016                   Stefan Schaefer,
-*               2017                   Agostino Patella
+*               2017, 2019             Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -42,11 +42,7 @@ static int my_rank;
 
 static void read_flds_bc_lat_parms(void)
 {
-   int gg,nfl,ifl,bc,sf,cs,type,qhat;
-   double phi[2],phi_prime[2];
-   double beta,c0,cG,cG_prime;
-   double alpha,lambda,invqel;
-   double kappa,su3csw,u1csw,cF,cF_prime,th1,th2,th3;
+   int gg,nfl;
    char line[NAME_SIZE];
 
    if (my_rank==0)
@@ -73,181 +69,24 @@ static void read_flds_bc_lat_parms(void)
 
    set_flds_parms(gg,nfl);
 
-   if (my_rank==0)
-   {
-      find_section("Boundary conditions");
-      read_line("type","%s",&line);
-      bc=4;
-      if ((strcmp(line,"open")==0)||(strcmp(line,"0")==0))
-         bc=0;
-      else if ((strcmp(line,"SF")==0)||(strcmp(line,"1")==0))
-         bc=1;
-      else if ((strcmp(line,"open-SF")==0)||(strcmp(line,"2")==0))
-         bc=2;
-      else if ((strcmp(line,"periodic")==0)||(strcmp(line,"3")==0))
-         bc=3;
-      else
-         error_root(1,1,"read_flds_bc_lat_parms [main.c]",
-                    "Unknown time boundary condition type %s",line);
-      
-      read_line("cstar","%d",&cs);
-
-      sf=0;
-      phi[0]=0.0;
-      phi[1]=0.0;
-      phi_prime[0]=0.0;
-      phi_prime[1]=0.0;
-      if ((cs==0)&&(bc==1)&&((gg&1)!=0))
-         read_dprms("phi",2,phi);
-      if ((bc==1)||(bc==2))
-      {
-         read_line("SFtype","%s",&line);
-         if ((strcmp(line,"orbifold")==0)||
-             (strcmp(line,"openQCD-1.4")==0)||(strcmp(line,"0")==0))
-            sf=0;
-         else if ((strcmp(line,"AFW-typeB")==0)||
-                  (strcmp(line,"openQCD-1.2")==0)||(strcmp(line,"1")==0))
-            sf=1;
-         else
-            error_root(1,1,"read_flds_bc_lat_parms [main.c]",
-                       "Unknown SF type %s",line);
-         
-         if ((cs==0)&&((gg&1)!=0))
-            read_dprms("phi'",2,phi_prime);
-      }
-   }
-   
-   MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&sf,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(phi,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(phi_prime,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
-
-   set_bc_parms(bc,sf,cs,phi,phi_prime);
-   
-   if ((gg&1)!=0)
-   {
-      if (my_rank==0)
-      {
-         find_section("SU(3) action");
-         read_line("beta","%lf",&beta);
-         read_line("c0","%lf",&c0);
-
-         cG=1.0;
-         cG_prime=1.0;
-         if (bc!=3)
-            read_line("cG","%lf",&cG);
-         if (bc==2)
-            read_line("cG'","%lf",&cG_prime);
-      }
-      
-      MPI_Bcast(&beta,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(&c0,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(&cG,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(&cG_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      
-      set_su3lat_parms(beta,c0,cG,cG_prime);
-   }
-   
-   if ((gg&2)!=0)
-   {
-      if (my_rank==0)
-      {
-         find_section("U(1) action");
-         read_line("type","%s",line);
-
-         type=0;
-         if ((strcmp(line,"compact")==0)||(strcmp(line,"0")==0))
-            type=0;
-         else if ((strcmp(line,"non-compact")==0)||(strcmp(line,"1")==0))
-            type=1;
-         else
-            error_root(1,1,"read_flds_bc_lat_parms [main.c]",
-                       "Unknown U(1) action type %s",line);
-      
-         read_line("alpha","%lf",&alpha);
-         read_line("invqel","%lf",&invqel);
-
-         lambda=c0=cG=cG_prime=0.0;
-         if(type==0)
-         {
-            read_line("c0","%lf",&c0);
-            if (bc!=3) read_line("cG","%lf",&cG);
-            if (bc==2) read_line("cG'","%lf",&cG_prime);
-         }
-         else
-         {
-            read_line("lambda","%lf",&lambda);
-         }
-      }
-      
-      MPI_Bcast(&type,1,MPI_INT,0,MPI_COMM_WORLD);
-      MPI_Bcast(&alpha,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(&invqel,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(&lambda,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(&c0,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(&cG,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(&cG_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      
-      set_u1lat_parms(type,alpha,invqel,lambda,c0,cG,cG_prime);
-   }
-   
-   for (ifl=0;ifl<nfl;ifl++)
-   {
-      qhat=0;
-      su3csw=u1csw=0.0;
-      cF=cF_prime=0.0;
-      th1=th2=th3=0.0;
-      
-      sprintf(line,"Flavour %d",ifl);
-      if (my_rank==0)
-      {
-         find_section(line);
-         read_line("kappa","%lf",&kappa);
-         if (gg==1)
-         {
-            read_line("csw","%lf",&su3csw);
-         }
-         else if (gg==2)
-         {
-            read_line("qhat","%d",&qhat);
-            read_line("csw","%lf",&u1csw);
-         }
-         else if (gg==3)
-         {
-            read_line("qhat","%d",&qhat);         
-            read_line("su3csw","%lf",&su3csw);
-            read_line("u1csw","%lf",&u1csw);
-         }
-         if (bc!=3) read_line("cF","%lf",&cF);
-         if (bc==2) read_line("cF'","%lf",&cF_prime);
-         if (cs==0) read_line("theta","%lf %lf %lf",&th1,&th2,&th3);
-      }
-      
-      MPI_Bcast(&qhat,1,MPI_INT,0,MPI_COMM_WORLD);
-      MPI_Bcast(&kappa,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(&su3csw,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(&u1csw,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(&cF,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(&cF_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(&th1,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(&th2,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-      MPI_Bcast(&th3,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-
-      set_qlat_parms(ifl,kappa,qhat,su3csw,u1csw,cF,cF_prime,th1,th2,th3);
-   }
+   read_bc_parms();
+   read_glat_parms();
+   read_qlat_parms();
 }
 
 
 static void read_hmc_parms(void)
 {
    int nact,*iact;
-   int npf,nmu,nlv;
+   int npf,nmu,nlv,facc;
    double tau,*mu;
 
+   facc=0;
    if (my_rank==0)
    {
       find_section("HMC parameters");
+      if ((gauge()&2)!=0)
+         read_line("facc","%d",&facc);
       nact=count_tokens("actions");
       read_line("npf","%d",&npf);
       nmu=count_tokens("mu");
@@ -255,6 +94,7 @@ static void read_hmc_parms(void)
       read_line("tau","%lf",&tau);
    }
 
+   MPI_Bcast(&facc,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&nact,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&npf,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&nmu,1,MPI_INT,0,MPI_COMM_WORLD);
@@ -285,7 +125,7 @@ static void read_hmc_parms(void)
    else
       mu=NULL;
 
-   set_hmc_parms(nact,iact,npf,nmu,mu,nlv,tau);
+   set_hmc_parms(nact,iact,npf,nmu,mu,nlv,tau,facc);
 
    if (nact>0)
       free(iact);
@@ -363,96 +203,6 @@ static void read_actions(void)
             read_rat_parms(l);
       }
    }
-}
-
-
-static void read_sap_parms(void)
-{
-   int bs[4];
-
-   if (my_rank==0)
-   {
-      find_section("SAP");
-      read_line("bs","%d %d %d %d",bs,bs+1,bs+2,bs+3);
-   }
-
-   MPI_Bcast(bs,4,MPI_INT,0,MPI_COMM_WORLD);
-   set_sap_parms(bs,1,4,5);
-}
-
-
-static void read_dfl_parms(void)
-{
-   int bs[4],Ns;
-   int ninv,nmr,ncy,nkv,nmx,nsm,qhat;
-   double kappa,mu,su3csw,u1csw,cF,cF_prime,th1,th2,th3,res,dtau;
-
-   if (my_rank==0)
-   {
-      find_section("Deflation subspace");
-      read_line("bs","%d %d %d %d",bs,bs+1,bs+2,bs+3);
-      read_line("Ns","%d",&Ns);
-   }
-
-   MPI_Bcast(bs,4,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&Ns,1,MPI_INT,0,MPI_COMM_WORLD);
-   set_dfl_parms(bs,Ns);
-
-   qhat=0;
-   su3csw=u1csw=cF=cF_prime=th1=th2=th3=0.0;
-   if (my_rank==0)
-   {
-      find_section("Deflation subspace generation");
-      read_line("kappa","%lf",&kappa);
-      read_line("mu","%lf",&mu);
-      if((gauge()&2)!=0) read_line("qhat","%d",&qhat);
-      if((gauge()&1)!=0) read_line("su3csw","%lf",&su3csw);
-      if((gauge()&2)!=0) read_line("u1csw","%lf",&u1csw);
-      if (bc_type()!=3) read_line("cF","%lf",&cF);
-      if (bc_type()==2) read_line("cF'","%lf",&cF_prime);
-      if(bc_cstar()==0) read_line("theta","%lf %lf %lf",&th1,&th2,&th3);
-      read_line("ninv","%d",&ninv);
-      read_line("nmr","%d",&nmr);
-      read_line("ncy","%d",&ncy);
-   }
-
-   MPI_Bcast(&qhat,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&kappa,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&mu,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&su3csw,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&cF,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&cF_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&th1,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&th2,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&th3,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&ninv,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&nmr,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&ncy,1,MPI_INT,0,MPI_COMM_WORLD);
-   set_dfl_gen_parms(kappa,mu,qhat,su3csw,u1csw,cF,cF_prime,th1,th2,th3,ninv,nmr,ncy);
-
-   if (my_rank==0)
-   {
-      find_section("Deflation projection");
-      read_line("nkv","%d",&nkv);
-      read_line("nmx","%d",&nmx);
-      read_line("res","%lf",&res);
-   }
-
-   MPI_Bcast(&nkv,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&nmx,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   set_dfl_pro_parms(nkv,nmx,res);
-
-   if (my_rank==0)
-   {
-      find_section("Deflation update scheme");
-      read_line("dtau","%lf",&dtau);
-      read_line("nsm","%d",&nsm);
-   }
-
-   MPI_Bcast(&dtau,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&nsm,1,MPI_INT,0,MPI_COMM_WORLD);
-   set_dfl_upd_parms(dtau,nsm);
 }
 
 
@@ -545,6 +295,9 @@ static void read_solvers(void)
                {
                   isap=1;
                   idfl=1;
+                  
+                  if (dfl_gen_parms(sp.idfl).status!=DFL_DEF)
+                     read_dfl_parms(sp.idfl);
                }
             }
          }
@@ -555,7 +308,7 @@ static void read_solvers(void)
       read_sap_parms();
 
    if (idfl)
-      read_dfl_parms();
+      read_dfl_parms(-2);
 }
 
 
@@ -572,7 +325,7 @@ static void chk_mode_regen(int isp,int *status)
 
 static void start_hmc(double *act0,su3_dble *uold,double *aold,su3_alg_dble *su3mold,double *u1mold)
 {
-   int i,nact,*iact;
+   int i,nact,*iact,idfl;
    int status[3];
    double *mu;
    su3_dble *udb;
@@ -581,6 +334,7 @@ static void start_hmc(double *act0,su3_dble *uold,double *aold,su3_alg_dble *su3
    hmc_parms_t hmc;
    action_parms_t ap;
    dirac_parms_t dp;
+   dflst_t dfl_status;
 
    hmc=hmc_parms();
    nact=hmc.nact;
@@ -603,19 +357,31 @@ static void start_hmc(double *act0,su3_dble *uold,double *aold,su3_alg_dble *su3
       adb=adfld();
       assign_dvec2dvec(4*VOLUME,adb,aold);
       random_u1mom();
-      assign_dvec2dvec(4*VOLUME,mdflds()->u1mom,u1mold);
       act0[0]+=u1momentum_action(0);
+      if (hmc.facc)
+         u1mom_Delta_no0(2,mdflds()->u1mom,mdflds()->u1mom);
+      assign_dvec2dvec(4*VOLUME,mdflds()->u1mom,u1mold);
    }
 
    dfl=dfl_parms();
 
    if (dfl.Ns)
    {
-      dfl_modes(status);
-      error_root(status[0]<0,1,"start_hmc [check3.c]",
-                 "Deflation subspace generation failed (status = %d)",
-                 status[0]);
-      add2counter("modes",0,status);
+      idfl=0;
+      while(1)
+      {
+         dfl_status=dfl_gen_parms(idfl).status;
+         if(dfl_status==DFL_OUTOFRANGE) break;
+         if(dfl_status==DFL_DEF)
+         {
+            dfl_modes(idfl,status);
+            error_root(status[0]<0,1,"start_hmc [check3.c]",
+                       "Generation of eflation subspace %d failed (status = %d)",
+                       idfl,status[0]);
+            add2counter("modes",0,status);
+         }
+         idfl++;
+      }
    }
 
    for (i=0;i<nact;i++)
@@ -628,7 +394,7 @@ static void start_hmc(double *act0,su3_dble *uold,double *aold,su3_alg_dble *su3
          act0[i+1]=action6(0);
       else
       {
-         dp=qlat_parms(ap.im0);
+         dp=qlat_parms(ap.ifl);
          set_dirac_parms1(&dp);
 
          if (ap.action==ACF_TM1)
@@ -683,13 +449,19 @@ static void end_hmc(double *act1)
    action_parms_t ap;
    dirac_parms_t dp;
 
+   hmc=hmc_parms();
+
    act1[0]=0.0;
    if((gauge()&1)!=0)
       act1[0]+=su3momentum_action(0);
    if((gauge()&2)!=0)
+   {
+      if (hmc.facc)
+         u1mom_Delta_no0(3,mdflds()->u1mom,mdflds()->u1mom);
       act1[0]+=u1momentum_action(0);
-
-   hmc=hmc_parms();
+      if (hmc.facc)
+         u1mom_Delta_no0(2,mdflds()->u1mom,mdflds()->u1mom);
+   }
    nact=hmc.nact;
    iact=hmc.iact;
    mu=hmc.mu;
@@ -704,7 +476,7 @@ static void end_hmc(double *act1)
          act1[i+1]=action6(0);
       else
       {
-         dp=qlat_parms(ap.im0);
+         dp=qlat_parms(ap.ifl);
          set_dirac_parms1(&dp);
          status[2]=0;
 
@@ -734,10 +506,11 @@ static void end_hmc(double *act1)
 
 static void restart_hmc(su3_dble *uold,double *aold,su3_alg_dble *su3mold,double *u1mold)
 {
-   int status;
+   int status,idfl;
    su3_dble *udb;
    double *adb;
    dfl_parms_t dfl;
+   dflst_t dfl_status;
 
    clear_counters();
 
@@ -760,10 +533,21 @@ static void restart_hmc(su3_dble *uold,double *aold,su3_alg_dble *su3mold,double
 
    if (dfl.Ns)
    {
-      dfl_modes(&status);
-      error_root(status<0,1,"restart_hmc [check3.c]",
-                 "Deflation subspace generation failed (status = %d)",status);
-      add2counter("modes",0,&status);
+      idfl=0;
+      while(1)
+      {
+         dfl_status=dfl_gen_parms(idfl).status;
+         if(dfl_status==DFL_OUTOFRANGE) break;
+         if(dfl_status==DFL_DEF)
+         {
+            dfl_modes(idfl,&status);
+            error_root(status<0,1,"start_hmc [check3.c]",
+                       "Generation of eflation subspace %d failed (status = %d)",
+                       idfl,status);
+            add2counter("modes",0,&status);
+         }
+         idfl++;
+      }
    }
 }
 
@@ -888,6 +672,8 @@ int main(int argc,char *argv[])
    {
       sprintf(cnfg_file,"%s/%sn%d",cnfg_dir,nbase,icnfg);
       cnfg_type=import_cnfg(cnfg_file);
+      error_root(((~gauge())&&cnfg_type)==0,1,"main [check3.c]",
+                 "Imported inactive gauge field");
       if (((gauge()&1)!=0)&&((cnfg_type&1)==0)) random_ud();
       if (((gauge()&2)!=0)&&((cnfg_type&2)==0)) random_ad();
 
@@ -900,7 +686,7 @@ int main(int argc,char *argv[])
       for (i=0;i<4;i++)
       {
          set_hmc_parms(hmc.nact,hmc.iact,hmc.npf,
-                       hmc.nmu,hmc.mu,hmc.nlv,tau[i]);
+                       hmc.nmu,hmc.mu,hmc.nlv,tau[i],hmc.facc);
          set_mdsteps();
          
          if (i==0)

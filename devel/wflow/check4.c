@@ -41,7 +41,9 @@
 int main(int argc,char *argv[])
 {
    int my_rank,bc,i,n;
-   double alpha,beta,qel2,phi[2],phi_prime[2],eps;
+   double alpha,beta,qel2,eps;
+   double su3phi[2],su3phi_prime[2];
+   double u1phi,u1phi_prime;
    double *ad;
    su3_dble *ud;
    double d,dmax,dmax_all;
@@ -85,18 +87,20 @@ int main(int argc,char *argv[])
    print_flds_parms();
 
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
-   phi[0]=0.0;
-   phi[1]=0.0;
-   phi_prime[0]=0.0;
-   phi_prime[1]=0.0;
-   set_bc_parms(bc,0,1,phi,phi_prime);
+   su3phi[0]=0.573;
+   su3phi[1]=-0.573;
+   su3phi_prime[0]=-1.827;
+   su3phi_prime[1]=1.827;
+   u1phi=0.573;
+   u1phi_prime=-1.827;
+   set_bc_parms(bc,0,su3phi,su3phi_prime,u1phi,u1phi_prime);
    print_bc_parms();
 
    alpha=.013;
    qel2=2.45;
    beta=1./(16.*atan(1)*qel2*alpha);
-   set_u1lat_parms(0,alpha,1.0/sqrt(qel2),0.0,0.482,0.87,0.57);
-   set_su3lat_parms(beta,0.482,0.87,0.57);
+   set_u1lat_parms(0,alpha,1.0/sqrt(qel2),0.0,0.482,0.87,0.57,0);
+   set_su3lat_parms(beta,0.482,0.87,0.57,0);
    print_lat_parms();
 
    start_ranlux(0,12345);
@@ -112,8 +116,8 @@ int main(int argc,char *argv[])
    for(i=0;i<4*VOLUME;i++)
    {
       ud[i].c11.re=ud[i].c22.re=cos(ad[i]);
-      ud[i].c12.re=sin(ad[i]);
-      ud[i].c21.re=-ud[i].c12.re;
+      ud[i].c11.im=sin(ad[i]);
+      ud[i].c22.im=-ud[i].c11.im;
       ud[i].c33.re=1.0;
    }
    set_flags(UPDATED_UD);
@@ -126,7 +130,7 @@ int main(int argc,char *argv[])
    {
       d=fabs(ud[i].c11.re-cos(ad[i]));
       if(d>dmax) dmax=d;
-      d=fabs(ud[i].c12.re-sin(ad[i]));
+      d=fabs(ud[i].c11.im-sin(ad[i]));
       if(d>dmax) dmax=d;
    }
    MPI_Reduce(&dmax,&dmax_all,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
@@ -145,8 +149,8 @@ int main(int argc,char *argv[])
    for(i=0;i<4*VOLUME;i++)
    {
       ud[i].c11.re=ud[i].c22.re=cos(ad[i]);
-      ud[i].c12.re=sin(ad[i]);
-      ud[i].c21.re=-ud[i].c12.re;
+      ud[i].c11.im=sin(ad[i]);
+      ud[i].c22.im=-ud[i].c11.im;
       ud[i].c33.re=1.0;
    }
    set_flags(UPDATED_UD);
@@ -159,7 +163,7 @@ int main(int argc,char *argv[])
    {
       d=fabs(ud[i].c11.re-cos(ad[i]));
       if(d>dmax) dmax=d;
-      d=fabs(ud[i].c12.re-sin(ad[i]));
+      d=fabs(ud[i].c11.im-sin(ad[i]));
       if(d>dmax) dmax=d;
    }
    MPI_Reduce(&dmax,&dmax_all,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
@@ -178,8 +182,8 @@ int main(int argc,char *argv[])
    for(i=0;i<4*VOLUME;i++)
    {
       ud[i].c11.re=ud[i].c22.re=cos(ad[i]);
-      ud[i].c12.re=sin(ad[i]);
-      ud[i].c21.re=-ud[i].c12.re;
+      ud[i].c11.im=sin(ad[i]);
+      ud[i].c22.im=-ud[i].c11.im;
       ud[i].c33.re=1.0;
    }
    set_flags(UPDATED_UD);
@@ -192,7 +196,7 @@ int main(int argc,char *argv[])
    {
       d=fabs(ud[i].c11.re-cos(ad[i]));
       if(d>dmax) dmax=d;
-      d=fabs(ud[i].c12.re-sin(ad[i]));
+      d=fabs(ud[i].c11.im-sin(ad[i]));
       if(d>dmax) dmax=d;
    }
    MPI_Reduce(&dmax,&dmax_all,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);

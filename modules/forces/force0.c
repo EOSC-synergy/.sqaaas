@@ -4,7 +4,7 @@
 * File force0.c
 *
 * Copyright (C) 2005, 2009-2014, 2016 Martin Luescher, John Bulava
-* Copyright (C) 2016, 2017 Agostino Patella, Alberto Ramos
+*               2016, 2017 Agostino Patella, Alberto Ramos
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -310,7 +310,6 @@ void force0(double c)
 
    bcp=bc_parms();
    bc=bcp.type;
-   is_typeB=bcp.SFtype;
 
    lat=su3lat_parms();
    c*=(lat.beta/6.0);
@@ -318,6 +317,7 @@ void force0(double c)
    c0=lat.c0;
    c1=lat.c1;
    cG=lat.cG;
+   is_typeB=lat.SFtype;
 
    if (query_flags(UDBUF_UP2DATE)!=1)
       copy_bnd_ud();
@@ -648,7 +648,6 @@ double action0(int icom)
 
    bcp=bc_parms();
    bc=bcp.type;
-   is_typeB=bcp.SFtype;
 
    lat=su3lat_parms();
    beta=lat.beta;
@@ -656,6 +655,7 @@ double action0(int icom)
    c0=lat.c0;
    c1=lat.c1;
    cG=lat.cG;
+   is_typeB=lat.SFtype;
 
    if (query_flags(UDBUF_UP2DATE)!=1)
       copy_bnd_ud();

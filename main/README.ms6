@@ -85,9 +85,14 @@ cstar        0                     # Number of spatial directions with
                                    #   1: C* b.c.s in X
                                    #   2: C* b.c.s in XY
                                    #   3: C* b.c.s in XYZ
-phi          0.12 -0.56            # Boundary values of the SU(3) gauge field
+su3phi       0.12 -0.56            # Boundary values of the SU(3) gauge field
                                    # at time 0
-phi'         0.92 0.76             # Boundary values of the SU(3) gauge field
+su3phi'      0.92 0.76             # Boundary values of the SU(3) gauge field
+                                   # at time NPROC0*L0
+u1phi        0.43                  # Boundary values of the U(1) gauge field
+                                   # at time 0
+u1phi'       -1.32                 # Boundary values of the U(1) gauge field
+                                   # at time NPROC0*L0
 
 [Correlators]
 nfl          2                     # Number of flavours having different
@@ -124,14 +129,16 @@ theta        0.34 -1.25 0.58
 
 [Source fields]
 x0           1                     # Time at which the random source fields
-                                   # live (0<=x0<NPROC0*L0)
+                                   # live. It can be set to an integer value
+                                   # from 0 to NPROC0*L0. If periodic boundary
+                                   # conditions are chosen in time, then it can
+                                   # be set to "random".
 nsrc         3                     # Number of U(1) random source fields
                                    # to be generated per gauge configuration
 
 
 Then follows a description of the solver for the Dirac equation to be used (see
-doc/openQCD-1.6/parms.pdf, to be updated). The supported solvers are CGNE, 
-SAP_GCR and DFL_SAP_GCR.
+doc/parms.pdf). The supported solvers are CGNE,  SAP_GCR and DFL_SAP_GCR.
 
 Setting the source time x0 to 0 or NPROC0*L0-1 is not permitted if the chosen
 boundary conditions require the quark fields to vanish there. Superfluous
@@ -200,6 +207,9 @@ the deflated solver is recommended if both masses are small.
 
 The processing times per gauge field configuration quoted in the log file
 include the time required for the I/O operations.
+
+A simple main program that reads and analyses the data files is included in
+the directory ../devel/nompi/main.
 
 
 BINARY FILE FORMAT

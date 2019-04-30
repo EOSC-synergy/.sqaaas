@@ -62,6 +62,7 @@ nkv          16
 isolv        1
 nmr          4
 ncy          5
+idfl         0
 res          1.0e-12
 
 [SAP]
@@ -71,10 +72,15 @@ bs           4 4 4 4
 bs           4 4 4 4
 Ns           8
 
-[Deflation subspace generation]
+[Deflation subspace generation 0]
 qhat         -3
 kappa        0.1350
 mu           0.01
+su3csw       0.95
+u1csw        0.8
+cF           1.301
+cF'          0.789
+theta        0.38 -1.25 0.54
 ninv         5
 nmr          4
 ncy          5

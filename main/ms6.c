@@ -4,6 +4,7 @@
 * File ms6.c
 *
 * Copyright (C) 2017 Nazario Tantalo
+*               2019 Agostino Patella
 *
 * Based on openQCD-1.6/main/ms4.c
 * Copyright (C) 2012, 2013, 2016 Martin Luescher
@@ -110,7 +111,7 @@ static void write_file_head(void)
 {
    int ifl;
 
-   write_little_int(fdat,4,
+   write_little_int(1,fdat,4,
 		    file_head.tmax,
 		    file_head.x0,
 		    file_head.nsrc,
@@ -118,9 +119,9 @@ static void write_file_head(void)
 
    for (ifl=0;ifl<file_head.nfl;++ifl)
    {
-      write_little_int(fdat,1,file_head.qhat[ifl]);
+      write_little_int(1,fdat,1,file_head.qhat[ifl]);
 
-      write_little_dble(fdat,9,
+      write_little_dble(1,fdat,9,
 			file_head.kappa[ifl],
 			file_head.mu[ifl],
 			file_head.su3csw[ifl],
@@ -138,7 +139,7 @@ static void check_file_head(void)
 {
    int ifl;
 
-   check_fpar_int("ms6",fdat,4,
+   check_little_int("ms6",fdat,4,
 		  file_head.tmax,
 		  file_head.x0,
 		  file_head.nsrc,
@@ -146,9 +147,9 @@ static void check_file_head(void)
 
    for (ifl=0;ifl<file_head.nfl;++ifl)
    {
-      check_fpar_int("ms6",fdat,1,file_head.qhat[ifl]);
+      check_little_int("ms6",fdat,1,file_head.qhat[ifl]);
 
-      check_fpar_dble("ms6",fdat,9,
+      check_little_dble("ms6",fdat,9,
 		      file_head.kappa[ifl],
 		      file_head.mu[ifl],
 		      file_head.su3csw[ifl],
@@ -168,13 +169,13 @@ static void write_data(void)
 
    tmax=file_head.tmax;
 
-   write_little_int(fdat,1,data.nc);
+   write_little_int(1,fdat,1,data.nc);
    
-   write_little_dblearray(fdat,tmax,data.P);
-   write_little_dblearray(fdat,tmax,data.A0);
-   write_little_dblearray(fdat,tmax,data.A1);
-   write_little_dblearray(fdat,tmax,data.A2);
-   write_little_dblearray(fdat,tmax,data.A3);
+   write_little_dblearray(1,fdat,tmax,data.P);
+   write_little_dblearray(1,fdat,tmax,data.A0);
+   write_little_dblearray(1,fdat,tmax,data.A1);
+   write_little_dblearray(1,fdat,tmax,data.A2);
+   write_little_dblearray(1,fdat,tmax,data.A3);
 }
 
 
@@ -201,7 +202,7 @@ static int read_data(void)
       ir+=fread(dstd,sizeof(double),1,fdat);
       
       if (endian==BIG_ENDIAN)
-	 bswap_double(1,dstd);
+         bswap_double(1,dstd);
 
       data.P[t]=dstd[0];
    }
@@ -343,7 +344,6 @@ static void setup_files(void)
 static void read_flds_bc_lat_parms(void)
 {
    int gg,ifl,bc,cs;
-   double phi[2],phi_prime[2];
 
    if (my_rank==0)
    {
@@ -372,44 +372,9 @@ static void read_flds_bc_lat_parms(void)
 
    set_flds_parms(gg,file_head.nfl);
 
-   if (my_rank==0)
-   {
-      find_section("Boundary conditions");
-      read_line("type","%s",&line);
-      bc=4;
-      if ((strcmp(line,"open")==0)||(strcmp(line,"0")==0))
-         bc=0;
-      else if ((strcmp(line,"SF")==0)||(strcmp(line,"1")==0))
-         bc=1;
-      else if ((strcmp(line,"open-SF")==0)||(strcmp(line,"2")==0))
-         bc=2;
-      else if ((strcmp(line,"periodic")==0)||(strcmp(line,"3")==0))
-         bc=3;
-      else
-         error_root(1,1,"read_flds_bc_lat_parms [ms4.c]",
-                    "Unknown time boundary condition type %s",line);
-      
-      read_line("cstar","%d",&cs);
-
-      phi[0]=0.0;
-      phi[1]=0.0;
-      phi_prime[0]=0.0;
-      phi_prime[1]=0.0;
-      if ((cs==0)&&(bc==1)&&((gg&1)!=0))
-         read_dprms("phi",2,phi);
-      if ((bc==1)||(bc==2))
-      {
-         if ((cs==0)&&((gg&1)!=0))
-            read_dprms("phi'",2,phi_prime);
-      }
-   }
-   
-   MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(phi,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(phi_prime,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
-
-   set_bc_parms(bc,0,cs,phi,phi_prime);
+   read_bc_parms();
+   bc=bc_type();
+   cs=bc_cstar();
    
    for (ifl=0;ifl<file_head.nfl;ifl++)
    {
@@ -495,11 +460,19 @@ static void read_flds_bc_lat_parms(void)
    if (my_rank==0)
    {
       find_section("Source fields");
-      read_line("x0","%d",&(file_head.x0));
+      read_line("x0","%s",&line);
+      if (strcmp(line,"random")==0)
+         file_head.x0=-1;
+      else
+         error_root(sscanf(line,"%d",&(file_head.x0))!=1,1,"main [ms6.c]",
+                    "x0 must be either 'random' or a non-negative integer");
       read_line("nsrc","%d",&(file_head.nsrc));
 
-      error_root( (file_head.x0<0)||(file_head.x0>=N0),1,"read_fld_bc_lat_parms [ms6.c]",
+      error_root( (file_head.x0<-1)||(file_head.x0>=N0),1,"read_fld_bc_lat_parms [ms6.c]",
                  "Specified time x0 is out of range");
+   
+      error_root( (file_head.x0==-1)&&(bc!=3),1,"read_fld_bc_lat_parms [ms6.c]",
+                 "Random x0 can be used only with periodic b.c.'s");
 
       error_root(((file_head.x0==0)&&(bc!=3))||((file_head.x0==(N0-1))&&(bc==0)),1,
                  "read_bc_parms [ms6.c]","Incompatible choice of boundary "
@@ -518,99 +491,6 @@ static void read_flds_bc_lat_parms(void)
 }
 
 
-static void read_sap_parms(void)
-{
-   int bs[4];
-
-   if (my_rank==0)
-   {
-      find_section("SAP");
-      read_line("bs","%d %d %d %d",bs,bs+1,bs+2,bs+3);
-   }
-
-   MPI_Bcast(bs,4,MPI_INT,0,MPI_COMM_WORLD);
-   set_sap_parms(bs,1,4,5);
-}
-
-
-static void read_dfl_parms(void)
-{
-   int bs[4],Ns;
-   int ninv,nmr,ncy,nkv,nmx,qhat;
-   double kappa,mu,su3csw,u1csw,cF,cF_prime,th1,th2,th3,res;
-
-   if (my_rank==0)
-   {
-      find_section("Deflation subspace");
-      read_line("bs","%d %d %d %d",bs,bs+1,bs+2,bs+3);
-      read_line("Ns","%d",&Ns);
-   }
-
-   MPI_Bcast(bs,4,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&Ns,1,MPI_INT,0,MPI_COMM_WORLD);
-   set_dfl_parms(bs,Ns);
-
-   if (my_rank==0)
-   {
-      cF=cF_prime=0.0;
-      th1=th2=th3=0;
-      su3csw=u1csw=0.0;
-
-      find_section("Deflation subspace generation");
-      read_line("kappa","%lf",&kappa);
-      read_line("mu","%lf",&mu);
-      if(gauge()==1)
-	 read_line("csw","%lf",&su3csw);
-      else if(gauge()==2)
-      {
-	 read_line("qhat","%d",&qhat);
-	 read_line("csw","%lf",&su3csw);	 
-      }
-      else if(gauge()==3)
-      {
-	 read_line("qhat","%d",&qhat);
-	 read_line("su3csw","%lf",&su3csw);	 
-	 read_line("u1csw","%lf",&u1csw);	 
-      }
-      if (bc_type()!=3) read_line("cF","%lf",&cF);
-      if (bc_type()==2) read_line("cF'","%lf",&cF_prime);
-      if (bc_cstar()==0) read_line("theta","%lf %lf %lf",&th1,&th2,&th3);
-
-      read_line("ninv","%d",&ninv);
-      read_line("nmr","%d",&nmr);
-      read_line("ncy","%d",&ncy);
-   }
-
-   MPI_Bcast(&kappa,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&mu,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&qhat,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&su3csw,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&u1csw,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&cF,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&cF_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&th1,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&th2,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&th3,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&ninv,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&nmr,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&ncy,1,MPI_INT,0,MPI_COMM_WORLD);
-   set_dfl_gen_parms(kappa,mu,qhat,su3csw,u1csw,cF,cF_prime,th1,th2,th3,ninv,nmr,ncy);
-
-   if (my_rank==0)
-   {
-      find_section("Deflation projection");
-      read_line("nkv","%d",&nkv);
-      read_line("nmx","%d",&nmx);
-      read_line("res","%lf",&res);
-   }
-
-   MPI_Bcast(&nkv,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&nmx,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   set_dfl_pro_parms(nkv,nmx,res);
-}
-
-
 static void read_solver(void)
 {
    solver_parms_t sp;
@@ -622,7 +502,10 @@ static void read_solver(void)
       read_sap_parms();
 
    if (sp.solver==DFL_SAP_GCR)
-      read_dfl_parms();
+   {
+      read_dfl_parms(-1);
+      read_dfl_parms(sp.idfl);
+   }
    
    if (append)
       check_solver_parms(fdat);
@@ -781,7 +664,6 @@ static void check_old_dat(int fst,int lst,int stp)
 
    while (read_data()==1)
    {
-      pc=lc;
       lc=data.nc;
       ic+=1;
 
@@ -791,6 +673,8 @@ static void check_old_dat(int fst,int lst,int stp)
          dc=lc-fc;
       else if ((ic>2)&&(lc!=(pc+dc)))
          ie|=0x1;
+
+      pc=lc;
    }
 
    fclose(fdat);
@@ -909,7 +793,10 @@ static void print_info(void)
 	 printf("level = %d, seed = %d\n\n",level,seed);
 	 
 	 printf("Source fields:\n");
-	 printf("x0 = %d\n",file_head.x0);
+    if (file_head.x0>=0)
+	   printf("x0 = %d\n",file_head.x0);
+   else
+	   printf("x0 = random\n");
 	 printf("nsrc = %d\n\n",file_head.nsrc);
 	 
 	 print_solver_parms(&isap,&idfl);
@@ -977,7 +864,7 @@ static void wsize(int *nws,int *nwsd,int *nwv,int *nwvd)
                  "Unknown or unsupported solver");
 }
 
-static void random_source(spinor_dble *eta)
+static void random_source(int x0,spinor_dble *eta)
 {
    int i,y0,iy,ix;
    double twopi,r[12];
@@ -986,20 +873,20 @@ static void random_source(spinor_dble *eta)
    twopi=8.0*atan(1.0);
 
    set_sd2zero(VOLUME,eta);
-   y0=file_head.x0-cpr[0]*L0;
+   y0=x0-cpr[0]*L0;
 
    if ((y0>=0)&&(y0<L0))
    {
       for (iy=0;iy<(L1*L2*L3);iy++)
       {
          ix=ipt[iy+y0*L1*L2*L3];
-	 c=(complex_dble*)(eta+ix);
-	 ranlxd(r,12);
-	 for(i=0;i<12;++i)
-	 {
-	    c[i].re=cos(twopi*r[i]);
-	    c[i].im=sin(twopi*r[i]);
-	 }
+         c=(complex_dble*)(eta+ix);
+         ranlxd(r,12);
+         for(i=0;i<12;++i)
+         {
+            c[i].re=cos(twopi*r[i]);
+            c[i].im=sin(twopi*r[i]);
+         }
       }
    }
 }
@@ -1039,7 +926,7 @@ static void solve_dirac(spinor_dble *eta,spinor_dble *psi,int *status)
       sap=sap_parms();
       set_sap_parms(sap.bs,sp.isolv,sp.nmr,sp.ncy);
 
-      dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mus,eta,psi,status);
+      dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mus,eta,psi,status);
 
       error_root((status[0]<0)||(status[1]<0),1,
                  "solve_dirac [ms6.c]","DFL_SAP_GCR solver failed "
@@ -1197,12 +1084,14 @@ void slices(int idirac,spinor_dble *psi1,spinor_dble *psi2)
 
 static void correlators(int nc)
 {
-   int t;
-   int isrc,ifl,ifl2,stat[6];
+   int x0,t,tt;
+   int isrc,ifl,ifl2,stat[6],idfl;
    double wt1,wt2,wt[2],wtsum,norm;
+   float rn;
    spinor_dble **wsd;
    dirac_parms_t dp;
    dfl_parms_t dfl;
+   dflst_t dfl_status;
 
    if(file_head.nfl==1)
    {
@@ -1230,79 +1119,118 @@ static void correlators(int nc)
    dfl=dfl_parms();
    if (dfl.Ns)
    {
-      dfl_modes(stat);
-      error_root(stat[0]<0,1,"main [ms6.c]",
-		 "Deflation subspace generation failed (status = %d)",
-		 stat[0]);
-      
-      if (my_rank==0)
-	 printf("Deflation subspace generation: status = %d\n",stat[0]);
+      idfl=0;
+      while(1)
+      {
+         dfl_status=dfl_gen_parms(idfl).status;
+         if(dfl_status==DFL_OUTOFRANGE) break;
+         if(dfl_status==DFL_DEF)
+         {
+            dfl_modes(idfl,stat);
+            error_root(stat[0]<0,1,"main [ms6.c]",
+                       "Generation of deflation subspace %d failed (status = %d)",
+                       idfl,stat[0]);
+
+            if (my_rank==0)
+               printf("Generation of deflation subspace %d: status = %d\n\n",idfl,stat[0]);
+         }
+         idfl++;
+      }
    }
 
    wtsum=0.0;
    for (isrc=0;isrc<file_head.nsrc;isrc++)
    {
-      random_source(wsd[0]);
+      if (file_head.x0>=0)
+         x0=file_head.x0;
+      else
+      {
+         if (my_rank==0)
+         {
+            ranlxs(&rn,1);
+            x0=(int)(rn*file_head.tmax);
+         }
+
+         if (NPROC>1)
+            MPI_Bcast(&x0,1,MPI_INT,0,MPI_COMM_WORLD);
+      }
+         
+      random_source(x0,wsd[0]);
 
       for (ifl=0;ifl<file_head.nfl;++ifl)
       {
-	 MPI_Barrier(MPI_COMM_WORLD);
-	 wt1=MPI_Wtime();
+         MPI_Barrier(MPI_COMM_WORLD);
+         wt1=MPI_Wtime();
 
-	 dp=qlat_parms(ifl);
-	 set_dirac_parms1(&dp);
-	 mus=file_head.mu[ifl];
-	 solve_dirac(wsd[0],wsd[1+ifl],stat+3*ifl);
+         dp=qlat_parms(ifl);
+         set_dirac_parms1(&dp);
+         mus=file_head.mu[ifl];
+         solve_dirac(wsd[0],wsd[1+ifl],stat+3*ifl);
 
-	 MPI_Barrier(MPI_COMM_WORLD);
-	 wt2=MPI_Wtime();
-	 wt[ifl]=(wt2-wt1);
-	 wtsum+=wt[ifl];
+         MPI_Barrier(MPI_COMM_WORLD);
+         wt2=MPI_Wtime();
+         wt[ifl]=(wt2-wt1);
+         wtsum+=wt[ifl];
       }
 
       if (my_rank==0)
       {
-         printf("Source n. %d, computation of propagators completed\n",isrc);
+         printf("Source n. %d, x0=%d, computation of propagators completed\n",isrc,x0);
 
-	 for (ifl=0;ifl<file_head.nfl;++ifl)
-	 {
-	    printf("propagator_%d: ",ifl+1);
-	    if (dfl.Ns)
-	    {
-	       printf("status = %d,%d",stat[0+3*ifl],stat[1+3*ifl]);
+         for (ifl=0;ifl<file_head.nfl;++ifl)
+         {
+            printf("propagator_%d: ",ifl+1);
+            if (dfl.Ns)
+            {
+               printf("status = %d,%d",stat[0+3*ifl],stat[1+3*ifl]);
 
-	       if (stat[2+3*ifl])
-		  printf(" (no of subspace regenerations = %d) ",stat[2+3*ifl]);
-	       else
-		  printf(" ");
-	    }
-	    else
-	       printf("status = %d ",stat[0+3*ifl]);
-	    printf("time %.2e sec\n",wt[ifl]);
-	 }
-	 printf("\n");
-	 fflush(flog);
+               if (stat[2+3*ifl])
+                  printf(" (no of subspace regenerations = %d) ",stat[2+3*ifl]);
+               else
+                  printf(" ");
+            }
+            else
+            printf("status = %d ",stat[0+3*ifl]);
+            printf("time %.2e sec\n",wt[ifl]);
+         }
+         printf("\n");
+         fflush(flog);
       }
 
       slices(0,wsd[1],wsd[ifl2]);
       for (t=0;t<file_head.tmax;++t)
-	 data.P[t]+=corr_re[t]/norm;
+      {
+         tt=(file_head.x0>=0)?t:((t-x0+file_head.tmax)%file_head.tmax);
+         data.P[tt]+=corr_re[t]/norm;
+      }
 
       slices(1,wsd[1],wsd[ifl2]);
       for (t=0;t<file_head.tmax;++t)
-	 data.A0[t]+=corr_re[t]/norm;
+      {
+         tt=(file_head.x0>=0)?t:((t-x0+file_head.tmax)%file_head.tmax);
+         data.A0[tt]+=corr_re[t]/norm;
+      }
 
       slices(2,wsd[1],wsd[ifl2]);
       for (t=0;t<file_head.tmax;++t)
-	 data.A1[t]+=corr_im[t]/norm;
+      {
+         tt=(file_head.x0>=0)?t:((t-x0+file_head.tmax)%file_head.tmax);
+         data.A1[tt]+=corr_im[t]/norm;
+      }
 
       slices(3,wsd[1],wsd[ifl2]);
       for (t=0;t<file_head.tmax;++t)
-	 data.A2[t]+=corr_im[t]/norm;
+      {
+         tt=(file_head.x0>=0)?t:((t-x0+file_head.tmax)%file_head.tmax);
+         data.A2[tt]+=corr_im[t]/norm;
+      }
 
       slices(4,wsd[1],wsd[ifl2]);
       for (t=0;t<file_head.tmax;++t)
-	 data.A3[t]+=corr_im[t]/norm;
+      {
+         tt=(file_head.x0>=0)?t:((t-x0+file_head.tmax)%file_head.tmax);
+         data.A3[tt]+=corr_im[t]/norm;
+      }
    }
    
    wtsum/=(double)(file_head.nsrc);
@@ -1394,12 +1322,12 @@ int main(int argc,char *argv[])
    check_files();
    print_info();
 
+   geometry();
+
    if (append)
       start_ranlux(level,seed^(first-1));
    else
       start_ranlux(level,seed);
-
-   geometry();
 
    wsize(&nws,&nwsd,&nwv,&nwvd);
    alloc_ws(nws);
@@ -1416,7 +1344,7 @@ int main(int argc,char *argv[])
       wt1=MPI_Wtime();
 
       if (my_rank==0)
-         printf("Configuration no %d\n",nc);
+         printf("Configuration no %d\n\n",nc);
 
       if (noexp)
       {
@@ -1431,10 +1359,10 @@ int main(int argc,char *argv[])
 	 
          import_cnfg(cnfg_file);
 	 
-	 udfld(); 
-	 set_flags(UPDATED_UD); 
-	 adfld(); 
-	 set_flags(UPDATED_AD);
+         udfld(); 
+         set_flags(UPDATED_UD); 
+         adfld(); 
+         set_flags(UPDATED_AD);
       }
       
       correlators(nc);

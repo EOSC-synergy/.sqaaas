@@ -144,7 +144,7 @@ static int check_end(void)
 int main(int argc,char *argv[])
 {
    int first,last,step;
-   int bc,n,rule,icnfg,ncnfg,nsize;
+   int bc,n,rule,icnfg,ncnfg,nsize,cnfg_type;
    double phi[2],phi_prime[2];
    double eps,dE[3],dQ[3],dU[2];
    double act[2],qtop[2],dev[2],nplaq;
@@ -220,10 +220,10 @@ int main(int argc,char *argv[])
    phi[1]=-0.534;
    phi_prime[0]=0.912;
    phi_prime[1]=0.078;
-   set_bc_parms(bc,0,0,phi,phi_prime);
+   set_bc_parms(bc,0,phi,phi_prime,0.573,-1.827);
    print_bc_parms();
 
-   set_su3lat_parms(6.0,1.0,1.0,1.0);
+   set_su3lat_parms(6.0,1.0,1.0,1.0,0);
    print_lat_parms();
 
    start_ranlux(0,1234);
@@ -294,7 +294,9 @@ int main(int argc,char *argv[])
       }
 
       sprintf(cnfg_file,"%s/%sn%d",cnfg_dir,nbase,icnfg);
-      import_cnfg(cnfg_file);
+      cnfg_type=import_cnfg(cnfg_file);
+      error_root(cnfg_type!=1,1,"main [check3.c]",
+                 "Imported inactive gauge field");
       cm3x3_assign(4*VOLUME,udb,usv[0]);
 
       if (rule==1)

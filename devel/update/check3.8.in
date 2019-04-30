@@ -11,10 +11,7 @@ gauge        U(1)
 
 [Boundary conditions]
 type         0
-SF_type      0
 cstar        3
-phi          0.12 -0.56
-phi'         0.92 0.76
 
 [U(1) action]
 type         compact
@@ -23,6 +20,7 @@ invqel       3.0
 c0           1.6667
 cG           1.10
 cG'          1.05
+SF_type      0
 
 [Quark action]
 nfl          2
@@ -30,7 +28,7 @@ nfl          2
 [Flavour 0]
 kappa        0.1300
 qhat         2
-csw          0.234
+u1csw        0.234
 cF           0.95
 cF'          0.90
 theta        0.34 -1.25 0.58
@@ -38,7 +36,7 @@ theta        0.34 -1.25 0.58
 [Flavour 1]
 kappa        0.12505
 qhat         -3
-csw          0.234
+u1csw        0.234
 cF           0.95
 cF'          0.90
 theta        0.34 -1.25 0.58
@@ -49,11 +47,12 @@ npf          4
 mu           0.1 1.0
 nlv          3
 tau          0.5
+facc         0
 
 [Action 1]
 action       ACF_TM1
 ipf          0
-im0          0
+ifl          0
 imu          1
 isp          0
 
@@ -63,21 +62,21 @@ action       ACG_U1
 [Action 2]
 action       ACF_TM2
 ipf          1
-im0          0
+ifl          0
 imu          0 1
 isp          1 0
 
 [Action 3]
 action       ACF_RAT_SDET
 ipf          2
-im0          1
+ifl          1
 irat         0 0 6
 isp          2
 
 [Action 4]
 action       ACF_RAT
 ipf          3
-im0          1
+ifl          1
 irat         0 7 11
 isp          2
 
@@ -168,11 +167,11 @@ bs           4 4 4 4
 bs           4 4 4 4
 Ns           8
 
-[Deflation subspace generation]
+[Deflation subspace generation 0]
 kappa        0.1350
 qhat         0
 mu           0.01
-csw          0.234
+u1csw        0.234
 cF           0.95
 cF'          0.90
 theta        0.34 -1.25 0.58

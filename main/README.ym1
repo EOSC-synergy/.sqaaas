@@ -96,15 +96,11 @@ type         2                     # Type of boundary condition:
                                    #   1|SF
                                    #   2|open-SF
                                    #   3|periodic
-SFtype       0                     # Type of SF boundary (this affects the
-                                   # LW gauge action):
-                                   #   0|orbifold|openQCD-1.4
-                                   #   1|AFW-typeB|openQCD-1.2
 cstar        0                     # Number of spatial directions with
                                    # C* boundary conditions
-phi          0.12 -0.56            # Boundary values of the SU(3) gauge field
+su3phi       0.12 -0.56            # Boundary values of the SU(3) gauge field
                                    # at time 0
-phi'         0.92 0.76             # Boundary values of the SU(3) gauge field
+su3phi'      0.92 0.76             # Boundary values of the SU(3) gauge field
                                    # at time NPROC0*L0
 
 [SU(3) action]
@@ -115,13 +111,17 @@ cG           1.10                  # SU(3) gauge action improvement coefficient
                                    # at time 0
 cG'          1.05                  # SU(3) gauge action improvement coefficient
                                    # at time NPROC0*L0
+SFtype       0                     # Type of SF boundary (this affects the
+                                   # LW gauge action):
+                                   #   0|orbifold|openQCD-1.4
+                                   #   1|AFW-typeB|openQCD-1.2
 
 [Random number generator]
 level        0                     # Ranlux level
 seed         73099                 # Ranlux seed
 
-[Trajectory length]
-tau          3.0                   # Molecular-dynamics (MD) trajectory length
+[HMC parameters]
+tau          0.5                   # MD trajectory length
 
 [MD integrator]
 integrator   OMF4                  # LPFR: leapfrog, OMF2: 2nd order OMF,

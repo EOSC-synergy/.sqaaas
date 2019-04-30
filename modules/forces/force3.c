@@ -3,8 +3,8 @@
 *
 * File force3.c
 *
-* Copyright (C) 2016 Agostino Patella
 * Copyright (C) 2012, 2013 Martin Luescher
+*               2016, 2019 Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -342,7 +342,7 @@ double setpf3(int *irat,int ipf,int isw,int isp,int icom,int *status)
 
       for (k=0;k<np;k++)
       {
-         dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,nu[k],phi,rsd[0],stat);
+         dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,nu[k],phi,rsd[0],stat);
 
          error_root((stat[0]<0)||(stat[1]<0),1,
                     "setpf3 [force3.c]","DFL_SAP_GCR solver failed "
@@ -495,10 +495,10 @@ void force3(int *irat,int ipf,int isw,int isp,double c,int *status)
 
       for (k=0;k<np;k++)
       {
-         dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mu[k],phi,rsd[0],stat);
+         dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mu[k],phi,rsd[0],stat);
          assign_sd2sd(VOLUME/2,rsd[0],wsd[0]);
          mulg5_dble(VOLUME/2,wsd[0]);
-         dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,-mu[k],wsd[0],rsd[1],stat+3);
+         dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,-mu[k],wsd[0],rsd[1],stat+3);
 
          error_root((stat[0]<0)||(stat[1]<0)||(stat[3]<0)||(stat[4]<0),1,
                     "force3 [force3.c]","DFL_SAP_GCR solver failed "
@@ -633,7 +633,7 @@ double action3(int *irat,int ipf,int isw,int isp,int icom,int *status)
 
       for (k=0;k<np;k++)
       {
-         dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mu[k],phi,rsd[0],stat);
+         dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mu[k],phi,rsd[0],stat);
 
          error_root((stat[0]<0)||(stat[1]<0),1,"action3 [force3.c]",
                     "DFL_SAP_GCR solver failed (irat=%d,%d,%d, isp=%d, "

@@ -4,7 +4,7 @@
 * File check4.c
 *
 * Copyright (C) 2011-2013, 2016 Martin Luescher
-*               2017 Agostino Patella
+*               2017, 2019 Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -38,7 +38,8 @@ int bs_sap[4],nmr_sap,ncy_sap,nkv_gcr,nmx_gcr;
 int bs_dfl[4],Ns,nkv_dfl,nmx_dfl,nkv_dpr,nmx_dpr,eoflg,bc,qhat;
 int ninv_dgn,nmr_dgn,ncy_dgn,qhat_dgn;
 double m0,kappa,su3csw,u1csw,mu,cF,cF_prime,theta[3];
-double phi[2],phi_prime[2],m0,res_gcr,res_dpr;
+double phi3[2],phi3_prime[2],phi1,phi1_prime;
+double m0,res_gcr,res_dpr;
 double kappa_dgn,su3csw_dgn,u1csw_dgn,mu_dgn,cF_dgn,cF_prime_dgn,theta_dgn[3];
 char cnfg_dir[NAME_SIZE],cnfg_file[NAME_SIZE],nbase[NAME_SIZE];
 
@@ -82,18 +83,26 @@ int main(int argc,char *argv[])
       find_section("Boundary conditions");
       read_line("type","%d",&bc);
 
-      phi[0]=0.0;
-      phi[1]=0.0;
-      phi_prime[0]=0.0;
-      phi_prime[1]=0.0;
+      phi3[0]=0.0;
+      phi3[1]=0.0;
+      phi3_prime[0]=0.0;
+      phi3_prime[1]=0.0;
+      phi1=0.0;
+      phi1_prime=0.0;
       cF=1.0;
       cF_prime=1.0;
 
       if (bc==1)
-         read_dprms("phi",2,phi);
+      {
+         read_dprms("su3phi",2,phi3);
+         read_line("u1phi","%lf",&phi1);
+      }
 
       if ((bc==1)||(bc==2))
-         read_dprms("phi'",2,phi_prime);
+      {
+         read_dprms("su3phi'",2,phi3_prime);
+         read_line("u1phi'","%lf",&phi1_prime);
+      }
       
       find_section("Lattice parameters");
       read_line("kappa","%lf",&kappa);
@@ -156,8 +165,10 @@ int main(int argc,char *argv[])
    MPI_Bcast(&step,1,MPI_INT,0,MPI_COMM_WORLD);
 
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(phi,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(phi_prime,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(phi3,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(phi3_prime,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(&phi1,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(&phi1_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
    MPI_Bcast(&kappa,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
    MPI_Bcast(&qhat,1,MPI_INT,0,MPI_COMM_WORLD);
@@ -199,7 +210,10 @@ int main(int argc,char *argv[])
    m0=DBL_MAX;
    if (kappa!=0.0) m0=1.0/(2.0*kappa)-4.0;
 
-   set_bc_parms(bc,0,0,phi,phi_prime);
+   set_flds_parms(3,0);
+   print_flds_parms();
+
+   set_bc_parms(bc,0,phi3,phi3_prime,phi1,phi1_prime);
    print_bc_parms();
 
    qhat=0;
@@ -227,7 +241,7 @@ int main(int argc,char *argv[])
    tm=set_tm_parms(eoflg);
    set_dfl_parms(bs_dfl,Ns);
    dpr=set_dfl_pro_parms(nkv_dpr,nmx_dpr,res_dpr);
-   set_dfl_gen_parms(kappa_dgn,mu_dgn,qhat_dgn,su3csw_dgn,u1csw_dgn,
+   set_dfl_gen_parms(0,kappa_dgn,mu_dgn,qhat_dgn,su3csw_dgn,u1csw_dgn,
                      cF_dgn,cF_prime_dgn,theta_dgn[0],theta_dgn[1],theta_dgn[2],
                      ninv_dgn,nmr_dgn,ncy_dgn);
 
@@ -292,7 +306,7 @@ int main(int argc,char *argv[])
          fflush(flog);
       }
 
-      dfl_modes(status);
+      dfl_modes(0,status);
       error_root(status[0]<0,1,"main [check4.c]",
                  "Subspace generation failed");
       random_sd(VOLUME,psd[0],1.0);
@@ -300,7 +314,7 @@ int main(int argc,char *argv[])
       nrm=sqrt(norm_square_dble(VOLUME,1,psd[0]));
       assign_sd2sd(VOLUME,psd[0],psd[2]);
 
-      rho=dfl_sap_gcr(nkv_gcr,nmx_gcr,res_gcr,mu,psd[0],psd[1],status);
+      rho=dfl_sap_gcr(0,nkv_gcr,nmx_gcr,res_gcr,mu,psd[0],psd[1],status);
 
       mulr_spinor_add_dble(VOLUME,psd[2],psd[0],-1.0);
       del=norm_square_dble(VOLUME,1,psd[2]);
@@ -332,7 +346,7 @@ int main(int argc,char *argv[])
          MPI_Barrier(MPI_COMM_WORLD);
          wt1=MPI_Wtime();
 
-         rho=dfl_sap_gcr(nkv_gcr,nmx_gcr,res_gcr,mu,psd[0],psd[0],status);
+         rho=dfl_sap_gcr(0,nkv_gcr,nmx_gcr,res_gcr,mu,psd[0],psd[0],status);
 
          MPI_Barrier(MPI_COMM_WORLD);
          wt2=MPI_Wtime();

@@ -59,5 +59,6 @@ extern void bnd_imbed(block_t*b);
 /* UIDX_C */
 extern uidx_t *uidx(void);
 extern void plaq_uidx(int n,int ix,int *ip);
+extern int link_offset(int ix,int mu);
 
 #endif

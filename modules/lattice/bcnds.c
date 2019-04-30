@@ -317,12 +317,12 @@ static void set_ubnd(void)
       for (k=0;k<3;k++)
       {
          ubnd[i][k]=ud0;
-         ubnd[i][k].c11.re=cos(bcp.phi[i][0]/s[k]);
-         ubnd[i][k].c11.im=sin(bcp.phi[i][0]/s[k]);
-         ubnd[i][k].c22.re=cos(bcp.phi[i][1]/s[k]);
-         ubnd[i][k].c22.im=sin(bcp.phi[i][1]/s[k]);
-         ubnd[i][k].c33.re=cos(bcp.phi[i][2]/s[k]);
-         ubnd[i][k].c33.im=sin(bcp.phi[i][2]/s[k]);
+         ubnd[i][k].c11.re=cos(bcp.phi3[i][0]/s[k]);
+         ubnd[i][k].c11.im=sin(bcp.phi3[i][0]/s[k]);
+         ubnd[i][k].c22.re=cos(bcp.phi3[i][1]/s[k]);
+         ubnd[i][k].c22.im=sin(bcp.phi3[i][1]/s[k]);
+         ubnd[i][k].c33.re=cos(bcp.phi3[i][2]/s[k]);
+         ubnd[i][k].c33.im=sin(bcp.phi3[i][2]/s[k]);
       }
    }
 

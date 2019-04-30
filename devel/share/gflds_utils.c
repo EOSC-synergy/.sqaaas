@@ -44,13 +44,13 @@ static void unit_ud(void)
    bc=bc_parms();
    
    ie=0;
-   ie|=(bc.phi[1][0]!=0.0);
-   ie|=(bc.phi[1][1]!=0.0);
-   ie|=(bc.phi[1][2]!=0.0);
+   ie|=(bc.phi3[1][0]!=0.0);
+   ie|=(bc.phi3[1][1]!=0.0);
+   ie|=(bc.phi3[1][2]!=0.0);
    error((bc.type==2)&ie,1,"unit_ud ["FILENAME"]","Nonzero boundary angles for open-SF boundary conditions");
-   ie|=(bc.phi[0][0]!=0.0);
-   ie|=(bc.phi[0][1]!=0.0);
-   ie|=(bc.phi[0][2]!=0.0);
+   ie|=(bc.phi3[0][0]!=0.0);
+   ie|=(bc.phi3[0][1]!=0.0);
+   ie|=(bc.phi3[0][2]!=0.0);
    error((bc.type==1)&ie,1,"unit_ud ["FILENAME"]","Nonzero boundary angles for SF boundary conditions");
 
    n=4*VOLUME+7*(BNDRY/4);
@@ -76,8 +76,15 @@ static void zero_ad(void)
    size_t n;
    double *a,*am,*adb;
    bc_parms_t bc;
+   int ie;
    
    bc=bc_parms();
+   
+   ie=0;
+   ie|=(bc.phi1[1]!=0.0);
+   error((bc.type==2)&ie,1,"unit_ad ["FILENAME"]","Nonzero boundary angles for open-SF boundary conditions");
+   ie|=(bc.phi1[0]!=0.0);
+   error((bc.type==1)&ie,1,"unit_ad ["FILENAME"]","Nonzero boundary angles for SF boundary conditions");
    
    n=4*VOLUME+7*(BNDRY/4);
    if ((cpr[0]==(NPROC0-1))&&((bc.type==1)||(bc.type==2)))

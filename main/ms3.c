@@ -21,7 +21,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
 #include <string.h>
 #include "mpi.h"
 #include "flags.h"
@@ -30,253 +29,27 @@
 #include "lattice.h"
 #include "uflds.h"
 #include "archive.h"
-#include "tcharge.h"
-#include "wflow.h"
 #include "version.h"
 #include "global.h"
+#include "lib/main_utils.h"
 
 #define N0 (NPROC0*L0)
 #define N1 (NPROC1*L1)
 #define N2 (NPROC2*L2)
 #define N3 (NPROC3*L3)
 
-static struct
-{
-   int dn,nn,tmax;
-   double eps;
-} file_head;
-
-static struct
-{
-   int nc;
-   double **Wsl,**Ysl,**Qsl;
-} data;
-
 static int my_rank,noexp,append,endian;
 static int first,last,step;
-static int ipgrd[2],flint;
-static double *Wact,*Yact,*Qtop;
+static int ipgrd[2];
 
 static char line[NAME_SIZE];
 static char log_dir[NAME_SIZE],dat_dir[NAME_SIZE];
 static char loc_dir[NAME_SIZE],cnfg_dir[NAME_SIZE];
 static char log_file[NAME_SIZE],log_save[NAME_SIZE],end_file[NAME_SIZE];
 static char par_file[NAME_SIZE],par_save[NAME_SIZE];
-static char dat_file[NAME_SIZE],dat_save[NAME_SIZE];
+static char ms3dat_file[NAME_SIZE],ms3dat_save[NAME_SIZE];
 static char cnfg_file[NAME_SIZE],nbase[NAME_SIZE];
-static FILE *fin=NULL,*flog=NULL,*fdat=NULL,*fend=NULL;
-
-
-static void alloc_data(void)
-{
-   int nn,tmax;
-   int in;
-   double **pp,*p;
-
-   nn=file_head.nn;
-   tmax=file_head.tmax;
-
-   pp=amalloc(3*(nn+1)*sizeof(*pp),3);
-   p=amalloc(3*(nn+1)*(tmax+1)*sizeof(*p),4);
-
-   error((pp==NULL)||(p==NULL),1,"alloc_data [ms3.c]",
-         "Unable to allocate data arrays");
-
-   data.Wsl=pp;
-   data.Ysl=pp+nn+1;
-   data.Qsl=pp+2*(nn+1);
-
-   for (in=0;in<(3*(nn+1));in++)
-   {
-      *pp=p;
-      pp+=1;
-      p+=tmax;
-   }
-
-   Wact=p;
-   p+=nn+1;
-   Yact=p;
-   p+=nn+1;
-   Qtop=p;
-}
-
-
-static void write_file_head(void)
-{
-   int iw;
-   stdint_t istd[3];
-   double dstd[1];
-
-   istd[0]=(stdint_t)(file_head.dn);
-   istd[1]=(stdint_t)(file_head.nn);
-   istd[2]=(stdint_t)(file_head.tmax);
-   dstd[0]=file_head.eps;
-
-   if (endian==BIG_ENDIAN)
-   {
-      bswap_int(3,istd);
-      bswap_double(1,dstd);
-   }
-
-   iw=fwrite(istd,sizeof(stdint_t),3,fdat);
-   iw+=fwrite(dstd,sizeof(double),1,fdat);
-
-   error_root(iw!=4,1,"write_file_head [ms3.c]",
-              "Incorrect write count");
-}
-
-
-static void check_file_head(void)
-{
-   int ir;
-   stdint_t istd[3];
-   double dstd[1];
-
-   ir=fread(istd,sizeof(stdint_t),3,fdat);
-   ir+=fread(dstd,sizeof(double),1,fdat);
-
-   error_root(ir!=4,1,"check_file_head [ms3.c]",
-              "Incorrect read count");
-
-   if (endian==BIG_ENDIAN)
-   {
-      bswap_int(3,istd);
-      bswap_double(1,dstd);
-   }
-
-   error_root(((int)(istd[0])!=file_head.dn)||
-              ((int)(istd[1])!=file_head.nn)||
-              ((int)(istd[2])!=file_head.tmax)||
-              (dstd[0]!=file_head.eps),1,"check_file_head [ms3.c]",
-              "Unexpected value of dn,nn,tmax or eps");
-}
-
-
-static void write_data(void)
-{
-   int iw,nn,tmax;
-   int in,t;
-   stdint_t istd[1];
-   double dstd[1];
-
-   istd[0]=(stdint_t)(data.nc);
-
-   if (endian==BIG_ENDIAN)
-      bswap_int(1,istd);
-
-   iw=fwrite(istd,sizeof(stdint_t),1,fdat);
-
-   nn=file_head.nn;
-   tmax=file_head.tmax;
-
-   for (in=0;in<=nn;in++)
-   {
-      for (t=0;t<tmax;t++)
-      {
-         dstd[0]=data.Wsl[in][t];
-
-         if (endian==BIG_ENDIAN)
-            bswap_double(1,dstd);
-
-         iw+=fwrite(dstd,sizeof(double),1,fdat);
-      }
-   }
-
-   for (in=0;in<=nn;in++)
-   {
-      for (t=0;t<tmax;t++)
-      {
-         dstd[0]=data.Ysl[in][t];
-
-         if (endian==BIG_ENDIAN)
-            bswap_double(1,dstd);
-
-         iw+=fwrite(dstd,sizeof(double),1,fdat);
-      }
-   }
-
-   for (in=0;in<=nn;in++)
-   {
-      for (t=0;t<tmax;t++)
-      {
-         dstd[0]=data.Qsl[in][t];
-
-         if (endian==BIG_ENDIAN)
-            bswap_double(1,dstd);
-
-         iw+=fwrite(dstd,sizeof(double),1,fdat);
-      }
-   }
-
-   error_root(iw!=(1+3*(nn+1)*tmax),1,"write_data [ms3.c]",
-              "Incorrect write count");
-}
-
-
-static int read_data(void)
-{
-   int ir,nn,tmax;
-   int in,t;
-   stdint_t istd[1];
-   double dstd[1];
-
-   ir=fread(istd,sizeof(stdint_t),1,fdat);
-
-   if (ir!=1)
-      return 0;
-
-   if (endian==BIG_ENDIAN)
-      bswap_int(1,istd);
-
-   data.nc=(int)(istd[0]);
-
-   nn=file_head.nn;
-   tmax=file_head.tmax;
-
-   for (in=0;in<=nn;in++)
-   {
-      for (t=0;t<tmax;t++)
-      {
-         ir+=fread(dstd,sizeof(double),1,fdat);
-
-         if (endian==BIG_ENDIAN)
-            bswap_double(1,dstd);
-
-         data.Wsl[in][t]=dstd[0];
-      }
-   }
-
-   for (in=0;in<=nn;in++)
-   {
-      for (t=0;t<tmax;t++)
-      {
-         ir+=fread(dstd,sizeof(double),1,fdat);
-
-         if (endian==BIG_ENDIAN)
-            bswap_double(1,dstd);
-
-         data.Ysl[in][t]=dstd[0];
-      }
-   }
-
-   for (in=0;in<=nn;in++)
-   {
-      for (t=0;t<tmax;t++)
-      {
-         ir+=fread(dstd,sizeof(double),1,fdat);
-
-         if (endian==BIG_ENDIAN)
-            bswap_double(1,dstd);
-
-         data.Qsl[in][t]=dstd[0];
-      }
-   }
-
-   error_root(ir!=(1+3*(nn+1)*tmax),1,"read_data [ms3.c]",
-              "Read error or incomplete data record");
-
-   return 1;
-}
+static FILE *flog=NULL;
 
 
 static void read_dirs(void)
@@ -341,150 +114,40 @@ static void setup_files(void)
 
    sprintf(log_file,"%s/%s.ms3.log",log_dir,nbase);
    sprintf(par_file,"%s/%s.ms3.par",dat_dir,nbase);
-   sprintf(dat_file,"%s/%s.ms3.dat",dat_dir,nbase);
+   sprintf(ms3dat_file,"%s/%s.ms3.dat",dat_dir,nbase);
    sprintf(end_file,"%s/%s.ms3.end",log_dir,nbase);
    sprintf(log_save,"%s~",log_file);
    sprintf(par_save,"%s~",par_file);
-   sprintf(dat_save,"%s~",dat_file);
+   sprintf(ms3dat_save,"%s~",ms3dat_file);
 }
 
 
-static void read_flds_bc_lat_parms(void)
+static void read_flds_bc_lat_parms(FILE *fpar)
 {
-   int bc,cs;
-   double phi[2],phi_prime[2];
-
-   if (my_rank==0)
-   {
-      find_section("Boundary conditions");
-      read_line("type","%s",&line);
-      bc=4;
-      if ((strcmp(line,"open")==0)||(strcmp(line,"0")==0))
-         bc=0;
-      else if ((strcmp(line,"SF")==0)||(strcmp(line,"1")==0))
-         bc=1;
-      else if ((strcmp(line,"open-SF")==0)||(strcmp(line,"2")==0))
-         bc=2;
-      else if ((strcmp(line,"periodic")==0)||(strcmp(line,"3")==0))
-         bc=3;
-      else
-         error_root(1,1,"read_flds_bc_lat_parms [ms1.c]",
-                    "Unknown time boundary condition type %s",line);
-
-      read_line("cstar","%d",&cs);
-
-      phi[0]=0.0;
-      phi[1]=0.0;
-      phi_prime[0]=0.0;
-      phi_prime[1]=0.0;
-      if (bc==1)
-         read_dprms("phi",2,phi);
-      if ((bc==1)||(bc==2))
-         read_dprms("phi'",2,phi_prime);
-   }
-
-   MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(phi,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(phi_prime,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
-
-   set_flds_parms(3,0);
-   set_bc_parms(bc,0,cs,phi,phi_prime);
+   set_flds_parms(1,0);
+   read_bc_parms();
 
    if (append)
-      check_flds_bc_lat_parms(fdat);
+      check_flds_bc_lat_parms(fpar);
    else
-      write_flds_bc_lat_parms(fdat);
+      write_flds_bc_lat_parms(fpar);
 }
 
 
-static void read_wflow_parms(void)
+static void read_observables(FILE *fpar)
 {
-   int nstep,dnms,ie,ir,iw;
-   stdint_t istd[3];
-   double eps,dstd[1];
-
-   if (my_rank==0)
-   {
-      find_section("Wilson flow");
-      read_line("integrator","%s",line);
-      read_line("eps","%lf",&eps);
-      read_line("nstep","%d",&nstep);
-      read_line("dnms","%d",&dnms);
-
-      if (strcmp(line,"EULER")==0)
-         flint=0;
-      else if (strcmp(line,"RK2")==0)
-         flint=1;
-      else if (strcmp(line,"RK3")==0)
-         flint=2;
-      else
-         error_root(1,1,"read_wflow_parms [ms3.c]","Unknown integrator");
-
-      error_root((dnms<1)||(nstep<dnms)||((nstep%dnms)!=0),1,
-                 "read_wflow_parms [ms3.c]",
-                 "nstep must be a multiple of dnms");
-   }
-
-   MPI_Bcast(&flint,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&eps,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&nstep,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&dnms,1,MPI_INT,0,MPI_COMM_WORLD);
-
-   file_head.dn=dnms;
-   file_head.nn=nstep/dnms;
-   file_head.tmax=N0;
-   file_head.eps=eps;
-
-   if (my_rank==0)
-   {
-      if (append)
-      {
-         ir=fread(istd,sizeof(stdint_t),3,fdat);
-         ir+=fread(dstd,sizeof(double),1,fdat);
-         error_root(ir!=4,1,"read_wflow_parms [ms3.c]",
-                    "Incorrect read count");
-
-         if (endian==BIG_ENDIAN)
-         {
-            bswap_int(3,istd);
-            bswap_double(1,dstd);
-         }
-
-         ie=0;
-         ie|=(istd[0]!=(stdint_t)(flint));
-         ie|=(istd[1]!=(stdint_t)(nstep));
-         ie|=(istd[2]!=(stdint_t)(dnms));
-         ie|=(dstd[0]!=eps);
-
-         error_root(ie!=0,1,"read_wflow_parms [ms3.c]",
-                    "Parameters do not match previous run");
-      }
-      else
-      {
-         istd[0]=(stdint_t)(flint);
-         istd[1]=(stdint_t)(nstep);
-         istd[2]=(stdint_t)(dnms);
-         dstd[0]=eps;
-
-         if (endian==BIG_ENDIAN)
-         {
-            bswap_int(3,istd);
-            bswap_double(1,dstd);
-         }
-
-         iw=fwrite(istd,sizeof(stdint_t),3,fdat);
-         iw+=fwrite(dstd,sizeof(double),1,fdat);
-         error_root(iw!=4,1,"read_wflow_parms [ms3.c]",
-                    "Incorrect write count");
-      }
-   }
+   read_wflow_parms();
+   if (append)
+      check_wflow_parms(fpar);
+   else
+      write_wflow_parms(fpar);
 }
 
 
 static void read_infile(int argc,char *argv[])
 {
    int ifile;
+   FILE *fin=NULL,*fpar=NULL;
 
    if (my_rank==0)
    {
@@ -517,21 +180,21 @@ static void read_infile(int argc,char *argv[])
    if (my_rank==0)
    {
       if (append)
-         fdat=fopen(par_file,"rb");
+         fpar=fopen(par_file,"rb");
       else
-         fdat=fopen(par_file,"wb");
+         fpar=fopen(par_file,"wb");
 
-      error_root(fdat==NULL,1,"read_infile [ms3.c]",
+      error_root(fpar==NULL,1,"read_infile [ms3.c]",
                  "Unable to open parameter file");
    }
 
-   read_flds_bc_lat_parms();
-   read_wflow_parms();
+   read_flds_bc_lat_parms(fpar);
+   read_observables(fpar);
 
    if (my_rank==0)
    {
       fclose(fin);
-      fclose(fdat);
+      fclose(fpar);
 
       if (append==0)
          copy_file(par_file,par_save);
@@ -544,9 +207,10 @@ static void check_old_log(int *fst,int *lst,int *stp)
    int ie,ic,isv;
    int fc,lc,dc,pc;
    int np[4],bp[4];
+   FILE *fold=NULL;
 
-   fend=fopen(log_file,"r");
-   error_root(fend==NULL,1,"check_old_log [ms3.c]",
+   fold=fopen(log_file,"r");
+   error_root(fold==NULL,1,"check_old_log [ms3.c]",
               "Unable to open log file");
 
    fc=0;
@@ -558,7 +222,7 @@ static void check_old_log(int *fst,int *lst,int *stp)
    ic=0;
    isv=0;
 
-   while (fgets(line,NAME_SIZE,fend)!=NULL)
+   while (fgets(line,NAME_SIZE,fold)!=NULL)
    {
       if (strstr(line,"process grid")!=NULL)
       {
@@ -596,7 +260,7 @@ static void check_old_log(int *fst,int *lst,int *stp)
          isv=0;
    }
 
-   fclose(fend);
+   fclose(fold);
 
    error_root((ie&0x1)!=0x0,1,"check_old_log [ms3.c]",
               "Incorrect read count");
@@ -611,16 +275,17 @@ static void check_old_log(int *fst,int *lst,int *stp)
 }
 
 
-static void check_old_dat(int fst,int lst,int stp)
+static void check_old_ms3dat(int fst,int lst,int stp)
 {
    int ie,ic;
    int fc,lc,dc,pc;
+   FILE *fdat=NULL;
 
-   fdat=fopen(dat_file,"rb");
+   fdat=fopen(ms3dat_file,"rb");
    error_root(fdat==NULL,1,"check_old_dat [ms3.c]",
               "Unable to open data file");
 
-   check_file_head();
+   check_ms3dat_head(fdat);
 
    fc=0;
    lc=0;
@@ -630,10 +295,8 @@ static void check_old_dat(int fst,int lst,int stp)
    ie=0x0;
    ic=0;
 
-   while (read_data()==1)
+   while (read_ms3dat(fdat,&lc)==1)
    {
-      pc=lc;
-      lc=data.nc;
       ic+=1;
 
       if (ic==1)
@@ -642,6 +305,8 @@ static void check_old_dat(int fst,int lst,int stp)
          dc=lc-fc;
       else if ((ic>2)&&(lc!=(pc+dc)))
          ie|=0x1;
+
+      pc=lc;
    }
 
    fclose(fdat);
@@ -658,6 +323,7 @@ static void check_old_dat(int fst,int lst,int stp)
 static void check_files(void)
 {
    int fst,lst,stp;
+   FILE *fdat=NULL;
 
    ipgrd[0]=0;
    ipgrd[1]=0;
@@ -667,7 +333,7 @@ static void check_files(void)
       if (append)
       {
          check_old_log(&fst,&lst,&stp);
-         check_old_dat(fst,lst,stp);
+         check_old_ms3dat(fst,lst,stp);
 
          error_root((fst!=lst)&&(stp!=step),1,"check_files [ms3.c]",
                     "Continuation run:\n"
@@ -678,16 +344,18 @@ static void check_files(void)
       }
       else
       {
-         fin=fopen(log_file,"r");
-         fdat=fopen(dat_file,"rb");
+         error_root(fopen(log_file,"r")!=NULL,1,
+                    "check_files [ms3.c]",
+                    "Attempt to overwrite old *.log file");
 
-         error_root((fin!=NULL)||(fdat!=NULL),1,"check_files [ms3.c]",
-                    "Attempt to overwrite old *.log or *.dat file");
+         error_root(fopen(ms3dat_file,"rb")!=NULL,1,
+                    "check_files [ms3.c]",
+                    "Attempt to overwrite old *.ms*.dat file");
 
-         fdat=fopen(dat_file,"wb");
+         fdat=fopen(ms3dat_file,"wb");
          error_root(fdat==NULL,1,"check_files [ms3.c]",
-                    "Unable to open data file");
-         write_file_head();
+                    "Unable to open measurement data file");
+         write_ms3dat_head(fdat);
          fclose(fdat);
       }
    }
@@ -696,7 +364,6 @@ static void check_files(void)
 
 static void print_info(void)
 {
-   int n;
    long ip;
 
    if (my_rank==0)
@@ -754,18 +421,7 @@ static void print_info(void)
       {
          print_bc_parms();
          print_flds_parms();
-
-         printf("Wilson flow:\n");
-         if (flint==0)
-            printf("Euler integrator\n");
-         else if (flint==1)
-            printf("2nd order RK integrator\n");
-         else
-            printf("3rd order RK integrator\n");
-         n=fdigits(file_head.eps);
-         printf("eps = %.*f\n",IMAX(n,1),file_head.eps);
-         printf("nstep = %d\n",file_head.dn*file_head.nn);
-         printf("dnms = %d\n\n",file_head.dn);
+         print_wflow_parms();
       }
 
       printf("Configurations no %d -> %d in steps of %d\n\n",
@@ -775,97 +431,25 @@ static void print_info(void)
 }
 
 
-static void set_data(int nc)
+static void save_msdat(void)
 {
-   int in,dn,nn,x0;
-   double eps;
+   FILE *fdat=NULL;
 
-   data.nc=nc;
-   dn=file_head.dn;
-   nn=file_head.nn;
-   eps=file_head.eps;
-
-   for (in=0;in<nn;in++)
-   {
-      Wact[in]=plaq_action_slices(data.Wsl[in]);
-      Yact[in]=ym_action_slices(data.Ysl[in]);
-      Qtop[in]=tcharge_slices(data.Qsl[in]);
-      if (bc_cstar()!=0)
-      {
-         for(x0=0;x0<N0;x0++)
-         {
-            data.Wsl[in][x0]*=0.5;
-            data.Ysl[in][x0]*=0.5;
-            data.Qsl[in][x0]*=0.5;
-         }
-         Wact[in]*=0.5;
-         Yact[in]*=0.5;
-         Qtop[in]*=0.5;
-      }
-
-      if (flint==0)
-         fwd_su3_euler(dn,eps);
-      else if (flint==1)
-         fwd_su3_rk2(dn,eps);
-      else
-         fwd_su3_rk3(dn,eps);
-   }
-
-   Wact[in]=plaq_action_slices(data.Wsl[in]);
-   Yact[in]=ym_action_slices(data.Ysl[in]);
-   Qtop[in]=tcharge_slices(data.Qsl[in]);
-   if (bc_cstar()!=0)
-   {
-      for(x0=0;x0<N0;x0++)
-      {
-         data.Wsl[in][x0]*=0.5;
-         data.Ysl[in][x0]*=0.5;
-         data.Qsl[in][x0]*=0.5;
-      }
-      Wact[in]*=0.5;
-      Yact[in]*=0.5;
-      Qtop[in]*=0.5;
-   }
-}
-
-
-static void save_data(void)
-{
    if (my_rank==0)
    {
-      fdat=fopen(dat_file,"ab");
-      error_root(fdat==NULL,1,"save_data [ms3.c]",
+      fdat=fopen(ms3dat_file,"ab");
+      error_root(fdat==NULL,1,"save_msdat [ms3.c]",
                  "Unable to open data file");
-      write_data();
+      write_ms3dat(fdat);
       fclose(fdat);
-   }
-}
-
-
-static void print_log(void)
-{
-   int in,dn,nn,din;
-   double eps;
-
-   if (my_rank==0)
-   {
-      dn=file_head.dn;
-      nn=file_head.nn;
-      eps=file_head.eps;
-
-      din=nn/10;
-      if (din<1)
-         din=1;
-
-      for (in=0;in<=nn;in+=din)
-         printf("n = %3d, t = %.2e, Wact = %.6e, Yact = %.6e, Q = % .2e\n",
-                in*dn,eps*(double)(in*dn),Wact[in],Yact[in],Qtop[in]);
    }
 }
 
 
 static void check_endflag(int *iend)
 {
+   FILE *fend=NULL;
+
    if (my_rank==0)
    {
       fend=fopen(end_file,"r");
@@ -889,17 +473,20 @@ int main(int argc,char *argv[])
 {
    int nc,iend,cnfg_type;
    double wt1,wt2,wtavg;
+   wflow_parms_t wfp;
 
    MPI_Init(&argc,&argv);
    MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
 
    read_infile(argc,argv);
-   alloc_data();
    check_files();
    print_info();
 
    geometry();
-   if (flint)
+   
+   wfp=wflow_parms();
+   alloc_wud(1);
+   if (wfp.flint)
       alloc_wf3d(1);
 
    iend=0;
@@ -926,9 +513,9 @@ int main(int argc,char *argv[])
                "Imported configuration does not contain an SU(3) gauge field");
       }
 
-      set_data(nc);
-      save_data();
-      print_log();
+      set_ms3dat(nc);
+      save_msdat();
+      print_ms3dat();
 
       MPI_Barrier(MPI_COMM_WORLD);
       wt2=MPI_Wtime();
@@ -943,7 +530,7 @@ int main(int argc,char *argv[])
          fflush(flog);
 
          copy_file(log_file,log_save);
-         copy_file(dat_file,dat_save);
+         copy_file(ms3dat_file,ms3dat_save);
       }
 
       check_endflag(&iend);

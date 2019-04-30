@@ -85,12 +85,12 @@ int main(int argc,char *argv[])
    phi[1]=0.0;
    phi_prime[0]=0.0;
    phi_prime[1]=0.0;
-   set_bc_parms(0,0,0,phi,phi_prime);
+   set_bc_parms(0,0,phi,phi_prime,0.0,0.0);
 
-   set_su3lat_parms(5.3,1.6667,1.0,1.0);
+   set_su3lat_parms(5.3,1.6667,1.0,1.0,0);
    set_qlat_parms(0,0.1365,0,1.789,0.0,1.0,1.0,0.0,0.0,0.0);
 
-   set_hmc_parms(0,NULL,1,1,&mu,2,2.0);
+   set_hmc_parms(0,NULL,1,1,&mu,2,2.0,0);
    ifr=0;
    set_mdint_parms(0,OMF4,0.0,1,1,&ifr);
    ifr=1;

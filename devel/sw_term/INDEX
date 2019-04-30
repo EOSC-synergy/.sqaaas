@@ -13,8 +13,8 @@ All programs accept the option -bc <type> that allows the type of boundary
 condition to be chosen. When the option is not set, open boundary conditions
 are assumed. 
 
-All programs accept the option -gg <gauge> that allows the gauge group (0=QCD,
-1=QED, 2=QCD+QED) to be chosen at runtime. When the option is not set, QCD is
+All programs accept the option -gg <gauge> that allows the gauge group (1=QCD,
+2=QED, 3=QCD+QED) to be chosen at runtime. When the option is not set, QCD is
 assumed.
 
 The program time1 accepts the option -cs <cstar> that allows the number of

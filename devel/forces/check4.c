@@ -520,11 +520,11 @@ int main(int argc,char *argv[])
    chi[1]=-0.534;
    chi_prime[0]=0.912;
    chi_prime[1]=0.078;
-   set_bc_parms(bc,0,cs,chi,chi_prime);
+   set_bc_parms(bc,cs,chi,chi_prime,0.573,-1.827);
    print_bc_parms();
 
-   set_su3lat_parms(3.50,0.95,0.82,1.32);
-   set_u1lat_parms(0,1.5,1.2,0.0,0.482,0.87,0.57);
+   set_su3lat_parms(3.50,0.95,0.82,1.32,0);
+   set_u1lat_parms(0,1.5,1.2,0.0,0.482,0.87,0.57,0);
    print_lat_parms();
 
    start_ranlux(0,1245);

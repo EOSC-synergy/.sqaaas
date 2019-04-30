@@ -88,8 +88,10 @@ int main(int argc,char *argv[])
    int iu,ix,ifc,x0,k;
    double d1,d2,dmax1,dmax2;
    double dmax1_all,dmax2_all;
-   double phi[2],phi_prime[2];
+   double su3phi[2],su3phi_prime[2];
+   double u1phi,u1phi_prime;
    double *ad,*adb,*adm;
+   int gs[4]={N0,N1,N2,N3};
    FILE *flog=NULL;
 
    MPI_Init(&argc,&argv);
@@ -100,8 +102,8 @@ int main(int argc,char *argv[])
       flog=freopen("check2.log","w",stdout);
 
       printf("\n");
-      printf("Initialization of the U(1) fields\n");
-      printf("---------------------------------\n\n");
+      printf("Boundary conditions of random U(1) momentum\n");
+      printf("-------------------------------------------\n\n");
 
       printf("%dx%dx%dx%d lattice, ",NPROC0*L0,NPROC1*L1,NPROC2*L2,NPROC3*L3);
       printf("%dx%dx%dx%d process grid, ",NPROC0,NPROC1,NPROC2,NPROC3);
@@ -125,14 +127,25 @@ int main(int argc,char *argv[])
 
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
-   phi[0]=0.0;
-   phi[1]=0.0;
-   phi_prime[0]=0.0;
-   phi_prime[1]=0.0;
-   set_bc_parms(bc,0,cs,phi,phi_prime);
+   su3phi[0]=0.0;
+   su3phi[1]=0.0;
+   su3phi_prime[0]=0.0;
+   su3phi_prime[1]=0.0;
+   u1phi=0.0;
+   u1phi_prime=0.0;
+   if(cs==0)
+   {
+      su3phi[0]=0.123;
+      su3phi[1]=-0.534;
+      su3phi_prime[0]=0.912;
+      su3phi_prime[1]=0.078;
+      u1phi=0.573;
+      u1phi_prime=-1.827;
+   }
+   set_bc_parms(bc,cs,su3phi,su3phi_prime,u1phi,u1phi_prime);
    print_bc_parms();
 
-   start_ranlux(0,123456);
+   start_ranlux(0,1236);
    geometry();
 
 
@@ -164,6 +177,12 @@ int main(int argc,char *argv[])
          if (d1>dmax1)
             dmax1=d1;
       }
+      else if ((bc==1)&&(x0==0)&&(ifc>1))
+      {
+         d2=fabs(*ad-u1phi/gs[ifc/2]);
+         if (d2>dmax2)
+            dmax2=d2;
+      }
       else
       {
          d2=fabs(*ad);
@@ -178,7 +197,7 @@ int main(int argc,char *argv[])
 
       for (k=1;k<4;k++)
       {
-         d2=fabs(*ad);
+         d2=fabs(*ad-u1phi_prime/gs[k]);
          ad+=1;
 
          if (d2>dmax2)
@@ -191,7 +210,7 @@ int main(int argc,char *argv[])
 
    if (my_rank==0)
    {
-      printf("enerate random U(1) momenta and shift zero U(1) gauge field\n");
+      printf("Generate random U(1) momenta and shift zero U(1) gauge field\n");
       printf("|ad| = %.2e (this should not be small)\n",dmax1_all);
       if (bc!=3)
          printf("|ad-bval| = %.2e\n",dmax2_all);

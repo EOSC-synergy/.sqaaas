@@ -4,7 +4,7 @@
 * File solver_parms.c
 *
 * Copyright (C) 2011, 2012 Martin Luescher
-*               2017 Agostino Patella
+*               2017, 2019 Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -15,7 +15,7 @@
 *
 *   solver_parms_t set_solver_parms(int isp,solver_t solver,
 *                                   int nkv,int isolv,int nmr,int ncy,
-*                                   int nmx,double res)
+*                                   int nmx,int idfl,double res)
 *     Sets the parameters in the solver parameter set number isp and returns
 *     a structure containing them (see the notes).
 *
@@ -35,12 +35,14 @@
 *       nmr     <int>
 *       ncy     <int>
 *       nmx     <int>
+*       idfl    <int>
 *       res     <double>
 *
 *     are then read one by one using read_line() [utils/mutils.c]. The 
 *     lines with tags nkv,..,ncy may be absent in the case of the CGNE
-*     and MSCG solvers (see the notes). The data are then added to the 
-*     data base by calling set_solver_parms(isp,...).
+*     and MSCG solvers (see the notes). The line idfl if used only in case
+*     of DFL_SAP_GCR. The data are then added to the data base by calling 
+*     set_solver_parms(isp,...).
 *
 *   void print_solver_parms(int *isap,int *idfl)
 *     Prints the parameters of the defined solvers to stdout on MPI
@@ -89,6 +91,8 @@
 *           maximal total number of Krylov vectors that may be generated 
 *           if solver={SAP_GCR,DFL_SAP_GCR}.
 *
+*   idfl    Index of the deflation subspace to be used if solver==DFL_SAP_GCR.
+*
 *   res     Desired maximal relative residue of the calculated solution.
 *
 * Depending on the solver, some parameters are not used. These are set to
@@ -119,7 +123,7 @@
 
 static int init=0;
 static solver_t solver[]={CGNE,MSCG,SAP_GCR,DFL_SAP_GCR};
-static solver_parms_t sp[ISPMAX+1]={{SOLVERS,0,0,0,0,0,0.0}};
+static solver_parms_t sp[ISPMAX+1]={{SOLVERS,0,0,0,0,0,-1,0.0}};
 
 
 static void init_sp(void)
@@ -135,7 +139,7 @@ static void init_sp(void)
 
 solver_parms_t set_solver_parms(int isp,solver_t solver,
                                 int nkv,int isolv,int nmr,int ncy,
-                                int nmx,double res)
+                                int nmx,int idfl,double res)
 {
    int ie;
    
@@ -149,9 +153,11 @@ solver_parms_t set_solver_parms(int isp,solver_t solver,
       nmr=0;
       ncy=0;
    }
+   if (solver!=DFL_SAP_GCR)
+      idfl=-1;
    
-   check_global_int("set_solver_parms",7,
-                    isp,(int)(solver),nkv,isolv,nmr,ncy,nmx);
+   check_global_int("set_solver_parms",8,
+                    isp,(int)(solver),nkv,isolv,nmr,ncy,nmx,idfl);
    check_global_dble("set_solver_parms",1,res);
 
    ie=0;
@@ -166,6 +172,11 @@ solver_parms_t set_solver_parms(int isp,solver_t solver,
       ie|=(ncy<1);
    }
 
+   if (solver==DFL_SAP_GCR)
+   {
+      ie|=(idfl<0);
+   }
+
    error_root(ie!=0,1,"set_solver_parms [solver_parms.c]",
               "Parameters are out of range");
    
@@ -178,6 +189,7 @@ solver_parms_t set_solver_parms(int isp,solver_t solver,
    sp[isp].nmr=nmr;
    sp[isp].ncy=ncy;
    sp[isp].nmx=nmx;
+   sp[isp].idfl=idfl;
    sp[isp].res=res;
 
    return sp[isp];
@@ -203,7 +215,7 @@ solver_parms_t solver_parms(int isp)
 void read_solver_parms(int isp)
 {
    int my_rank,ids;
-   int nkv,isolv,nmr,ncy,nmx;
+   int nkv,isolv,nmr,ncy,nmx,idfl;
    double res;
    char line[NAME_SIZE];
 
@@ -214,6 +226,7 @@ void read_solver_parms(int isp)
    nmr=0;
    ncy=0;
    nmx=0;
+   idfl=-1;
    res=1.0;
    
    if (my_rank==0)
@@ -240,6 +253,7 @@ void read_solver_parms(int isp)
          read_line("isolv","%d",&isolv);
          read_line("nmr","%d",&nmr);
          read_line("ncy","%d",&ncy);
+         read_line("idfl","%d",&idfl);
       }
       else if (strcmp(line,"CGNE")!=0)
          error_root(1,1,"read_solver_parms [solver_parms.c]",
@@ -257,10 +271,11 @@ void read_solver_parms(int isp)
       MPI_Bcast(&nmr,1,MPI_INT,0,MPI_COMM_WORLD);
       MPI_Bcast(&ncy,1,MPI_INT,0,MPI_COMM_WORLD);
       MPI_Bcast(&nmx,1,MPI_INT,0,MPI_COMM_WORLD);
+      MPI_Bcast(&idfl,1,MPI_INT,0,MPI_COMM_WORLD);
       MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_COMM_WORLD);   
    }
    
-   set_solver_parms(isp,solver[ids],nkv,isolv,nmr,ncy,nmx,res);
+   set_solver_parms(isp,solver[ids],nkv,isolv,nmr,ncy,nmx,idfl,res);
 }
 
 
@@ -313,6 +328,7 @@ void print_solver_parms(int *isap,int *idfl)
                printf("nmr = %d\n",sp[i].nmr);              
                printf("ncy = %d\n",sp[i].ncy);
                printf("nmx = %d\n",sp[i].nmx);
+               printf("idfl = %d\n",sp[i].idfl);
                printf("res = %.1e\n\n",sp[i].res);
             }
             else
@@ -333,9 +349,9 @@ void write_solver_parms(FILE *fdat)
       {
          if (sp[i].solver!=SOLVERS)
          {
-            write_little_int(fdat,7,i,sp[i].solver,sp[i].nmx,
-                             sp[i].nkv,sp[i].isolv,sp[i].nmr,sp[i].ncy);
-            write_little_dble(fdat,1,sp[i].res);
+            write_little_int(1,fdat,8,i,sp[i].solver,sp[i].nmx,sp[i].nkv,
+                             sp[i].isolv,sp[i].nmr,sp[i].ncy,sp[i].idfl);
+            write_little_dble(1,fdat,1,sp[i].res);
          }
       }
    }
@@ -352,9 +368,9 @@ void check_solver_parms(FILE *fdat)
       {
          if (sp[i].solver!=SOLVERS)
          {
-            check_fpar_int("check_solver_parms",fdat,7,i,sp[i].solver,sp[i].nmx,
-                           sp[i].nkv,sp[i].isolv,sp[i].nmr,sp[i].ncy);
-            check_fpar_dble("check_solver_parms",fdat,1,sp[i].res);
+            check_little_int("check_solver_parms",fdat,8,i,sp[i].solver,sp[i].nmx,
+                           sp[i].nkv,sp[i].isolv,sp[i].nmr,sp[i].ncy,sp[i].idfl);
+            check_little_dble("check_solver_parms",fdat,1,sp[i].res);
          }
       }
    }

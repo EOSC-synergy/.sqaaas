@@ -4,11 +4,12 @@
 * File rwtm.c
 *
 * Copyright (C) 2012-2014 Martin Luescher
+*               2019 Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
 *
-* Twisted-mass reweighting factors.
+* HMC twisted-mass reweighting factors.
 *
 * The externally accessible functions are
 *
@@ -166,7 +167,7 @@ double rwtm1(double mu1,double mu2,int isp,double *sqn,int *status)
       sap=sap_parms();
       set_sap_parms(sap.bs,sp.isolv,sp.nmr,sp.ncy);
       mulg5_dble(VOLUME,eta);
-      dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mu1,eta,phi,status);
+      dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mu1,eta,phi,status);
 
       error_root((status[0]<0)||(status[1]<0),1,
                  "rwtm1 [rwtm.c]","DFL_SAP_GCR solver failed "
@@ -267,7 +268,7 @@ double rwtm2(double mu1,double mu2,int isp,double *sqn,int *status)
       sap=sap_parms();
       set_sap_parms(sap.bs,sp.isolv,sp.nmr,sp.ncy);
       mulg5_dble(VOLUME,eta);
-      dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mu1,eta,phi,status);
+      dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mu1,eta,phi,status);
 
       error_root((status[0]<0)||(status[1]<0),1,
                  "rwtm2 [rwtm.c]","DFL_SAP_GCR solver failed "
@@ -276,7 +277,7 @@ double rwtm2(double mu1,double mu2,int isp,double *sqn,int *status)
       status[2]=(status[2]!=0);
 
       mulg5_dble(VOLUME,phi);
-      dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,sqrt(2.0)*mu2,phi,eta,stat);
+      dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,sqrt(2.0)*mu2,phi,eta,stat);
 
       error_root((stat[0]<0)||(stat[1]<0),2,
                  "rwtm2 [rwtm.c]","DFL_SAP_GCR solver failed "
@@ -288,7 +289,7 @@ double rwtm2(double mu1,double mu2,int isp,double *sqn,int *status)
 
       if (mu1>0.0)
       {
-         dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mu1,phi,phi,stat);
+         dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mu1,phi,phi,stat);
 
          error_root((stat[0]<0)||(stat[1]<0),3,
                     "rwtm2 [rwtm.c]","DFL_SAP_GCR solver failed "

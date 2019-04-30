@@ -4,6 +4,7 @@
 * File check6.c
 *
 * Copyright (C) 2012-2014, 2016 Stefan Schaefer, Martin Luescher
+*               2019 Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -103,7 +104,7 @@ static void divide_pf(double mu,int isp,int *status)
 
       mulg5_dble(VOLUME/2,phi);
       set_sd2zero(VOLUME/2,phi+VOLUME/2);
-      dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mu,phi,phi,status);
+      dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mu,phi,phi,status);
       set_sd2zero(VOLUME/2,phi+VOLUME/2);
 
       error_root((status[0]<0)||(status[1]<0),1,
@@ -117,9 +118,9 @@ static void divide_pf(double mu,int isp,int *status)
 int main(int argc,char *argv[])
 {
    int my_rank,bc,irw,isp,status[6],mnkv;
-   int bs[4],Ns,nmx,nkv,nmr,ncy,ninv;
+   int Ns,nkv;
+   int isap,idfl;
    double chi[2],chi_prime[2];
-   double kappa,mu,res;
    double mu1,mu2,act0,act1,sqn0,sqn1;
    double da,ds,damx,dsmx;
    solver_parms_t sp;
@@ -155,16 +156,17 @@ int main(int argc,char *argv[])
    chi[1]=-0.534;
    chi_prime[0]=0.912;
    chi_prime[1]=0.078;
-   set_bc_parms(bc,0,0,chi,chi_prime);
+   set_bc_parms(bc,0,chi,chi_prime,0.573,-1.827);
 
-   set_su3lat_parms(5.3,1.0,1.0,1.0);
+   set_su3lat_parms(5.3,1.0,1.0,1.0,0);
 
    print_flds_parms();
    print_bc_parms();
    print_lat_parms();
 
    mnkv=0;
-
+   isap=0;
+   idfl=0;
    for (isp=0;isp<3;isp++)
    {
       read_solver_parms(isp);
@@ -172,59 +174,26 @@ int main(int argc,char *argv[])
 
       if (sp.nkv>mnkv)
          mnkv=sp.nkv;
+
+      if (sp.solver==SAP_GCR)
+         isap=1;
+      else if (sp.solver==DFL_SAP_GCR)
+      {
+         isap=1;
+         idfl=1;
+         
+         if (dfl_gen_parms(sp.idfl).status!=DFL_DEF)
+            read_dfl_parms(sp.idfl);
+      }
    }
 
-   if (my_rank==0)
-   {
-      find_section("SAP");
-      read_line("bs","%d %d %d %d",bs,bs+1,bs+2,bs+3);
-   }
+   if (isap)
+      read_sap_parms();
 
-   MPI_Bcast(bs,4,MPI_INT,0,MPI_COMM_WORLD);
-   set_sap_parms(bs,0,1,1);
+   if (idfl)
+      read_dfl_parms(-1);
 
-   if (my_rank==0)
-   {
-      find_section("Deflation subspace");
-      read_line("bs","%d %d %d %d",bs,bs+1,bs+2,bs+3);
-      read_line("Ns","%d",&Ns);
-   }
-
-   MPI_Bcast(bs,4,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&Ns,1,MPI_INT,0,MPI_COMM_WORLD);
-   set_dfl_parms(bs,Ns);
-
-   if (my_rank==0)
-   {
-      find_section("Deflation subspace generation");
-      read_line("kappa","%lf",&kappa);
-      read_line("mu","%lf",&mu);
-      read_line("ninv","%d",&ninv);
-      read_line("nmr","%d",&nmr);
-      read_line("ncy","%d",&ncy);
-   }
-
-   MPI_Bcast(&kappa,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&mu,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&ninv,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&nmr,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&ncy,1,MPI_INT,0,MPI_COMM_WORLD);
-   set_dfl_gen_parms(kappa,mu,0,1.782,0.0,1.0,1.0,0.34,-1.25,0.78,ninv,nmr,ncy);
-
-   if (my_rank==0)
-   {
-      find_section("Deflation projection");
-      read_line("nkv","%d",&nkv);
-      read_line("nmx","%d",&nmx);
-      read_line("res","%lf",&res);
-      fclose(fin);
-   }
-
-   MPI_Bcast(&nkv,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&nmx,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   set_dfl_pro_parms(nkv,nmx,res);
-   set_hmc_parms(0,NULL,1,0,NULL,1,1.0);
+   set_hmc_parms(0,NULL,1,0,NULL,1,1.0,0);
 
    print_solver_parms(status,status+1);
    print_sap_parms(0);
@@ -233,6 +202,8 @@ int main(int argc,char *argv[])
    start_ranlux(0,1245);
    geometry();
 
+   nkv=dfl_pro_parms().nkv;
+   Ns=dfl_parms().Ns;
    mnkv=2*mnkv+2;
    if (mnkv<(Ns+2))
       mnkv=Ns+2;
@@ -280,9 +251,10 @@ int main(int argc,char *argv[])
 
          random_ud();
 
-         if (isp==2)
+         sp=solver_parms(isp);
+         if (sp.solver==DFL_SAP_GCR)
          {
-            dfl_modes(status);
+            dfl_modes(sp.idfl,status);
             error_root(status[0]<0,1,"main [check6.c]",
                        "dfl_modes failed");
          }
@@ -364,6 +336,7 @@ int main(int argc,char *argv[])
    {
       printf("max|1-act1/act0| = %.1e, max|1-sqn1/sqn0| = %.1e\n\n",damx,dsmx);
       fclose(flog);
+      fclose(fin);
    }
 
    MPI_Finalize();

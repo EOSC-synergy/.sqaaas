@@ -65,9 +65,9 @@ cstar        0                     # Number of spatial directions with
                                    #   1: C* b.c.s in X
                                    #   2: C* b.c.s in XY
                                    #   3: C* b.c.s in XYZ
-phi          0.12 -0.56            # Boundary values of the SU(3) gauge field
+su3phi       0.12 -0.56            # Boundary values of the SU(3) gauge field
                                    # at time 0
-phi'         0.92 0.76             # Boundary values of the SU(3) gauge field
+su3phi'      0.92 0.76             # Boundary values of the SU(3) gauge field
                                    # at time NPROC0*L0
 
 [Wilson flow]
@@ -157,6 +157,9 @@ topological charge are written to the arrays
 
 See the functions write_file_head() and write_data() in the program file
 ms3.c for the exact order in which the data are written to the output files.
+
+A simple main program that reads and analyses the data files is included in
+the directory ../devel/nompi/main.
 
 
 BINARY FILE FORMAT

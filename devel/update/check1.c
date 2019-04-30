@@ -74,7 +74,7 @@ static void read_hmc_parms(void)
 
    MPI_Bcast(&nlv,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&tau,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   set_hmc_parms(0,NULL,0,0,NULL,nlv,tau);
+   set_hmc_parms(0,NULL,0,0,NULL,nlv,tau,0);
 }
 
 

@@ -4,7 +4,7 @@
 * File ms4.c
 *
 * Copyright (C) 2012, 2013, 2016 Martin Luescher
-*               2017             Agostino Patella
+*               2017, 2019       Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -140,7 +140,6 @@ static void setup_files(void)
 static void read_flds_bc_lat_parms(void)
 {
    int gg,bc,cs,qhat;
-   double phi[2],phi_prime[2];
    double m0,kappa,su3csw,u1csw,cF,cF_prime,th1,th2,th3;
    char line[NAME_SIZE];
 
@@ -163,45 +162,10 @@ static void read_flds_bc_lat_parms(void)
    MPI_Bcast(&gg,1,MPI_INT,0,MPI_COMM_WORLD);
 
    set_flds_parms(gg,0);
+   read_bc_parms();
 
-   if (my_rank==0)
-   {
-      find_section("Boundary conditions");
-      read_line("type","%s",&line);
-      bc=4;
-      if ((strcmp(line,"open")==0)||(strcmp(line,"0")==0))
-         bc=0;
-      else if ((strcmp(line,"SF")==0)||(strcmp(line,"1")==0))
-         bc=1;
-      else if ((strcmp(line,"open-SF")==0)||(strcmp(line,"2")==0))
-         bc=2;
-      else if ((strcmp(line,"periodic")==0)||(strcmp(line,"3")==0))
-         bc=3;
-      else
-         error_root(1,1,"read_flds_bc_lat_parms [ms4.c]",
-                    "Unknown time boundary condition type %s",line);
-      
-      read_line("cstar","%d",&cs);
-
-      phi[0]=0.0;
-      phi[1]=0.0;
-      phi_prime[0]=0.0;
-      phi_prime[1]=0.0;
-      if ((cs==0)&&(bc==1)&&((gg&1)!=0))
-         read_dprms("phi",2,phi);
-      if ((bc==1)||(bc==2))
-      {
-         if ((cs==0)&&((gg&1)!=0))
-            read_dprms("phi'",2,phi_prime);
-      }
-   }
-   
-   MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(phi,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(phi_prime,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
-
-   set_bc_parms(bc,0,cs,phi,phi_prime);
+   bc=bc_type();
+   cs=bc_cstar();
    
    qhat=0;
    su3csw=u1csw=0.0;
@@ -272,101 +236,6 @@ static void read_flds_bc_lat_parms(void)
 }
 
 
-static void read_sap_parms(void)
-{
-   int bs[4];
-
-   if (my_rank==0)
-   {
-      find_section("SAP");
-      read_line("bs","%d %d %d %d",bs,bs+1,bs+2,bs+3);
-   }
-
-   MPI_Bcast(bs,4,MPI_INT,0,MPI_COMM_WORLD);
-   set_sap_parms(bs,1,4,5);
-}
-
-
-static void read_dfl_parms(void)
-{
-   int bs[4],Ns;
-   int ninv,nmr,ncy,nkv,nmx,qhat;
-   double kappa,mu,su3csw,u1csw,cF,cF_prime,th1,th2,th3,res;
-
-   if (my_rank==0)
-   {
-      find_section("Deflation subspace");
-      read_line("bs","%d %d %d %d",bs,bs+1,bs+2,bs+3);
-      read_line("Ns","%d",&Ns);
-   }
-
-   MPI_Bcast(bs,4,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&Ns,1,MPI_INT,0,MPI_COMM_WORLD);
-   set_dfl_parms(bs,Ns);
-
-   if (my_rank==0)
-   {
-      qhat=0;
-      su3csw=u1csw=0.0;
-      cF=cF_prime=0.0;
-      th1=th2=th3=0.0;
-
-      find_section("Deflation subspace generation");
-      read_line("kappa","%lf",&kappa);
-      read_line("mu","%lf",&mu);
-      if (gauge()==1)
-      {
-         read_line("su3csw","%lf",&su3csw);
-      }
-      else if (gauge()==2)
-      {
-         read_line("qhat","%d",&qhat);
-         read_line("u1csw","%lf",&u1csw);
-      }
-      else if (gauge()==3)
-      {
-         read_line("qhat","%d",&qhat);         
-         read_line("su3csw","%lf",&su3csw);
-         read_line("u1csw","%lf",&u1csw);
-      }
-      if (bc_type()!=3) read_line("cF","%lf",&cF);
-      if (bc_type()==2) read_line("cF'","%lf",&cF_prime);
-      if (bc_cstar()==0) read_line("theta","%lf %lf %lf",&th1,&th2,&th3);
-      read_line("ninv","%d",&ninv);
-      read_line("nmr","%d",&nmr);
-      read_line("ncy","%d",&ncy);
-   }
-
-   MPI_Bcast(&qhat,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&kappa,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&mu,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&su3csw,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&u1csw,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&cF,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&cF_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&th1,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&th2,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&th3,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&ninv,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&nmr,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&ncy,1,MPI_INT,0,MPI_COMM_WORLD);
-   set_dfl_gen_parms(kappa,mu,qhat,su3csw,u1csw,cF,cF_prime,th1,th2,th3,ninv,nmr,ncy);
-
-   if (my_rank==0)
-   {
-      find_section("Deflation projection");
-      read_line("nkv","%d",&nkv);
-      read_line("nmx","%d",&nmx);
-      read_line("res","%lf",&res);
-   }
-
-   MPI_Bcast(&nkv,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&nmx,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   set_dfl_pro_parms(nkv,nmx,res);
-}
-
-
 static void read_solver(void)
 {
    solver_parms_t sp;
@@ -378,7 +247,10 @@ static void read_solver(void)
       read_sap_parms();
 
    if (sp.solver==DFL_SAP_GCR)
-      read_dfl_parms();
+   {
+      read_dfl_parms(-1);
+      read_dfl_parms(sp.idfl);
+   }
 }
 
 
@@ -595,7 +467,7 @@ static void solve_dirac(spinor_dble *eta,spinor_dble *psi,int *status)
       sap=sap_parms();
       set_sap_parms(sap.bs,sp.isolv,sp.nmr,sp.ncy);
 
-      dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mus,eta,psi,status);
+      dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mus,eta,psi,status);
 
       error_root((status[0]<0)||(status[1]<0),1,
                  "solve_dirac [ms4.c]","DFL_SAP_GCR solver failed "
@@ -707,11 +579,12 @@ static void check_endflag(int *iend)
 int main(int argc,char *argv[])
 {
    int nc,iend,status[3];
-   int nws,nwsd,nwv,nwvd,n;
+   int nws,nwsd,nwv,nwvd,n,idfl;
    int cnfg_type;
    double wt1,wt2,wtavg;
    double wts,wtsavg;
    dfl_parms_t dfl;
+   dflst_t dfl_status;
 
    MPI_Init(&argc,&argv);
    MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
@@ -721,8 +594,8 @@ int main(int argc,char *argv[])
    print_info();
    dfl=dfl_parms();
 
-   start_ranlux(level,seed);
    geometry();
+   start_ranlux(level,seed);
 
    wsize(&nws,&nwsd,&nwv,&nwvd);
    alloc_ws(nws);
@@ -759,13 +632,23 @@ int main(int argc,char *argv[])
 
       if (dfl.Ns)
       {
-         dfl_modes(status);
-         error_root(status[0]<0,1,"main [ms4.c]",
-                    "Deflation subspace generation failed (status = %d)",
-                    status[0]);
+         idfl=0;
+         while(1)
+         {
+            dfl_status=dfl_gen_parms(idfl).status;
+            if(dfl_status==DFL_OUTOFRANGE) break;
+            if(dfl_status==DFL_DEF)
+            {
+               dfl_modes(idfl,status);
+               error_root(status[0]<0,1,"main [ms4.c]",
+                          "Generation of deflation subspace %d failed (status = %d)",
+                          idfl,status[0]);
 
-         if (my_rank==0)
-            printf("Deflation subspace generation: status = %d\n",status[0]);
+               if (my_rank==0)
+                  printf("Generation of deflation subspace %d: status = %d\n",idfl,status[0]);
+            }
+            idfl++;
+         }
       }
 
       propagator(nc,status,&wts);

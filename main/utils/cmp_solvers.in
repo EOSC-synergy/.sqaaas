@@ -1,0 +1,85 @@
+
+[Configurations]
+name         CLS2A4HMC015r07
+cnfg_dir     .
+first        20
+last         20
+step         1
+
+[Parameters]
+gauge        SU(3)xU(1)
+invqel       6.0
+n_flavours   2
+n_solvers    2
+n_sources    3
+
+[Boundary conditions]
+type         periodic
+cstar        0
+
+[Flavour 0]
+qhat         -2
+kappa        0.128
+su3csw       1.234
+u1csw        1.0
+cF           0.95
+cF'          0.90
+theta        0.0 0.0 0.0
+
+[Flavour 1]
+qhat         1
+kappa        0.135
+su3csw       1.0
+u1csw        1.0
+cF           0.95
+cF'          0.90
+theta        0.0 0.0 0.0
+
+[Solver 0]
+solver       CGNE
+ifl          0
+mu           0.2
+eoflg        0
+nmx          256
+res          1.0e-8
+
+[Solver 1]
+solver       DFL_SAP_GCR
+ifl          1
+mu           0.1
+nkv          16
+isolv        1
+nmr          4
+ncy          5
+nmx          24
+idfl         0
+res          1.0e-8
+
+[SAP]
+bs           4 4 4 4
+nmr          4
+ncy          5
+
+[Deflation subspace]
+bs           4 4 4 4
+Ns           20
+
+[Deflation subspace generation 0]
+kappa        0.13590
+mu           1.0
+qhat         -2
+su3csw       2.017147
+u1csw        1.03
+theta        0.0 0.0 0.0
+ninv         9
+nmr          4
+ncy          4
+
+[Deflation projection]
+nkv          16
+nmx          300
+res          1.0e-2
+
+[Deflation update scheme]
+dtau         0.04688
+nsm          1

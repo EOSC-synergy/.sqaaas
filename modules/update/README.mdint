@@ -1,13 +1,6 @@
 
 ********************************************************************************
 
-                    This README file has been taken over from
-             the openQCD simulation program and should be integrated
-
-********************************************************************************
-
-********************************************************************************
-
                        Molecular-dynamics integration
 
 ********************************************************************************
@@ -25,14 +18,17 @@ Currently three elementary integration schemes are supported, the leapfrog,
 the 2nd order Omelyan-Mryglod-Folk (OMF) and a 4th order OMF integrator. They
 are labeled LPFR, OMF2 and OMF4, respectively.
 
-All these integrators consist in a sequence of update steps 
+All these integrators consist in a sequence of update steps
 
  TP(eps,F): P,U -> P-eps*F,U
 
  TU(eps):   P,U -> P,exp(eps*P)*U
 
 for the momentum field P and the gauge field U, where eps denotes the
-integration step size and F the force field that is integrated. Explicitly,
+integration step size and F the force field that is integrated. Here the
+variable P is a collective variable for the SU(3) and U(1) momentum fields,
+and U is a collective variable for the SU(3) and U(1) gauge fields.
+Explicitly,
 
  LPFR(eps,F) = TP(0.5*eps,F)*
                TU(eps)*
@@ -60,8 +56,8 @@ where r0 is a tunable parameter, usually set to a value in the range from 1/6
 to 0.2, while
 
   r1=0.08398315262876693
-  r2=0.2539785108410595 
-  r3=0.6822365335719091 
+  r2=0.2539785108410595
+  r3=0.6822365335719091
   r4=-0.03230286765269967
 
 are already fine-tuned values (in the literature, the parameter r0 is often
@@ -102,7 +98,7 @@ and, for each level,
   nstep       Power of the elementary integrator
   nfr         Number of forces integrated at this level
   ifr         Indices of these forces
- 
+
 The force indices refer to the force data base (see forces/README.forces). The
 step sizes need not be given, since these can be inferred from the the data
 provided.

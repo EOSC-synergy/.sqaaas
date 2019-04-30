@@ -1,0 +1,21 @@
+
+[QCD+QED configurations]
+name         CLS2A4HMC015r07
+cnfg_dir     .
+
+[QCD configurations]
+name         CLS2A4HMC015r07
+cnfg_dir     .
+first        20
+last         20
+step         1
+
+[QED configurations]
+name         CLS2A4HMC015r07
+cnfg_dir     .
+first        20
+step         1
+
+[Boundary conditions]
+type         periodic
+cstar        3

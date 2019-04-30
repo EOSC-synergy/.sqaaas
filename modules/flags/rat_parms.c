@@ -83,7 +83,7 @@
 * functions (see the modules ratfcts/zolotarev.c and ratfcts/ratfcts.c). If a
 * different powers is requested, the parameters of the rational approximations
 * are read from a file (see the module ratfcts/ratfcts.c), which can be
-* generated with the program MinMax
+* generated with the MinMax program (<root>/minmax).
 *
 * The elements of a structure of type rat_parms_t are
 *
@@ -291,14 +291,11 @@ void read_rat_parms(int irp)
       read_line("mu","%lf",&mu0);
    }
 
-   if (NPROC>1)
-   {
-      MPI_Bcast(&degree,1,MPI_INT,0,MPI_COMM_WORLD);
-      MPI_Bcast(&num,1,MPI_INT,0,MPI_COMM_WORLD);
-      MPI_Bcast(&den,1,MPI_INT,0,MPI_COMM_WORLD);
-      MPI_Bcast(range,2,MPI_DOUBLE,0,MPI_COMM_WORLD);   
-      MPI_Bcast(&mu0,1,MPI_DOUBLE,0,MPI_COMM_WORLD);   
-   }
+   MPI_Bcast(&degree,1,MPI_INT,0,MPI_COMM_WORLD);
+   MPI_Bcast(&num,1,MPI_INT,0,MPI_COMM_WORLD);
+   MPI_Bcast(&den,1,MPI_INT,0,MPI_COMM_WORLD);
+   MPI_Bcast(range,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(&mu0,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
    
    if ((num!=-1)||(den!=2))
    {
@@ -330,16 +327,13 @@ void read_rat_parms(int irp)
       }
    }
 
-   if (NPROC>1)
+   MPI_Bcast(&delta,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(&A,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   if ((num!=-1)||(den!=2))
    {
-      MPI_Bcast(&delta,1,MPI_DOUBLE,0,MPI_COMM_WORLD);   
-      MPI_Bcast(&A,1,MPI_DOUBLE,0,MPI_COMM_WORLD);   
-      if ((num!=-1)||(den!=2))
-      {
-         MPI_Bcast(nu,degree,MPI_DOUBLE,0,MPI_COMM_WORLD);   
-         MPI_Bcast(mu,degree,MPI_DOUBLE,0,MPI_COMM_WORLD);   
-         MPI_Bcast(x,2*(degree+1),MPI_DOUBLE,0,MPI_COMM_WORLD);
-      }
+      MPI_Bcast(nu,degree,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(mu,degree,MPI_DOUBLE,0,MPI_COMM_WORLD);
+      MPI_Bcast(x,2*(degree+1),MPI_DOUBLE,0,MPI_COMM_WORLD);
    }
    
    set_rat_parms(irp,num,den,degree,range,mu0,A,nu,mu,delta,x);
@@ -390,12 +384,12 @@ void write_rat_parms(FILE *fdat)
       {
          if (rp[irp].degree!=0)
          {
-            write_little_int(fdat,4,irp,rp[irp].power[0],rp[irp].power[1],
+            write_little_int(1,fdat,4,irp,rp[irp].power[0],rp[irp].power[1],
                                     rp[irp].degree);
-            write_little_dble(fdat,4,rp[irp].range[0],rp[irp].range[1],
+            write_little_dble(1,fdat,4,rp[irp].range[0],rp[irp].range[1],
                                      rp[irp].A,rp[irp].delta);
-            write_little_dblearray(fdat,rp[irp].degree,rp[irp].nu);
-            write_little_dblearray(fdat,rp[irp].degree,rp[irp].mu);
+            write_little_dblearray(1,fdat,rp[irp].degree,rp[irp].nu);
+            write_little_dblearray(1,fdat,rp[irp].degree,rp[irp].mu);
          }
       }
    }
@@ -412,15 +406,15 @@ void check_rat_parms(FILE *fdat)
       {
          if (rp[irp].degree!=0)
          {
-            check_fpar_int("check_rat_parms",fdat,4,
+            check_little_int("check_rat_parms",fdat,4,
                            irp,rp[irp].power[0],rp[irp].power[1],
                            rp[irp].degree);
-            check_fpar_dble("check_rat_parms",fdat,4,
+            check_little_dble("check_rat_parms",fdat,4,
                             rp[irp].range[0],rp[irp].range[1],
                             rp[irp].A,rp[irp].delta);
-            check_fpar_dblearray("check_rat_parms",fdat,
+            check_little_dblearray("check_rat_parms",fdat,
                                  rp[irp].degree,rp[irp].nu);
-            check_fpar_dblearray("check_rat_parms",fdat,
+            check_little_dblearray("check_rat_parms",fdat,
                                  rp[irp].degree,rp[irp].mu);
          }
       }

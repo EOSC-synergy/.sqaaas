@@ -126,7 +126,7 @@ static void ftplaq(int *x,int mu,int nu,double *ftp)
       sm-=afld(x,mu);
       x[nu]-=1;
 
-      phi=bcp.phi[0];
+      phi=bcp.phi3[0];
       om[0]=t[0]*sm-phi[0]*inp[nu];
       om[1]=t[1]*sm-phi[1]*inp[nu];
       om[2]=t[2]*sm-phi[2]*inp[nu];
@@ -140,7 +140,7 @@ static void ftplaq(int *x,int mu,int nu,double *ftp)
       sm-=afld(x,mu);
       x[nu]-=1;
 
-      phi=bcp.phi[1];
+      phi=bcp.phi3[1];
       om[0]=t[0]*sm+phi[0]*inp[nu];
       om[1]=t[1]*sm+phi[1]*inp[nu];
       om[2]=t[2]*sm+phi[2]*inp[nu];
@@ -607,14 +607,7 @@ int main(int argc,char *argv[])
    phi[1]=-0.534;
    phi_prime[0]=0.912;
    phi_prime[1]=0.078;
-   if (gauge()==2)
-   {
-      phi[0]=0.0;
-      phi[1]=0.0;
-      phi_prime[0]=0.0;
-      phi_prime[1]=0.0;
-   }   
-   set_bc_parms(bc,0,0,phi,phi_prime);
+   set_bc_parms(bc,0,phi,phi_prime,0.0,0.0);
    print_bc_parms();
 
    start_ranlux(0,12345);
@@ -662,7 +655,7 @@ int main(int argc,char *argv[])
 
       random_sd(VOLUME,psd[0],1.0);
       apply_sw_dble(VOLUME,0.0,sw,psd[0],psd[1]);
-      mul_swd(dp.m0,dp.u1csw,dp.su3csw,psd[0],psd[2]);
+      mul_swd(dp.m0,dp.qhat*dp.u1csw,dp.su3csw,psd[0],psd[2]);
       bnd_corr(dp.cF,psd[0],psd[2]);
 
       mulr_spinor_add_dble(VOLUME,psd[2],psd[1],-1.0);

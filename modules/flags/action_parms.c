@@ -14,7 +14,7 @@
 * The externally accessible functions are
 *
 *   action_parms_t set_action_parms(int iact,action_t action,int ipf,
-*                                   int im0,int *irat,int *imu,int *isp)
+*                                   int ifl,int *irat,int *imu,int *isp)
 *     Sets the parameters in the action parameter set number iact and returns
 *     a structure containing them (see the notes).
 *
@@ -30,7 +30,7 @@
 *
 *       action   <action_t>
 *       ipf      <int>
-*       im0      <int>
+*       ifl      <int>
 *       irat     <int> <int> <int>
 *       imu      <int> [<int>]
 *       isp      <int> [<int>]
@@ -84,7 +84,7 @@
 *
 *   ipf     Pseudo-fermion field index (see mdflds/mdflds.c),
 *
-*   im0     Index of the bare sea quark mass in parameter data base
+*   ifl     Index of quark flavour in parameter data base
 *           (see flags/lat_parms.c),
 *
 *   irat    Indices specifying a rational function (see ratfcts/ratfcts.c),
@@ -141,7 +141,7 @@ static void init_ap(void)
 
 
 action_parms_t set_action_parms(int iact,action_t action,
-                                int ipf,int im0,int *irat,int *imu,int *isp)
+                                int ipf,int ifl,int *irat,int *imu,int *isp)
 {
    int i,ie;
    int rat[3],mu[4],sp[4];
@@ -161,7 +161,7 @@ action_parms_t set_action_parms(int iact,action_t action,
    if ((action==ACG_SU3)||(action==ACG_U1)||(action==ACTIONS))
    {
       ipf=0;
-      im0=0;
+      ifl=0;
    }
    else if ((action==ACF_TM1)||(action==ACF_TM1_EO)||(action==ACF_TM1_EO_SDET))
    {
@@ -184,7 +184,7 @@ action_parms_t set_action_parms(int iact,action_t action,
    }
 
    check_global_int("set_action_parms",15,
-                    iact,(int)(action),ipf,im0,
+                    iact,(int)(action),ipf,ifl,
                     rat[0],rat[1],rat[2],
                     mu[0],mu[1],mu[2],mu[3],
                     sp[0],sp[1],sp[2],sp[3]);
@@ -192,7 +192,7 @@ action_parms_t set_action_parms(int iact,action_t action,
    ie=0;
    ie|=((iact<0)||(iact>=IACMAX));
    ie|=(action==ACTIONS);
-   ie|=((ipf<0)||(im0<0));
+   ie|=((ipf<0)||(ifl<0));
 
    for (i=0;i<3;i++)
       ie|=(rat[i]<0);
@@ -208,7 +208,7 @@ action_parms_t set_action_parms(int iact,action_t action,
 
    ap[iact].action=action;
    ap[iact].ipf=ipf;
-   ap[iact].im0=im0;
+   ap[iact].ifl=ifl;
 
    for (i=0;i<3;i++)
       ap[iact].irat[i]=rat[i];
@@ -242,13 +242,13 @@ action_parms_t action_parms(int iact)
 void read_action_parms(int iact)
 {
    int my_rank,i,action;
-   int ipf,im0,irat[3],imu[4],isp[4];
+   int ipf,ifl,irat[3],imu[4],isp[4];
    char line[NAME_SIZE];
 
    MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
    action=-1;
    ipf=0;
-   im0=0;
+   ifl=0;
 
    for (i=0;i<3;i++)
       irat[i]=0;
@@ -274,7 +274,7 @@ void read_action_parms(int iact)
       {
          action=ACF_TM1;
          read_line("ipf","%d",&ipf);
-         read_line("im0","%d",&im0);
+         read_line("ifl","%d",&ifl);
          read_line("imu","%d",imu);
          read_line("isp","%d",isp);
       }
@@ -282,7 +282,7 @@ void read_action_parms(int iact)
       {
          action=ACF_TM1_EO;
          read_line("ipf","%d",&ipf);
-         read_line("im0","%d",&im0);
+         read_line("ifl","%d",&ifl);
          read_line("imu","%d",imu);
          read_line("isp","%d",isp);
       }
@@ -290,7 +290,7 @@ void read_action_parms(int iact)
       {
          action=ACF_TM1_EO_SDET;
          read_line("ipf","%d",&ipf);
-         read_line("im0","%d",&im0);
+         read_line("ifl","%d",&ifl);
          read_line("imu","%d",imu);
          read_line("isp","%d",isp);
       }
@@ -298,7 +298,7 @@ void read_action_parms(int iact)
       {
          action=ACF_TM2;
          read_line("ipf","%d",&ipf);
-         read_line("im0","%d",&im0);
+         read_line("ifl","%d",&ifl);
          read_line("imu","%d %d",imu,imu+1);
          read_line("isp","%d %d",isp,isp+1);
       }
@@ -306,7 +306,7 @@ void read_action_parms(int iact)
       {
          action=ACF_TM2_EO;
          read_line("ipf","%d",&ipf);
-         read_line("im0","%d",&im0);
+         read_line("ifl","%d",&ifl);
          read_line("imu","%d %d",imu,imu+1);
          read_line("isp","%d %d",isp,isp+1);
       }
@@ -314,7 +314,7 @@ void read_action_parms(int iact)
       {
          action=ACF_RAT;
          read_line("ipf","%d",&ipf);
-         read_line("im0","%d",&im0);
+         read_line("ifl","%d",&ifl);
          read_line("irat","%d %d %d",irat,irat+1,irat+2);
          read_line("isp","%d",isp);
       }
@@ -322,7 +322,7 @@ void read_action_parms(int iact)
       {
          action=ACF_RAT_SDET;
          read_line("ipf","%d",&ipf);
-         read_line("im0","%d",&im0);
+         read_line("ifl","%d",&ifl);
          read_line("irat","%d %d %d",irat,irat+1,irat+2);
          read_line("isp","%d",isp);
       }
@@ -335,13 +335,13 @@ void read_action_parms(int iact)
    {
       MPI_Bcast(&action,1,MPI_INT,0,MPI_COMM_WORLD);
       MPI_Bcast(&ipf,1,MPI_INT,0,MPI_COMM_WORLD);
-      MPI_Bcast(&im0,1,MPI_INT,0,MPI_COMM_WORLD);
+      MPI_Bcast(&ifl,1,MPI_INT,0,MPI_COMM_WORLD);
       MPI_Bcast(irat,3,MPI_INT,0,MPI_COMM_WORLD);
       MPI_Bcast(imu,4,MPI_INT,0,MPI_COMM_WORLD);
       MPI_Bcast(isp,4,MPI_INT,0,MPI_COMM_WORLD);
    }
 
-   set_action_parms(iact,action,ipf,im0,irat,imu,isp);
+   set_action_parms(iact,action,ipf,ifl,irat,imu,isp);
 }
 
 
@@ -367,7 +367,7 @@ void print_action_parms(void)
             {
                printf("ACF_TM1 action\n");
                printf("ipf = %d\n",ap[i].ipf);
-               printf("im0 = %d\n",ap[i].im0);
+               printf("ifl = %d\n",ap[i].ifl);
                printf("imu = %d\n",ap[i].imu[0]);
                printf("isp = %d\n\n",ap[i].isp[0]);
             }
@@ -375,7 +375,7 @@ void print_action_parms(void)
             {
                printf("ACF_TM1_EO action\n");
                printf("ipf = %d\n",ap[i].ipf);
-               printf("im0 = %d\n",ap[i].im0);
+               printf("ifl = %d\n",ap[i].ifl);
                printf("imu = %d\n",ap[i].imu[0]);
                printf("isp = %d\n\n",ap[i].isp[0]);
             }
@@ -383,7 +383,7 @@ void print_action_parms(void)
             {
                printf("ACF_TM1_EO_SDET action\n");
                printf("ipf = %d\n",ap[i].ipf);
-               printf("im0 = %d\n",ap[i].im0);
+               printf("ifl = %d\n",ap[i].ifl);
                printf("imu = %d\n",ap[i].imu[0]);
                printf("isp = %d\n\n",ap[i].isp[0]);
             }
@@ -391,7 +391,7 @@ void print_action_parms(void)
             {
                printf("ACF_TM2 action\n");
                printf("ipf = %d\n",ap[i].ipf);
-               printf("im0 = %d\n",ap[i].im0);
+               printf("ifl = %d\n",ap[i].ifl);
                printf("imu = %d %d\n",ap[i].imu[0],ap[i].imu[1]);
                printf("isp = %d %d\n\n",ap[i].isp[0],ap[i].isp[1]);
             }
@@ -399,7 +399,7 @@ void print_action_parms(void)
             {
                printf("ACF_TM2_EO action\n");
                printf("ipf = %d\n",ap[i].ipf);
-               printf("im0 = %d\n",ap[i].im0);
+               printf("ifl = %d\n",ap[i].ifl);
                printf("imu = %d %d\n",ap[i].imu[0],ap[i].imu[1]);
                printf("isp = %d %d\n\n",ap[i].isp[0],ap[i].isp[1]);
             }
@@ -407,7 +407,7 @@ void print_action_parms(void)
             {
                printf("ACF_RAT action\n");
                printf("ipf = %d\n",ap[i].ipf);
-               printf("im0 = %d\n",ap[i].im0);
+               printf("ifl = %d\n",ap[i].ifl);
                printf("irat = %d %d %d\n",
                       ap[i].irat[0],ap[i].irat[1],ap[i].irat[2]);
                printf("isp = %d\n\n",ap[i].isp[0]);
@@ -416,7 +416,7 @@ void print_action_parms(void)
             {
                printf("ACF_RAT_SDET action\n");
                printf("ipf = %d\n",ap[i].ipf);
-               printf("im0 = %d\n",ap[i].im0);
+               printf("ifl = %d\n",ap[i].ifl);
                printf("irat = %d %d %d\n",
                       ap[i].irat[0],ap[i].irat[1],ap[i].irat[2]);
                printf("isp = %d\n\n",ap[i].isp[0]);
@@ -439,7 +439,7 @@ void write_action_parms(FILE *fdat)
       {
          if (ap[i].action!=ACTIONS)
          {
-            write_little_int(fdat,15,i,ap[i].action,ap[i].ipf,ap[i].im0,
+            write_little_int(1,fdat,15,i,ap[i].action,ap[i].ipf,ap[i].ifl,
                          ap[i].irat[0],ap[i].irat[1],ap[i].irat[2],
                          ap[i].imu[0],ap[i].imu[1],ap[i].imu[2],ap[i].imu[3],
                          ap[i].isp[0],ap[i].isp[1],ap[i].isp[2],ap[i].isp[3]);
@@ -459,8 +459,8 @@ void check_action_parms(FILE *fdat)
       {
          if (ap[i].action!=ACTIONS)
          {
-            check_fpar_int("check_action_parms",fdat,15,
-                         i,ap[i].action,ap[i].ipf,ap[i].im0,
+            check_little_int("check_action_parms",fdat,15,
+                         i,ap[i].action,ap[i].ipf,ap[i].ifl,
                          ap[i].irat[0],ap[i].irat[1],ap[i].irat[2],
                          ap[i].imu[0],ap[i].imu[1],ap[i].imu[2],ap[i].imu[3],
                          ap[i].isp[0],ap[i].isp[1],ap[i].isp[2],ap[i].isp[3]);

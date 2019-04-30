@@ -343,10 +343,10 @@ In the space directions, there are two options:
      psi(x+Nk*ek,mu) = psi(x+(N1/2)*e1,mu)
    
 A detailed description of the time boundary conditions is included in the notes
-doc/openQCD-1.6/gauge_action.pdf (to be updated) and doc/openQCD-1.6/dirac.pdf
-(to be updated). Notes describing the orbifold construction for the C* boundary
-conditions are in preparation. The type of boundary condition is set at run
-time via the input parameter file (see doc/openQCD/parms.pdf, to be updated).
+doc/gauge_action.pdf and doc/openQCD-1.6/dirac.pdf. The orbifold construction
+for the C* boundary conditions are described in doc/cstar.pdf. The type of
+boundary condition is set at run time via the input parameter file (see
+doc/parms.pdf).
 
 The physical space extent of the lattice is N1xN2xN3 if all space directions
 are periodic, and (N1/2)xN2xN3 is at least one C* direction exists (with

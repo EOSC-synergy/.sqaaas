@@ -4,7 +4,7 @@
 * File rwrat.c
 *
 * Copyright (C) 2012-2014 Martin Luescher
-*               2017      Agostino Patella
+*               2017, 2019 Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -20,9 +20,8 @@
 * Notes:
 *
 * The computation of the reweighting factor needed to correct for the inexact
-* RHMC action is discussed in the notes "Charm and strange quark in openQCD
-* simulations" (doc/openQCD-1.6/rhmc.pdf) for the special case of power -1/2.
-* The documentation for the general case is in preparation.
+* RHMC action is discussed in the notes "RHMC alogorithm in openQ*D"
+* (doc/rhmc.pdf).
 *
 * If R is a rational approximation of (Dwhat^dag*Dwhat)^(-N/M), an unbiased
 * stochastic estimate r of the reweighting factor is obtained by choosing a
@@ -129,6 +128,29 @@ static int nps=0;
 static double *rs;
 
 
+#ifdef REWEIGHT_CHECK_PROGRAMS
+
+extern void Dwhat_dble_rcp(double mu,spinor_dble *s,spinor_dble *r);
+extern void tmcgm_rcp(int nmx,double *res,int nmu,double *mu,
+                      spinor_dble *eta,spinor_dble **psi,int *status);
+extern double sap_gcr_rcp(int nkv,int nmx,double res,double mu,
+                          spinor_dble *eta,spinor_dble *psi,int *status);
+extern double dfl_sap_gcr2_rcp(int idfl,int nkv,int nmx,double res,double mu,
+                               spinor_dble *eta,spinor_dble *psi,int *status);
+
+#define Dwhat_dble Dwhat_dble_rcp
+#define tmcgm tmcgm_rcp
+#define sap_gcr sap_gcr_rcp
+#define dfl_sap_gcr2 dfl_sap_gcr2_rcp
+
+double get_rwrat_precition_limit(void)
+{
+   return PRECISION_LIMIT;
+}
+
+#endif
+
+
 static double set_eta(spinor_dble *eta)
 {
    random_sd(VOLUME/2,eta,1.0);
@@ -161,6 +183,9 @@ static void set_res(int np,double res)
 
 /*******************************************************************************
 psi += sum_k rmu(k)/(Dwhat^dag*Dwhat+mu(k)^2) eta
+
+NB: (Dwhat^dag*Dwhat+mu(k)^2)^{-1} =
+    = (Dwhat+i mu(k) g5)^{-1} g5 (Dwhat+i mu(k) g5)^{-1} g5
 *******************************************************************************/
 static void apply_Rk(int np,int isp,double *mu,double *rmu,
                      spinor_dble *eta,spinor_dble *psi,int *status)
@@ -232,10 +257,10 @@ static void apply_Rk(int np,int isp,double *mu,double *rmu,
 
       for (k=0;k<np;k++)
       {
-         dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mu[k],eta,rsd[0],stat);
+         dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mu[k],eta,rsd[0],stat);
          mulg5_dble(VOLUME/2,rsd[0]);
          set_sd2zero(VOLUME/2,rsd[0]+(VOLUME/2));
-         dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,-mu[k],rsd[0],rsd[1],stat+3);
+         dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,-mu[k],rsd[0],rsd[1],stat+3);
 
          error_root((stat[0]<0)||(stat[1]<0)||(stat[3]<0)||(stat[4]<0),1,
                     "apply_Rk [rwrat.c]","DFL_SAP_GCR solver failed (isp=%d, "
@@ -306,7 +331,7 @@ static void apply_R(int n,int *np,int *isp,ratfct_t *rf,
 Q = g5 Dwhat
 psi = [R^(2b) Q^(2a) - 1] eta
 *******************************************************************************/
-static void apply_Z(int n,int *np,int *isp,int a,int b,ratfct_t *rf,
+static void apply_Z(double mu0,int n,int *np,int *isp,int a,int b,ratfct_t *rf,
                     spinor_dble *eta,spinor_dble *psi,int **status)
 {
    int k;
@@ -315,20 +340,20 @@ static void apply_Z(int n,int *np,int *isp,int a,int b,ratfct_t *rf,
    wsd=reserve_wsd(1);
 
    assign_sd2sd(VOLUME/2,eta,psi);
-
-   sw_term(ODD_PTS);
-   for (k=0;k<a;k++)
-   {
-      Dwhat_dble(0.0,psi,wsd[0]);
-      mulg5_dble(VOLUME/2,wsd[0]);
-      Dwhat_dble(0.0,wsd[0],psi);
-      mulg5_dble(VOLUME/2,psi);
-   }
    
    for (k=0;k<b;k++)
    {
       apply_R(n,np,isp,rf,psi,wsd[0],status);
       apply_R(n,np,isp,rf,wsd[0],psi,status);
+   }
+
+   sw_term(ODD_PTS);
+   for (k=0;k<a;k++)
+   {
+      Dwhat_dble(mu0,psi,wsd[0]);
+      mulg5_dble(VOLUME/2,wsd[0]);
+      Dwhat_dble(-mu0,wsd[0],psi);
+      mulg5_dble(VOLUME/2,psi);
    }
 
    mulr_spinor_add_dble(VOLUME/2,psi,eta,-1.0);
@@ -460,7 +485,7 @@ double rwrat(int irp,int n,int *np,int *isp,double *sqn,int **status)
    max[5]=-max[4]*(cfs[0]-4.0)/5.0*2.0*b*delta;
 
    k=1;
-   apply_Z(n,np,isp,a,b,&rf,wsd[0],wsd[1],status);
+   apply_Z(rp.mu0,n,np,isp,a,b,&rf,wsd[0],wsd[1],status);
    r[0]=cfs[0]*spinor_prod_re_dble(VOLUME/2,1,wsd[0],wsd[1]);
    r[1]=cfs[1]*norm_square_dble(VOLUME/2,1,wsd[1]);
    lnr=r[0]+r[1];
@@ -479,7 +504,7 @@ double rwrat(int irp,int n,int *np,int *isp,double *sqn,int **status)
    if (max[3]>PRECISION_LIMIT)
    {
       k=2;
-      apply_Z(n,np,isp,a,b,&rf,wsd[1],wsd[0],status);
+      apply_Z(rp.mu0,n,np,isp,a,b,&rf,wsd[1],wsd[0],status);
       r[0]=cfs[2]*spinor_prod_re_dble(VOLUME/2,1,wsd[1],wsd[0]);
       r[1]=cfs[3]*norm_square_dble(VOLUME/2,1,wsd[0]);
       lnr+=r[0]+r[1];

@@ -5,7 +5,7 @@
 *
 * Copyright (C) 2017       Agostino Patella
 *
-* Based on openQCD-1.6/main/ms3.c
+* Based on openQCD-1.6/main/ms5.c
 * Copyright (C) 2012, 2013 Martin Luescher
 *
 * This software is distributed under the terms of the GNU General Public
@@ -23,7 +23,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
 #include <string.h>
 #include "mpi.h"
 #include "flags.h"
@@ -32,272 +31,27 @@
 #include "lattice.h"
 #include "u1flds.h"
 #include "archive.h"
-#include "u1ftensor.h"
-#include "wflow.h"
 #include "version.h"
 #include "global.h"
+#include "lib/main_utils.h"
 
 #define N0 (NPROC0*L0)
 #define N1 (NPROC1*L1)
 #define N2 (NPROC2*L2)
 #define N3 (NPROC3*L3)
 
-static struct
-{
-   int dn,nn,tmax;
-   double eps;
-} file_head;
-
-static struct
-{
-   int nc;
-   double **Usl,**Msl,**Fsl[6];
-} data;
-
 static int my_rank,noexp,append,endian;
 static int first,last,step;
-static int ipgrd[2],flint;
-static double *Uact,*Mact,*Flux[6];
+static int ipgrd[2];
 
 static char line[NAME_SIZE];
 static char log_dir[NAME_SIZE],dat_dir[NAME_SIZE];
 static char loc_dir[NAME_SIZE],cnfg_dir[NAME_SIZE];
 static char log_file[NAME_SIZE],log_save[NAME_SIZE],end_file[NAME_SIZE];
 static char par_file[NAME_SIZE],par_save[NAME_SIZE];
-static char dat_file[NAME_SIZE],dat_save[NAME_SIZE];
+static char ms5dat_file[NAME_SIZE],ms5dat_save[NAME_SIZE];
 static char cnfg_file[NAME_SIZE],nbase[NAME_SIZE];
-static FILE *fin=NULL,*flog=NULL,*fdat=NULL,*fend=NULL;
-
-
-static void alloc_data(void)
-{
-   int nn,tmax;
-   int in;
-   double **pp,*p;
-
-   nn=file_head.nn;
-   tmax=file_head.tmax;
-
-   pp=amalloc(8*(nn+1)*sizeof(*pp),8);
-   p=amalloc(8*(nn+1)*(tmax+1)*sizeof(*p),9);
-
-   error((pp==NULL)||(p==NULL),1,"alloc_data [ms5.c]",
-         "Unable to allocate data arrays");
-
-   data.Usl=pp;
-   data.Msl=pp+nn+1;
-   data.Fsl[0]=pp+2*(nn+1);
-   data.Fsl[1]=pp+3*(nn+1);
-   data.Fsl[2]=pp+4*(nn+1);
-   data.Fsl[3]=pp+5*(nn+1);
-   data.Fsl[4]=pp+6*(nn+1);
-   data.Fsl[5]=pp+7*(nn+1);
-
-   for (in=0;in<(8*(nn+1));in++)
-   {
-      *pp=p;
-      pp+=1;
-      p+=tmax;
-   }
-
-   Uact=p;
-   p+=nn+1;
-   Mact=p;
-   p+=nn+1;
-   Flux[0]=p;
-   p+=nn+1;
-   Flux[1]=p;
-   p+=nn+1;
-   Flux[2]=p;
-   p+=nn+1;
-   Flux[3]=p;
-   p+=nn+1;
-   Flux[4]=p;
-   p+=nn+1;
-   Flux[5]=p;
-}
-
-
-static void write_file_head(void)
-{
-   int iw;
-   stdint_t istd[3];
-   double dstd[1];
-
-   istd[0]=(stdint_t)(file_head.dn);
-   istd[1]=(stdint_t)(file_head.nn);
-   istd[2]=(stdint_t)(file_head.tmax);
-   dstd[0]=file_head.eps;
-
-   if (endian==BIG_ENDIAN)
-   {
-      bswap_int(3,istd);
-      bswap_double(1,dstd);
-   }
-
-   iw=fwrite(istd,sizeof(stdint_t),3,fdat);
-   iw+=fwrite(dstd,sizeof(double),1,fdat);
-
-   error_root(iw!=4,1,"write_file_head [ms5.c]",
-              "Incorrect write count");
-}
-
-
-static void check_file_head(void)
-{
-   int ir;
-   stdint_t istd[3];
-   double dstd[1];
-
-   ir=fread(istd,sizeof(stdint_t),3,fdat);
-   ir+=fread(dstd,sizeof(double),1,fdat);
-
-   error_root(ir!=4,1,"check_file_head [ms5.c]",
-              "Incorrect read count");
-
-   if (endian==BIG_ENDIAN)
-   {
-      bswap_int(3,istd);
-      bswap_double(1,dstd);
-   }
-
-   error_root(((int)(istd[0])!=file_head.dn)||
-              ((int)(istd[1])!=file_head.nn)||
-              ((int)(istd[2])!=file_head.tmax)||
-              (dstd[0]!=file_head.eps),1,"check_file_head [ms5.c]",
-              "Unexpected value of dn,nn,tmax or eps");
-}
-
-
-static void write_data(void)
-{
-   int iw,nn,tmax;
-   int in,t,k;
-   stdint_t istd[1];
-   double dstd[1];
-
-   istd[0]=(stdint_t)(data.nc);
-
-   if (endian==BIG_ENDIAN)
-      bswap_int(1,istd);
-
-   iw=fwrite(istd,sizeof(stdint_t),1,fdat);
-
-   nn=file_head.nn;
-   tmax=file_head.tmax;
-
-   for (in=0;in<=nn;in++)
-   {
-      for (t=0;t<tmax;t++)
-      {
-         dstd[0]=data.Usl[in][t];
-
-         if (endian==BIG_ENDIAN)
-            bswap_double(1,dstd);
-
-         iw+=fwrite(dstd,sizeof(double),1,fdat);
-      }
-   }
-
-   for (in=0;in<=nn;in++)
-   {
-      for (t=0;t<tmax;t++)
-      {
-         dstd[0]=data.Msl[in][t];
-
-         if (endian==BIG_ENDIAN)
-            bswap_double(1,dstd);
-
-         iw+=fwrite(dstd,sizeof(double),1,fdat);
-      }
-   }
-
-   for (k=0;k<6;k++)
-   {
-      for (in=0;in<=nn;in++)
-      {
-         for (t=0;t<tmax;t++)
-         {
-            dstd[0]=data.Fsl[k][in][t];
-
-            if (endian==BIG_ENDIAN)
-               bswap_double(1,dstd);
-
-            iw+=fwrite(dstd,sizeof(double),1,fdat);
-         }
-      }
-   }
-
-   error_root(iw!=(1+8*(nn+1)*tmax),1,"write_data [ms5.c]",
-              "Incorrect write count");
-}
-
-
-static int read_data(void)
-{
-   int ir,nn,tmax;
-   int in,t,k;
-   stdint_t istd[1];
-   double dstd[6];
-
-   ir=fread(istd,sizeof(stdint_t),1,fdat);
-
-   if (ir!=1)
-      return 0;
-
-   if (endian==BIG_ENDIAN)
-      bswap_int(1,istd);
-
-   data.nc=(int)(istd[0]);
-
-   nn=file_head.nn;
-   tmax=file_head.tmax;
-
-   for (in=0;in<=nn;in++)
-   {
-      for (t=0;t<tmax;t++)
-      {
-         ir+=fread(dstd,sizeof(double),1,fdat);
-
-         if (endian==BIG_ENDIAN)
-            bswap_double(1,dstd);
-
-         data.Usl[in][t]=dstd[0];
-      }
-   }
-
-   for (in=0;in<=nn;in++)
-   {
-      for (t=0;t<tmax;t++)
-      {
-         ir+=fread(dstd,sizeof(double),1,fdat);
-
-         if (endian==BIG_ENDIAN)
-            bswap_double(1,dstd);
-
-         data.Msl[in][t]=dstd[0];
-      }
-   }
-
-   for (in=0;in<=nn;in++)
-   {
-      for (t=0;t<tmax;t++)
-      {
-         ir+=fread(dstd,sizeof(double),6,fdat);
-
-         if (endian==BIG_ENDIAN)
-            bswap_double(6,dstd);
-
-         for (k=0;k<6;k++)
-            data.Fsl[k][in][t]=dstd[k];
-      }
-   }
-
-   error_root(ir!=(1+6*(nn+1)*tmax),1,"read_data [ms5.c]",
-              "Read error or incomplete data record");
-
-   return 1;
-}
+static FILE *flog=NULL;
 
 
 static void read_dirs(void)
@@ -362,49 +116,20 @@ static void setup_files(void)
 
    sprintf(log_file,"%s/%s.ms5.log",log_dir,nbase);
    sprintf(par_file,"%s/%s.ms5.par",dat_dir,nbase);
-   sprintf(dat_file,"%s/%s.ms5.dat",dat_dir,nbase);
+   sprintf(ms5dat_file,"%s/%s.ms5.dat",dat_dir,nbase);
    sprintf(end_file,"%s/%s.ms5.end",log_dir,nbase);
    sprintf(log_save,"%s~",log_file);
    sprintf(par_save,"%s~",par_file);
-   sprintf(dat_save,"%s~",dat_file);
+   sprintf(ms5dat_save,"%s~",ms5dat_file);
 }
 
 
-static void read_flds_bc_lat_parms(void)
+static void read_flds_bc_lat_parms(FILE *fpar)
 {
-   int bc,cs;
-   double phi[2],phi_prime[2],invqel;
-
-   if (my_rank==0)
-   {
-      find_section("Boundary conditions");
-      read_line("type","%s",&line);
-      bc=4;
-      if ((strcmp(line,"open")==0)||(strcmp(line,"0")==0))
-         bc=0;
-      else if ((strcmp(line,"SF")==0)||(strcmp(line,"1")==0))
-         bc=1;
-      else if ((strcmp(line,"open-SF")==0)||(strcmp(line,"2")==0))
-         bc=2;
-      else if ((strcmp(line,"periodic")==0)||(strcmp(line,"3")==0))
-         bc=3;
-      else
-         error_root(1,1,"read_flds_bc_lat_parms [ms1.c]",
-                    "Unknown time boundary condition type %s",line);
-
-      read_line("cstar","%d",&cs);
-   }
-
-   MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
-
-   phi[0]=0.0;
-   phi[1]=0.0;
-   phi_prime[0]=0.0;
-   phi_prime[1]=0.0;
-
-   set_flds_parms(3,0);
-   set_bc_parms(bc,0,cs,phi,phi_prime);
+   double invqel;
+   
+   set_flds_parms(2,0);
+   read_bc_parms();
 
    if (my_rank==0)
    {
@@ -414,102 +139,29 @@ static void read_flds_bc_lat_parms(void)
 
    MPI_Bcast(&invqel,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
-   set_u1lat_parms(0,DBL_MAX,invqel,0.0,1.0,1.0,1.0);
+   set_u1lat_parms(0,DBL_MAX,invqel,0.0,1.0,1.0,1.0,0);
 
    if (append)
-      check_flds_bc_lat_parms(fdat);
+      check_flds_bc_lat_parms(fpar);
    else
-      write_flds_bc_lat_parms(fdat);
+      write_flds_bc_lat_parms(fpar);
 }
 
 
-static void read_wflow_parms(void)
+static void read_observables(FILE *fpar)
 {
-   int nstep,dnms,ie,ir,iw;
-   stdint_t istd[3];
-   double eps,dstd[1];
-
-   if (my_rank==0)
-   {
-      find_section("Wilson flow");
-      read_line("integrator","%s",line);
-      read_line("eps","%lf",&eps);
-      read_line("nstep","%d",&nstep);
-      read_line("dnms","%d",&dnms);
-
-      if (strcmp(line,"EULER")==0)
-         flint=0;
-      else if (strcmp(line,"RK2")==0)
-         flint=1;
-      else if (strcmp(line,"RK3")==0)
-         flint=2;
-      else
-         error_root(1,1,"read_wflow_parms [ms5.c]","Unknown integrator");
-
-      error_root((dnms<1)||(nstep<dnms)||((nstep%dnms)!=0),1,
-                 "read_wflow_parms [ms5.c]",
-                 "nstep must be a multiple of dnms");
-   }
-
-   MPI_Bcast(&flint,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&eps,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&nstep,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&dnms,1,MPI_INT,0,MPI_COMM_WORLD);
-
-   file_head.dn=dnms;
-   file_head.nn=nstep/dnms;
-   file_head.tmax=N0;
-   file_head.eps=eps;
-
-   if (my_rank==0)
-   {
-      if (append)
-      {
-         ir=fread(istd,sizeof(stdint_t),3,fdat);
-         ir+=fread(dstd,sizeof(double),1,fdat);
-         error_root(ir!=4,1,"read_wflow_parms [ms5.c]",
-                    "Incorrect read count");
-
-         if (endian==BIG_ENDIAN)
-         {
-            bswap_int(3,istd);
-            bswap_double(1,dstd);
-         }
-
-         ie=0;
-         ie|=(istd[0]!=(stdint_t)(flint));
-         ie|=(istd[1]!=(stdint_t)(nstep));
-         ie|=(istd[2]!=(stdint_t)(dnms));
-         ie|=(dstd[0]!=eps);
-
-         error_root(ie!=0,1,"read_wflow_parms [ms5.c]",
-                    "Parameters do not match previous run");
-      }
-      else
-      {
-         istd[0]=(stdint_t)(flint);
-         istd[1]=(stdint_t)(nstep);
-         istd[2]=(stdint_t)(dnms);
-         dstd[0]=eps;
-
-         if (endian==BIG_ENDIAN)
-         {
-            bswap_int(3,istd);
-            bswap_double(1,dstd);
-         }
-
-         iw=fwrite(istd,sizeof(stdint_t),3,fdat);
-         iw+=fwrite(dstd,sizeof(double),1,fdat);
-         error_root(iw!=4,1,"read_wflow_parms [ms5.c]",
-                    "Incorrect write count");
-      }
-   }
+   read_wflow_parms();
+   if (append)
+      check_wflow_parms(fpar);
+   else
+      write_wflow_parms(fpar);
 }
 
 
 static void read_infile(int argc,char *argv[])
 {
    int ifile;
+   FILE *fin=NULL,*fpar=NULL;
 
    if (my_rank==0)
    {
@@ -542,21 +194,21 @@ static void read_infile(int argc,char *argv[])
    if (my_rank==0)
    {
       if (append)
-         fdat=fopen(par_file,"rb");
+         fpar=fopen(par_file,"rb");
       else
-         fdat=fopen(par_file,"wb");
+         fpar=fopen(par_file,"wb");
 
-      error_root(fdat==NULL,1,"read_infile [ms5.c]",
+      error_root(fpar==NULL,1,"read_infile [ms5.c]",
                  "Unable to open parameter file");
    }
 
-   read_flds_bc_lat_parms();
-   read_wflow_parms();
+   read_flds_bc_lat_parms(fpar);
+   read_observables(fpar);
 
    if (my_rank==0)
    {
       fclose(fin);
-      fclose(fdat);
+      fclose(fpar);
 
       if (append==0)
          copy_file(par_file,par_save);
@@ -569,9 +221,10 @@ static void check_old_log(int *fst,int *lst,int *stp)
    int ie,ic,isv;
    int fc,lc,dc,pc;
    int np[4],bp[4];
+   FILE *fold=NULL;
 
-   fend=fopen(log_file,"r");
-   error_root(fend==NULL,1,"check_old_log [ms5.c]",
+   fold=fopen(log_file,"r");
+   error_root(fold==NULL,1,"check_old_log [ms5.c]",
               "Unable to open log file");
 
    fc=0;
@@ -583,7 +236,7 @@ static void check_old_log(int *fst,int *lst,int *stp)
    ic=0;
    isv=0;
 
-   while (fgets(line,NAME_SIZE,fend)!=NULL)
+   while (fgets(line,NAME_SIZE,fold)!=NULL)
    {
       if (strstr(line,"process grid")!=NULL)
       {
@@ -621,7 +274,7 @@ static void check_old_log(int *fst,int *lst,int *stp)
          isv=0;
    }
 
-   fclose(fend);
+   fclose(fold);
 
    error_root((ie&0x1)!=0x0,1,"check_old_log [ms5.c]",
               "Incorrect read count");
@@ -636,16 +289,17 @@ static void check_old_log(int *fst,int *lst,int *stp)
 }
 
 
-static void check_old_dat(int fst,int lst,int stp)
+static void check_old_ms5dat(int fst,int lst,int stp)
 {
    int ie,ic;
    int fc,lc,dc,pc;
+   FILE *fdat=NULL;
 
-   fdat=fopen(dat_file,"rb");
+   fdat=fopen(ms5dat_file,"rb");
    error_root(fdat==NULL,1,"check_old_dat [ms5.c]",
               "Unable to open data file");
 
-   check_file_head();
+   check_ms5dat_head(fdat);
 
    fc=0;
    lc=0;
@@ -655,10 +309,8 @@ static void check_old_dat(int fst,int lst,int stp)
    ie=0x0;
    ic=0;
 
-   while (read_data()==1)
+   while (read_ms5dat(fdat,&lc)==1)
    {
-      pc=lc;
-      lc=data.nc;
       ic+=1;
 
       if (ic==1)
@@ -667,6 +319,8 @@ static void check_old_dat(int fst,int lst,int stp)
          dc=lc-fc;
       else if ((ic>2)&&(lc!=(pc+dc)))
          ie|=0x1;
+
+      pc=lc;
    }
 
    fclose(fdat);
@@ -683,6 +337,7 @@ static void check_old_dat(int fst,int lst,int stp)
 static void check_files(void)
 {
    int fst,lst,stp;
+   FILE *fdat=NULL;
 
    ipgrd[0]=0;
    ipgrd[1]=0;
@@ -692,7 +347,7 @@ static void check_files(void)
       if (append)
       {
          check_old_log(&fst,&lst,&stp);
-         check_old_dat(fst,lst,stp);
+         check_old_ms5dat(fst,lst,stp);
 
          error_root((fst!=lst)&&(stp!=step),1,"check_files [ms5.c]",
                     "Continuation run:\n"
@@ -703,16 +358,18 @@ static void check_files(void)
       }
       else
       {
-         fin=fopen(log_file,"r");
-         fdat=fopen(dat_file,"rb");
+         error_root(fopen(log_file,"r")!=NULL,1,
+                    "check_files [ms5.c]",
+                    "Attempt to overwrite old *.log file");
 
-         error_root((fin!=NULL)||(fdat!=NULL),1,"check_files [ms5.c]",
-                    "Attempt to overwrite old *.log or *.dat file");
+         error_root(fopen(ms5dat_file,"rb")!=NULL,1,
+                    "check_files [ms5.c]",
+                    "Attempt to overwrite old *.ms*.dat file");
 
-         fdat=fopen(dat_file,"wb");
+         fdat=fopen(ms5dat_file,"wb");
          error_root(fdat==NULL,1,"check_files [ms5.c]",
-                    "Unable to open data file");
-         write_file_head();
+                    "Unable to open measurement data file");
+         write_ms5dat_head(fdat);
          fclose(fdat);
       }
    }
@@ -721,11 +378,7 @@ static void check_files(void)
 
 static void print_info(void)
 {
-   int n;
    long ip;
-   u1lat_parms_t u1lat;
-   
-   u1lat=u1lat_parms();
 
    if (my_rank==0)
    {
@@ -782,22 +435,7 @@ static void print_info(void)
       {
          print_bc_parms();
          print_flds_parms();
-
-         printf("U(1) action:\n");
-         n=fdigits(u1lat.invqel);
-         printf("qel = 1 / %.*f\n\n",IMAX(n,1),u1lat.invqel);
-
-         printf("Wilson flow:\n");
-         if (flint==0)
-            printf("Euler integrator\n");
-         else if (flint==1)
-            printf("2nd order RK integrator\n");
-         else
-            printf("3rd order RK integrator\n");
-         n=fdigits(file_head.eps);
-         printf("eps = %.*f\n",IMAX(n,1),file_head.eps);
-         printf("nstep = %d\n",file_head.dn*file_head.nn);
-         printf("dnms = %d\n\n",file_head.dn);
+         print_wflow_parms();
       }
 
       printf("Configurations no %d -> %d in steps of %d\n\n",
@@ -807,103 +445,25 @@ static void print_info(void)
 }
 
 
-static void set_data(int nc)
+static void save_msdat(void)
 {
-   int in,dn,nn,x0;
-   double eps;
+   FILE *fdat=NULL;
 
-   data.nc=nc;
-   dn=file_head.dn;
-   nn=file_head.nn;
-   eps=file_head.eps;
-
-   for (in=0;in<nn;in++)
-   {
-      Uact[in]=u1_plaq_action_slices(data.Usl[in]);
-      Mact[in]=mxw_action_slices(data.Msl[in]);
-      Flux[0][in]=u1fluxes_slices(0,data.Fsl[0][in]);
-      Flux[1][in]=u1fluxes_slices(1,data.Fsl[1][in]);
-      Flux[2][in]=u1fluxes_slices(2,data.Fsl[2][in]);
-      Flux[3][in]=u1fluxes_slices(3,data.Fsl[3][in]);
-      Flux[4][in]=u1fluxes_slices(4,data.Fsl[4][in]);
-      Flux[5][in]=u1fluxes_slices(5,data.Fsl[5][in]);
-      if (bc_cstar()!=0)
-      {
-         for(x0=0;x0<N0;x0++)
-         {
-            data.Usl[in][x0]*=0.5;
-            data.Msl[in][x0]*=0.5;
-         }
-         Uact[in]*=0.5;
-         Mact[in]*=0.5;
-      }
-
-      if (flint==0)
-         fwd_u1_euler(dn,eps);
-      else if (flint==1)
-         fwd_u1_rk2(dn,eps);
-      else
-         fwd_u1_rk3(dn,eps);
-   }
-
-   Uact[in]=u1_plaq_action_slices(data.Usl[in]);
-   Mact[in]=mxw_action_slices(data.Msl[in]);
-   Flux[0][in]=u1fluxes_slices(0,data.Fsl[0][in]);
-   Flux[1][in]=u1fluxes_slices(1,data.Fsl[1][in]);
-   Flux[2][in]=u1fluxes_slices(2,data.Fsl[2][in]);
-   Flux[3][in]=u1fluxes_slices(3,data.Fsl[3][in]);
-   Flux[4][in]=u1fluxes_slices(4,data.Fsl[4][in]);
-   Flux[5][in]=u1fluxes_slices(5,data.Fsl[5][in]);
-   if (bc_cstar()!=0)
-   {
-      for(x0=0;x0<N0;x0++)
-      {
-         data.Usl[in][x0]*=0.5;
-         data.Msl[in][x0]*=0.5;
-      }
-      Uact[in]*=0.5;
-      Mact[in]*=0.5;
-   }
-}
-
-
-static void save_data(void)
-{
    if (my_rank==0)
    {
-      fdat=fopen(dat_file,"ab");
-      error_root(fdat==NULL,1,"save_data [ms5.c]",
+      fdat=fopen(ms5dat_file,"ab");
+      error_root(fdat==NULL,1,"save_msdat [ms5.c]",
                  "Unable to open data file");
-      write_data();
+      write_ms5dat(fdat);
       fclose(fdat);
-   }
-}
-
-
-static void print_log(void)
-{
-   int in,dn,nn,din;
-   double eps;
-
-   if (my_rank==0)
-   {
-      dn=file_head.dn;
-      nn=file_head.nn;
-      eps=file_head.eps;
-
-      din=nn/10;
-      if (din<1)
-         din=1;
-
-      for (in=0;in<=nn;in+=din)
-         printf("n = %3d, t = %.2e, Uact = %.6e, Mact = %.6e, F(01,02,03,23,31,12) = ( %+.2e, %+.2e, %+.2e, %+.2e, %+.2e, %+.2e )\n",
-                in*dn,eps*(double)(in*dn),Uact[in],Mact[in],Flux[0][in],Flux[1][in],Flux[2][in],Flux[3][in],Flux[4][in],Flux[5][in]);
    }
 }
 
 
 static void check_endflag(int *iend)
 {
+   FILE *fend=NULL;
+
    if (my_rank==0)
    {
       fend=fopen(end_file,"r");
@@ -927,17 +487,20 @@ int main(int argc,char *argv[])
 {
    int nc,iend,cnfg_type;
    double wt1,wt2,wtavg;
+   wflow_parms_t wfp;
 
    MPI_Init(&argc,&argv);
    MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
 
    read_infile(argc,argv);
-   alloc_data();
    check_files();
    print_info();
 
    geometry();
-   if (flint)
+   
+   wfp=wflow_parms();
+   alloc_wad(1);
+   if (wfp.flint)
       alloc_wf1d(1);
 
    iend=0;
@@ -961,12 +524,12 @@ int main(int argc,char *argv[])
          sprintf(cnfg_file,"%s/%sn%d",cnfg_dir,nbase,nc);
          cnfg_type=import_cnfg(cnfg_file);
          error((cnfg_type&2)==0,1,"main [ms5.c]",
-               "Imported configuration does not contain a U(1) gauge field");
+               "Imported configuration does not contain an U(1) gauge field");
       }
 
-      set_data(nc);
-      save_data();
-      print_log();
+      set_ms5dat(nc);
+      save_msdat();
+      print_ms5dat();
 
       MPI_Barrier(MPI_COMM_WORLD);
       wt2=MPI_Wtime();
@@ -981,7 +544,7 @@ int main(int argc,char *argv[])
          fflush(flog);
 
          copy_file(log_file,log_save);
-         copy_file(dat_file,dat_save);
+         copy_file(ms5dat_file,ms5dat_save);
       }
 
       check_endflag(&iend);

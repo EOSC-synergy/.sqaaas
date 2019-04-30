@@ -21,7 +21,7 @@ all: rmxeq mkdep mkxeq
 
 MAIN = check1 check2 check3 check4 check5 check6
 
-FLAGS = flags lat_parms hmc_parms dfl_parms parms_utils
+FLAGS = flags lat_parms hmc_parms dfl_parms
 
 FORCES = force0
 
@@ -41,7 +41,7 @@ TCHARGE = ftcom ftensor tcharge ym_action
 
 UFLDS = plaq_sum shift uflds udcom bstap ud_cstar
 
-UTILS = error endian hsum mutils utils wspace
+UTILS = error endian hsum ioutils mutils utils wspace
 
 WFLOW = wflow
 

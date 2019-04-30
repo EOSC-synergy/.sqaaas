@@ -38,7 +38,7 @@
 #define N2 (NPROC2*L2)
 #define N3 (NPROC3*L3)
 
-double phi[2],phi_prime[2];
+double su3phi[2]={0.0,0.0},su3phi_prime[2]={0.0,0.0},u1phi=0.0,u1phi_prime=0.0;
 
 
 static su3_dble pmat[4];
@@ -173,24 +173,26 @@ static double dev_unity(su3_dble *u)
 }
 
 
-static double dev_bval(int k,double *phi,su3_dble *u)
+static double dev_bval(int k,double su3phi[2],double u1phi,su3_dble *u)
 {
-   double s[3],phi3;
-
+   double s[3],su3phi3;
+   int q;
    su3_dble v;
+
+   q=dirac_parms().qhat;
 
    su3dagxsu3(pmat+k,u,&v);
    s[0]=(double)(N1);
    s[1]=(double)(N2);
    s[2]=(double)(N3);
-   phi3=-phi[0]-phi[1];
+   su3phi3=-su3phi[0]-su3phi[1];
 
-   v.c11.re-=cos(phi[0]/s[k-1]);
-   v.c11.im-=sin(phi[0]/s[k-1]);
-   v.c22.re-=cos(phi[1]/s[k-1]);
-   v.c22.im-=sin(phi[1]/s[k-1]);
-   v.c33.re-=cos(phi3/s[k-1]);
-   v.c33.im-=sin(phi3/s[k-1]);
+   v.c11.re-=cos((su3phi[0]+q*u1phi)/s[k-1]);
+   v.c11.im-=sin((su3phi[0]+q*u1phi)/s[k-1]);
+   v.c22.re-=cos((su3phi[1]+q*u1phi)/s[k-1]);
+   v.c22.im-=sin((su3phi[1]+q*u1phi)/s[k-1]);
+   v.c33.re-=cos((su3phi3+q*u1phi)/s[k-1]);
+   v.c33.im-=sin((su3phi3+q*u1phi)/s[k-1]);
 
    return dev_zero(&v);
 }
@@ -328,7 +330,6 @@ static void check_hdinit(double *dev1,double *dev2)
    int iu,ix,ifc,x0,bc;
    double d1,d2,dmax1,dmax2;
    su3_dble *ud,*udb,*udm;
-   double phi0[2]={0.0,0.0};
 
    bc=bc_type();
    
@@ -359,10 +360,7 @@ static void check_hdinit(double *dev1,double *dev2)
       }
       else
       {
-         if((gauge()&1)!=0)
-            d2=dev_bval(ifc/2,phi,ud);
-         else
-            d2=dev_bval(ifc/2,phi0,ud);
+         d2=dev_bval(ifc/2,su3phi,u1phi,ud);
          if (d2>dmax2)
             dmax2=d2;
       }
@@ -512,8 +510,11 @@ static double cmp_hdud(void)
    int iu,ix,x0,ifc;
    double d1,dmax1,a;
    su3_dble *hdb,*hd,*hdm,*ud;
+   int bc;
+   int s[3]={N1,N2,N3};
    
    hdb=hdfld();
+   bc=bc_type();
 
    ud=udfld();
    hdm=hdb+4*VOLUME;
@@ -526,6 +527,8 @@ static double cmp_hdud(void)
       x0=global_time(ix);
       
       a=0.0;
+      if((bc==1)&&(ifc>1)&&(x0==0))
+         a=u1phi/s[ifc/2-1];
       d1=dev_hd(x0,ifc,hd,ud,&a);
       if (d1>dmax1)
          dmax1=d1;
@@ -598,18 +601,19 @@ int main(int argc,char *argv[])
    if(gauge()==1) q=0;
 
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
-   phi[0]=0.123;
-   phi[1]=-0.534;
-   phi_prime[0]=0.912;
-   phi_prime[1]=0.078;
-   if (gauge()==2)
+   if((gauge()&1)!=0)
    {
-      phi[0]=0.0;
-      phi[1]=0.0;
-      phi_prime[0]=0.0;
-      phi_prime[1]=0.0;
-   }   
-   set_bc_parms(bc,0,0,phi,phi_prime);
+      su3phi[0]=0.123;
+      su3phi[1]=-0.534;
+      su3phi_prime[0]=0.912;
+      su3phi_prime[1]=0.078;
+   }
+   if((gauge()&2)!=0)
+   {
+      u1phi=0.573;
+      u1phi_prime=-1.827;
+   }
+   set_bc_parms(bc,0,su3phi,su3phi_prime,u1phi,u1phi_prime);
    print_bc_parms();
    
    su3csw=u1csw=0.0;

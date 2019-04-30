@@ -29,7 +29,7 @@ DFL = dfl_geometry
 
 DIRAC = Dw_dble Dw Dw_bnd
 
-FLAGS = flags dirac_parms lat_parms sap_parms dfl_parms parms_utils
+FLAGS = flags dirac_parms lat_parms sap_parms dfl_parms
 
 HFLDS = hflds
 
@@ -53,11 +53,11 @@ TCHARGE = ftcom ftensor
 
 UFLDS = plaq_sum shift uflds udcom ud_cstar
 
-U1FLDS = adflds adcom u1flds ad_shift ad_bcnds u1fcts ad_cstar
+U1FLDS = adflds adcom u1flds ad_shift ad_bcnds u1fcts ad_cstar u1_plaq_sum
 
 U1FTENSOR = u1ftcom u1ftensor u1fluxes mxw_action
 
-UTILS = endian error hsum mutils utils wspace
+UTILS = endian error hsum ioutils mutils utils wspace
 
 VFLDS = vflds vinit vcom vdcom
 

@@ -26,12 +26,12 @@ ARCHIVE = archive
 
 BLOCK = block blk_grid map_u2blk map_sw2blk map_s2blk
 
-DFL = dfl_geometry dfl_subspace ltl_gcr dfl_sap_gcr dfl_modes
+DFL = dfl_geometry dfl_multiple dfl_subspace ltl_gcr dfl_sap_gcr dfl_modes
 
 DIRAC = Dw_dble Dw Dw_bnd
 
 FLAGS = flags action_parms dirac_parms dfl_parms force_parms hmc_parms \
-      lat_parms sap_parms solver_parms mdint_parms rat_parms parms_utils
+      lat_parms sap_parms solver_parms mdint_parms rat_parms
 
 FORCES = force0 force1 force2 force3 force4 force5 force6 \
          frcfcts genfrc tmcg tmcgm xtensor
@@ -71,7 +71,7 @@ UFLDS = plaq_sum shift uflds udcom bstap ud_cstar
 
 UPDATE = chrono
 
-UTILS = endian error hsum mutils utils wspace
+UTILS = endian error hsum ioutils mutils utils wspace
 
 VFLDS = vflds vinit vcom vdcom
 

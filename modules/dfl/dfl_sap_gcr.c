@@ -4,7 +4,7 @@
 * File dfl_sap_gcr.c
 *
 * Copyright (C) 2007, 2011-2013 Martin Luescher
-*               2016, 2017 Agostino Patella
+*               2016, 2017, 2019 Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -13,13 +13,13 @@
 *
 * The externally accessible functions are
 *
-*   double dfl_sap_gcr(int nkv,int nmx,double res,double mu,
+*   double dfl_sap_gcr(int idfl,int nkv,int nmx,double res,double mu,
 *                      spinor_dble *eta,spinor_dble *psi,int *status)
 *     Obtains an approximate solution psi of the Wilson-Dirac equation for
 *     given source eta using the deflated SAP-preconditioned GCR algorithm.
 *     See the notes for the explanation of the parameters of the program.
 *
-*   double dfl_sap_gcr2(int nkv,int nmx,double res,double mu,
+*   double dfl_sap_gcr2(int idfl,int nkv,int nmx,double res,double mu,
 *                       spinor_dble *eta,spinor_dble *psi,int *status)
 *     This program calls dfl_sap_gcr() with the parameters nkv,..,status.
 *     If the solver fails and status[0]=-3 or status[1]<0, the deflation
@@ -57,6 +57,8 @@
 * initialized by the program dfl_subspace().
 *
 * All other parameters are passed through the argument list:
+*
+*  idfl      Index of the deflation subspace to be used.
 *
 *  nkv       Maximal number of Krylov vectors generated before the GCR
 *            algorithm is restarted.
@@ -205,7 +207,7 @@ static void Mop(int k,spinor *rho,spinor *phi,spinor *chi)
 }
 
 
-double dfl_sap_gcr(int nkv,int nmx,double res,double mu,
+double dfl_sap_gcr(int idfl, int nkv,int nmx,double res,double mu,
                    spinor_dble *eta,spinor_dble *psi,int *status)
 {
    int *bs,nb,isw,ifail;
@@ -228,6 +230,8 @@ double dfl_sap_gcr(int nkv,int nmx,double res,double mu,
    dpr=dfl_pro_parms();
    error_root(dpr.nkv==0,1,"dfl_sap_gcr [dfl_sap_gcr.c]",
               "Deflation projector parameters are not set");
+
+   use_dfl_subspace(idfl);
 
    blk_list(SAP_BLOCKS,&nb,&isw);
 
@@ -371,7 +375,7 @@ double dfl_sap_gcr(int nkv,int nmx,double res,double mu,
 }
 
 
-double dfl_sap_gcr2(int nkv,int nmx,double res,double mu,
+double dfl_sap_gcr2(int idfl,int nkv,int nmx,double res,double mu,
                     spinor_dble *eta,spinor_dble *psi,int *status)
 {
    double rho;
@@ -385,17 +389,17 @@ double dfl_sap_gcr2(int nkv,int nmx,double res,double mu,
       eta=wsd[0];
    }
 
-   rho=dfl_sap_gcr(nkv,nmx,res,mu,eta,psi,status);
+   rho=dfl_sap_gcr(idfl,nkv,nmx,res,mu,eta,psi,status);
 
    if ((status[0]==-3)||(status[1]<0))
    {
-      dfl_modes(status+2);
+      dfl_modes(idfl,status+2);
 
       error_root(status[2]<0,1,"dfl_sap_gcr2 [dfl_sap_gcr.c]",
-                 "Deflation subspace regeneration failed (status = %d)",
-                 status[2]);
+                 "Regeneration of deflation subspace %d failed (status = %d)",
+                 idfl,status[2]);
 
-      rho=dfl_sap_gcr(nkv,nmx,res,mu,eta,psi,status);
+      rho=dfl_sap_gcr(idfl,nkv,nmx,res,mu,eta,psi,status);
    }
    else
       status[2]=0;

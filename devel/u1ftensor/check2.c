@@ -87,7 +87,7 @@ static double ftplaq(int *x,int mu,int nu)
       sm-=afld(x,mu);
       x[nu]-=1;
 
-      phi=bcp.phi[0];
+      phi=bcp.phi3[0];
       om=sm-phi[0]*inp[nu];
    }
    else if ((x[0]==(N0-1))&&(mu==0)&&((bc==1)||(bc==2)))
@@ -97,7 +97,7 @@ static double ftplaq(int *x,int mu,int nu)
       sm-=afld(x,mu);
       x[nu]-=1;
 
-      phi=bcp.phi[1];
+      phi=bcp.phi3[1];
       om=sm+phi[0]*inp[nu];
    }
    else
@@ -346,10 +346,10 @@ int main(int argc,char *argv[])
    phi[1]=0.0;
    phi_prime[0]=0.0;
    phi_prime[1]=0.0;
-   set_bc_parms(bc,0,0,phi,phi_prime);
+   set_bc_parms(bc,0,phi,phi_prime,0.0,0.0);
    print_bc_parms();
 
-   set_u1lat_parms(0,1.0/137.0,5.0,0.0,7.0,0.0,0.0);
+   set_u1lat_parms(0,1.0/137.0,5.0,0.0,7.0,0.0,0.0,0);
    print_lat_parms();
 
    start_ranlux(0,123);

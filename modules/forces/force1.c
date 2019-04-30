@@ -3,8 +3,8 @@
 *
 * File force1.c
 *
-* Copyright (C) 2016 Agostino Patella
 * Copyright (C) 2011-2013 Stefan Schaefer, Martin Luescher
+*               2016, 2019 Agostino Patella
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -315,7 +315,7 @@ void force1(double mu,int ipf,int isp,int icr,double c,int *status)
             if (res1>sp.res)
             {
                mulg5_dble(VOLUME,rho);
-               dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res/res1,mu,rho,eta,status);
+               dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res/res1,mu,rho,eta,status);
                mulr_spinor_add_dble(VOLUME,psi,eta,-1.0);
 
                res0=norm_square_dble(VOLUME,1,psi);
@@ -327,7 +327,7 @@ void force1(double mu,int ipf,int isp,int icr,double c,int *status)
                   if (res1>sp.res)
                   {
                      mulg5_dble(VOLUME,eta);
-                     dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res/res1,-mu,eta,rho,
+                     dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res/res1,-mu,eta,rho,
                                   status+3);
                      mulr_spinor_add_dble(VOLUME,chi,rho,-1.0);
                   }
@@ -340,7 +340,7 @@ void force1(double mu,int ipf,int isp,int icr,double c,int *status)
                else
                {
                   mulg5_dble(VOLUME,psi);
-                  dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,-mu,psi,chi,status+3);
+                  dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,-mu,psi,chi,status+3);
                   mulg5_dble(VOLUME,psi);
                }
             }
@@ -353,10 +353,10 @@ void force1(double mu,int ipf,int isp,int icr,double c,int *status)
          else
          {
             mulg5_dble(VOLUME,phi);
-            dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mu,phi,psi,status);
+            dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mu,phi,psi,status);
             mulg5_dble(VOLUME,phi);
             mulg5_dble(VOLUME,psi);
-            dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,-mu,psi,chi,status+3);
+            dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,-mu,psi,chi,status+3);
             mulg5_dble(VOLUME,psi);
          }
 
@@ -365,10 +365,10 @@ void force1(double mu,int ipf,int isp,int icr,double c,int *status)
       else
       {
          mulg5_dble(VOLUME,phi);
-         dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mu,phi,psi,status);
+         dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mu,phi,psi,status);
          mulg5_dble(VOLUME,phi);
          mulg5_dble(VOLUME,psi);
-         dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,-mu,psi,chi,status+3);
+         dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,-mu,psi,chi,status+3);
          mulg5_dble(VOLUME,psi);
       }
 
@@ -452,7 +452,7 @@ double action1(double mu,int ipf,int isp,int icom,int *status)
       set_sap_parms(sap.bs,sp.isolv,sp.nmr,sp.ncy);
 
       mulg5_dble(VOLUME,phi);
-      dfl_sap_gcr2(sp.nkv,sp.nmx,sp.res,mu,phi,psi,status);
+      dfl_sap_gcr2(sp.idfl,sp.nkv,sp.nmx,sp.res,mu,phi,psi,status);
       mulg5_dble(VOLUME,phi);
 
       error_root((status[0]<0)||(status[1]<0),1,

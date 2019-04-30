@@ -5,6 +5,7 @@
 *
 * Copyright (C) 2011, 2012, 2013 Martin Luescher
 *               2017 Agostino Patella
+*               2019 Nazario Tantalo
 *
 * This software is distributed under the terms of the GNU General Public
 * License (GPL)
@@ -59,9 +60,10 @@
 * the action, pseudo-fermion field and force in the parameter data base (see
 * flags/{action,force}_parms.c). If type="modes", there are counters for the
 * solver iteration numbers required for the generation of the deflation sub-
-* space (idx=0), the subspace updates (idx=1) and the subspace regeneration
-* (idx=2; see dfl/dfl_sap_gcr.c). The status array passed to add2counter()
-* is expected to contain all status values returned by the associated action,
+* space (idx=0+3*idfl), the subspace updates (idx=1+3*idfl) and the subspace 
+* regeneration (idx=2+3*idfl; see dfl/dfl_sap_gcr.c) where idfl is the index
+* of the deflation subspace. The status array passed to add2counter() is 
+* expected to contain all status values returned by the associated action,
 * pseudo-fermion field generation, force and mode-generation program.
 *
 * When the HMC parameters or the specifications of the actions and forces
@@ -136,14 +138,16 @@ static counter_t *alloc_cnt(int nc)
 
 static void set_nc(void)
 {
-   int i,j,k;
+   int i,j,k,idfl;
    hmc_parms_t hmc;
    action_parms_t ap;
    mdint_parms_t mdp;
    force_parms_t fp;
-   solver_parms_t sp;
+   dfl_parms_t dfl;
+   dflst_t dfl_status;
    
    hmc=hmc_parms();
+   dfl=dfl_parms();
    nac=0;
    nfd=0;
    nfr=0;
@@ -165,19 +169,11 @@ static void set_nc(void)
          if (j>=nac)
             nac=j+1;
 
-         sp=solver_parms(ap.isp[0]);
-         if (sp.solver==DFL_SAP_GCR)
-            nmd=3;
-
          if ((ap.action==ACF_TM2)||
              (ap.action==ACF_TM2_EO))
          {
             if (ap.ipf>=nfd)
                nfd=ap.ipf+1;
-
-            sp=solver_parms(ap.isp[1]);
-            if (sp.solver==DFL_SAP_GCR)
-               nmd=3;
          }
 
          if ((ap.action==ACF_RAT)||
@@ -208,26 +204,39 @@ static void set_nc(void)
          {
             if (k>=nfr)
                nfr=k+1;
-
-            sp=solver_parms(fp.isp[0]);
-            if (sp.solver==DFL_SAP_GCR)
-               nmd=3;
          }
       }
    }  
+
+   if (dfl.Ns)
+   {
+      idfl=0;
+      while(1)
+      {
+         dfl_status=dfl_gen_parms(idfl).status;
+         if(dfl_status==DFL_OUTOFRANGE) break;
+         idfl++;
+      }
+      nmd=3*idfl;
+   }
+
 }
 
 
 static void set_ns(void)
 {
-   int i,j,k;
+   int i,j,k,idfl;
    hmc_parms_t hmc;
    mdint_parms_t mdp;
    action_parms_t ap;
    force_parms_t fp;
    solver_parms_t sp;
+   dfl_parms_t dfl;
+   dflst_t dfl_status;
+
    
    hmc=hmc_parms();
+   dfl=dfl_parms();
 
    for (i=0;i<hmc.nact;i++)
    {
@@ -315,11 +324,20 @@ static void set_ns(void)
       }
    }  
 
-   if (nmd>0)
+   for (i=0;i<nmd;i++)
+      mds[i].ns=0;
+   
+   if (dfl.Ns)
    {
-      mds[0].ns=1;
-      mds[1].ns=1;
-      mds[2].ns=1;
+      idfl=0;
+      while(1)
+      {
+         dfl_status=dfl_gen_parms(idfl).status;
+         if(dfl_status==DFL_OUTOFRANGE) break;
+         if(dfl_status==DFL_DEF)
+            mds[3*idfl].ns=mds[3*idfl+1].ns=mds[3*idfl+2].ns=1;
+         idfl++;
+      }
    }
 }
 
@@ -341,6 +359,7 @@ static void alloc_stat(int nc,counter_t *cnt)
 
       for (i=0;i<nc;i++)
       {
+         cnt[i].status=NULL;
          if (cnt[i].ns>0)
          {
             cnt[i].status=stat;
@@ -496,11 +515,12 @@ int get_count(char *type,int idx,int *status)
 void print_avgstat(char *type,int idx)
 {
    int my_rank;
-   int i,n,ns,*stat;
+   int i,n,ns,ridx,midx,*stat;
    double r;
 
    MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
    
+   ridx=midx=-1;
    if (my_rank==0)
    {
       n=0;
@@ -514,17 +534,19 @@ void print_avgstat(char *type,int idx)
             n=frc[idx].n;
             ns=frc[idx].ns;
             stat=frc[idx].status;
-            printf("Force  %2d: <status> = ",idx);
+            printf("Force   %2d: <status> = ",idx);
          }
       }
       else if (strcmp(type,"modes")==0)
       {
          if ((idx>=0)&&(idx<nmd))
          {         
+            ridx=idx/3;
+            midx=idx%3;
             n=mds[idx].n;
             ns=mds[idx].ns;
             stat=mds[idx].status;
-            printf("Modes  %2d: <status> = ",idx);
+            printf("Modes %2d/%1d: <status> = ",ridx,midx);
          }
       }
       else if (strcmp(type,"action")==0)
@@ -534,7 +556,7 @@ void print_avgstat(char *type,int idx)
             n=act[idx].n;
             ns=act[idx].ns;
             stat=act[idx].status;
-            printf("Action %2d: <status> = ",idx);
+            printf("Action  %2d: <status> = ",idx);
          }
       }
       else if (strcmp(type,"field")==0)
@@ -544,7 +566,7 @@ void print_avgstat(char *type,int idx)
             n=fld[idx].n;
             ns=fld[idx].ns;
             stat=fld[idx].status;
-            printf("Field  %2d: <status> = ",idx);
+            printf("Field   %2d: <status> = ",idx);
          }
       }
       else
@@ -555,19 +577,19 @@ void print_avgstat(char *type,int idx)
 
       if (ns>0)
       {
-         if ((strcmp(type,"modes")==0)&&(idx==0))
+         if ((strcmp(type,"modes")==0)&&(midx==0))
          {
-            n+=mds[2].n;
+            n+=mds[idx+2].n;
 
             if (n>0)
                r=1.0/(double)(n);
             else
                r=1.0;
 
-            printf("%d",(int)((double)(stat[0]+mds[2].status[0])*r+0.5));
+            printf("%d",(int)((double)(stat[0]+mds[idx+2].status[0])*r+0.5));
 
-            if (mds[2].n>0)
-               printf(" (no of regenerations = %d)",mds[2].n);
+            if (mds[idx+2].n>0)
+               printf(" (no of regenerations = %d)",mds[idx+2].n);
          }
          else
          {
@@ -581,7 +603,7 @@ void print_avgstat(char *type,int idx)
             for (i=1;i<ns;i++)
                printf(",%d",(int)((double)(stat[i])*r+0.5));
 
-            if ((strcmp(type,"modes")==0)&&(idx==1))
+            if ((strcmp(type,"modes")==0)&&(midx==1))
                printf(" (no of updates = %d)",n);
          }
          
@@ -593,7 +615,7 @@ void print_avgstat(char *type,int idx)
 
 void print_all_avgstat(void)
 {
-   int i;
+   int i,rnmd;
 
    for (i=0;i<nac;i++)
    {
@@ -613,9 +635,13 @@ void print_all_avgstat(void)
          print_avgstat("force",i);
    }
 
-   for (i=0;i<(nmd-1);i++)
+   rnmd=nmd/3;
+   for (i=0;i<rnmd;i++)
    {
-      if (mds[i].ns>0)
-         print_avgstat("modes",i);
+      if (mds[3*i].ns>0)
+         print_avgstat("modes",3*i);
+
+      if (mds[1+3*i].ns>0)
+         print_avgstat("modes",1+3*i);
    }      
 }

@@ -1,16 +1,16 @@
 
 [Run name]
-name         pedro
+name         Snoopy137
 
 [Directories]
-log_dir      /someStuff/MS6/log
-dat_dir      /someStuff/MS6/dat
-loc_dir      /someStuff/MS6/cnfg
-cnfg_dir     /someStuff/MS6/cnfg
+log_dir      ../data/ms6/log
+dat_dir      ../data/ms6/dat
+loc_dir      /ndata/iso1/cnfg
+cnfg_dir     /data/iso1/cnfg
 
 [Configurations]
 first        1
-last         4
+last         2
 step         1
 
 [Random number generator]
@@ -21,10 +21,10 @@ seed         73099
 gauge        SU(3)xU(1)
 
 [Boundary conditions]
-type         SF
-cstar        0
-phi          0.12 -0.56
-phi'         0.92 0.76
+type         open-SF
+cstar        1
+su3phi       0.12 -0.56
+u1phi        1.43
 
 [Correlators]
 nfl          2
@@ -37,7 +37,6 @@ su3csw       1.234
 u1csw        1.0
 cF           0.5
 cF'          0.6
-theta        0.0 0.0 0.0
 
 [Flavour 1]
 kappa        0.122
@@ -47,7 +46,6 @@ su3csw       1.234
 u1csw        1.0
 cF           0.5
 cF'          0.6
-theta        0.34 -1.25 0.58
 
 [Source fields]
 x0           1
@@ -60,6 +58,7 @@ isolv        1
 nmr          4
 ncy          5
 nmx          128
+idfl         0
 res          1.0e-12
 
 [SAP]
@@ -69,7 +68,7 @@ bs           8 4 4 4
 bs           4 4 4 4
 Ns           28
 
-[Deflation subspace generation]
+[Deflation subspace generation 0]
 kappa        0.122
 mu           0.000
 qhat         2
@@ -77,7 +76,6 @@ su3csw       1.234
 u1csw        0.5
 cF           0.5
 cF'          0.5
-theta        0.0 0.0 0.0
 ninv         10
 nmr          4
 ncy          4

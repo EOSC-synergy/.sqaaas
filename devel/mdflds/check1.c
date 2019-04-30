@@ -148,7 +148,8 @@ int main(int argc,char *argv[])
    int iu,ix,ifc,x0,k;
    double d1,d2,dmax1,dmax2;
    double dmax1_all,dmax2_all;
-   double phi[2],phi_prime[2];
+   double su3phi[2],su3phi_prime[2];
+   double u1phi,u1phi_prime;
    su3_dble *ud,*udb,*udm;
    FILE *flog=NULL;
 
@@ -185,21 +186,25 @@ int main(int argc,char *argv[])
 
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
-   phi[0]=0.0;
-   phi[1]=0.0;
-   phi_prime[0]=0.0;
-   phi_prime[1]=0.0;
+   su3phi[0]=0.0;
+   su3phi[1]=0.0;
+   su3phi_prime[0]=0.0;
+   su3phi_prime[1]=0.0;
+   u1phi=0.0;
+   u1phi_prime=0.0;
    if(cs==0)
    {
-      phi[0]=0.123;
-      phi[1]=-0.534;
-      phi_prime[0]=0.912;
-      phi_prime[1]=0.078;
+      su3phi[0]=0.123;
+      su3phi[1]=-0.534;
+      su3phi_prime[0]=0.912;
+      su3phi_prime[1]=0.078;
+      u1phi=0.573;
+      u1phi_prime=-1.827;
    }
-   set_bc_parms(bc,0,cs,phi,phi_prime);
+   set_bc_parms(bc,cs,su3phi,su3phi_prime,u1phi,u1phi_prime);
    print_bc_parms();
 
-   start_ranlux(0,123456);
+   start_ranlux(0,1236);
    geometry();
    
    
@@ -232,7 +237,7 @@ int main(int argc,char *argv[])
       }
       else
       {
-         d2=dev_bval(ifc/2,phi,ud);
+         d2=dev_bval(ifc/2,su3phi,ud);
          if (d2>dmax2)
             dmax2=d2;
       }
@@ -244,7 +249,7 @@ int main(int argc,char *argv[])
 
       for (k=1;k<4;k++)
       {
-         d2=dev_bval(k,phi_prime,ud);
+         d2=dev_bval(k,su3phi_prime,ud);
          ud+=1;
 
          if (d2>dmax2)
