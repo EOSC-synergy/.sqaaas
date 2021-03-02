@@ -24,6 +24,8 @@ ARCHIVE = archive sarchive
 
 BLOCK = block blk_grid map_u2blk map_sw2blk map_s2blk
 
+CSTATES = ccoulomb cfactor
+
 DFL = dfl_geometry dfl_multiple dfl_subspace ltl_gcr dfl_sap_gcr dfl_modes
 
 DFT = dft4d dft_com dft_shuf fft small_dft
@@ -80,11 +82,11 @@ WFLOW = wflow wflow_u1
 
 LIB = dat_utils ms3_utils ms5_utils wflow_parms
 
-MODULES = $(ARCHIVE) $(BLOCK) $(DFL) $(DIRAC) $(FLAGS) $(FORCES) $(HFLDS)\
-          $(LATTICE) $(LINALG) $(LINSOLV) $(LITTLE) $(MDFLDS) $(RANDOM) \
-          $(RATFCTS) $(SAP) $(SFLDS) $(SU3FCTS) $(SW_TERM) $(TCHARGE) \
-          $(UFLDS) $(UPDATE) $(UTILS) $(U1FLDS) $(U1FTENSOR) $(VFLDS) $(WFLOW) \
-			 $(DFT) $(LIB)
+MODULES = $(ARCHIVE) $(BLOCK) $(CSTATES) $(DFL) $(DIRAC) $(FLAGS) $(FORCES)\
+          $(HFLDS) $(LATTICE) $(LINALG) $(LINSOLV) $(LITTLE) $(MDFLDS) \
+          $(RANDOM) $(RATFCTS) $(SAP) $(SFLDS) $(SU3FCTS) $(SW_TERM) \
+          $(TCHARGE) $(UFLDS) $(UPDATE) $(UTILS) $(U1FLDS) $(U1FTENSOR) \
+			 $(VFLDS) $(WFLOW) $(DFT) $(LIB)
 
 
 # Logging option (-mpilog or -mpitrace or -mpianim)
@@ -102,7 +104,7 @@ VPATH = .:$(MDIR)/flags:$(MDIR)/lattice:$(MDIR)/archive:$(MDIR)/linalg:\
 	       $(MDIR)/sw_term:$(MDIR)/tcharge:$(MDIR)/block:$(MDIR)/sap:\
 	       $(MDIR)/linsolv:$(MDIR)/dfl:$(MDIR)/vflds:$(MDIR)/little:\
           $(MDIR)/update:$(MDIR)/wflow:$(MDIR)/ratfcts:$(MDIR)/hflds:\
-			 $(MDIR)/u1flds:$(MDIR)/u1ftensor:$(MDIR)/dft:lib
+			 $(MDIR)/u1flds:$(MDIR)/u1ftensor:$(MDIR)/dft:$(MDIR)/cstates:lib
 
 
 # additional include directories

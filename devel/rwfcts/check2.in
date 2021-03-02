@@ -40,6 +40,7 @@ res          1.0e-14
 solver       DFL_SAP_GCR
 nkv          16
 isolv        1
+idfl         0
 nmr          4
 ncy          5
 nmx          24

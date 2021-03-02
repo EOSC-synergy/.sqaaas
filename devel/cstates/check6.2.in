@@ -1,0 +1,41 @@
+
+[Gauge configuration]
+type         cold
+
+[Boundary conditions]
+type         open
+cstar        2
+
+[Correlators]
+nfl          2
+
+[Flavour 0]
+kappa        0.105
+mu           0.0
+qhat         -4
+u1csw        1.0
+cF           0.5
+cF'          0.6
+
+[Flavour 1]
+kappa        0.111
+mu           0.0
+qhat         2
+u1csw        1.0
+cF           0.5
+cF'          0.6
+
+[Source fields]
+x0           1
+
+[Solver 0]
+solver       SAP_GCR
+nkv          16
+isolv        1
+nmr          4
+ncy          5
+nmx          128
+res          1.0e-15
+
+[SAP]
+bs           4 4 4 4

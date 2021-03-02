@@ -500,15 +500,18 @@ void write_dfl_parms(FILE *fdat)
    
    for(idfl=0;idfl<DFLMAX;idfl++)
    {
-      write_little_int(1,fdat,5,dfl_gen[idfl].status,
-         dfl_gen[idfl].ninv,dfl_gen[idfl].nmr,dfl_gen[idfl].ncy,
-         dfl_gen[idfl].dp.qhat);
-      
-      write_little_dble(1,fdat,9,
-         dfl_gen[idfl].kappa,dfl_gen[idfl].mu,dfl_gen[idfl].dp.su3csw,
-         dfl_gen[idfl].dp.u1csw,dfl_gen[idfl].dp.cF[0],dfl_gen[idfl].dp.cF[1],
-         dfl_gen[idfl].dp.theta[0],dfl_gen[idfl].dp.theta[1],
-         dfl_gen[idfl].dp.theta[2]);
+      if (dfl_gen[idfl].status==DFL_DEF)
+      {
+         write_little_int(1,fdat,5,idfl,
+            dfl_gen[idfl].ninv,dfl_gen[idfl].nmr,dfl_gen[idfl].ncy,
+            dfl_gen[idfl].dp.qhat);
+         
+         write_little_dble(1,fdat,9,
+            dfl_gen[idfl].kappa,dfl_gen[idfl].mu,dfl_gen[idfl].dp.su3csw,
+            dfl_gen[idfl].dp.u1csw,dfl_gen[idfl].dp.cF[0],dfl_gen[idfl].dp.cF[1],
+            dfl_gen[idfl].dp.theta[0],dfl_gen[idfl].dp.theta[1],
+            dfl_gen[idfl].dp.theta[2]);
+      }
    }
 }
 
@@ -525,15 +528,18 @@ void check_dfl_parms(FILE *fdat)
    
    for(idfl=0;idfl<DFLMAX;idfl++)
    {
-      check_little_int("check_dfl_parms",fdat,5,dfl_gen[idfl].status,
-         dfl_gen[idfl].ninv,dfl_gen[idfl].nmr,dfl_gen[idfl].ncy,
-         dfl_gen[idfl].dp.qhat);
-      
-      check_little_dble("check_dfl_parms",fdat,9,
-         dfl_gen[idfl].kappa,dfl_gen[idfl].mu,dfl_gen[idfl].dp.su3csw,
-         dfl_gen[idfl].dp.u1csw,dfl_gen[idfl].dp.cF[0],dfl_gen[idfl].dp.cF[1],
-         dfl_gen[idfl].dp.theta[0],dfl_gen[idfl].dp.theta[1],
-         dfl_gen[idfl].dp.theta[2]);
+      if (dfl_gen[idfl].status==DFL_DEF)
+      {
+         check_little_int("check_dfl_parms",fdat,5,idfl,
+            dfl_gen[idfl].ninv,dfl_gen[idfl].nmr,dfl_gen[idfl].ncy,
+            dfl_gen[idfl].dp.qhat);
+         
+         check_little_dble("check_dfl_parms",fdat,9,
+            dfl_gen[idfl].kappa,dfl_gen[idfl].mu,dfl_gen[idfl].dp.su3csw,
+            dfl_gen[idfl].dp.u1csw,dfl_gen[idfl].dp.cF[0],dfl_gen[idfl].dp.cF[1],
+            dfl_gen[idfl].dp.theta[0],dfl_gen[idfl].dp.theta[1],
+            dfl_gen[idfl].dp.theta[2]);
+      }
    }
 }
 

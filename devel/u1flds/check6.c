@@ -66,6 +66,7 @@ int main(int argc,char *argv[])
    static double asl1[N0],asl2[N0];
    double su3phi[2],su3phi_prime[2];
    double u1phi,u1phi_prime;
+   double qel;
    double act1,nplaq1,nplaq2,p1,p2;
    double d1,d2,d3;
    FILE *flog=NULL;
@@ -116,6 +117,10 @@ int main(int argc,char *argv[])
    }
    set_bc_parms(bc,cs,su3phi,su3phi_prime,u1phi,u1phi_prime);
    print_bc_parms();
+
+   qel=1.111;
+   set_u1lat_parms(0,4.348,1.0/qel,0.0,7.0,0.0,0.0,0);
+   print_lat_parms();
 
    start_ranlux(0,12345);
    geometry();
@@ -186,7 +191,7 @@ int main(int argc,char *argv[])
    {
       printf("Comparison of plaq_wsum_dble() with plaq_action_slices():\n");
       printf("Absolute difference of total action = %.1e\n",
-             fabs(nplaq2-0.5*act1-p2));
+             fabs(nplaq2-qel*qel*act1-p2));
       if ((bc==0)||(bc==3))
          printf("Deviation from sum of action slices = %.1e\n\n",
                 fabs(d1));

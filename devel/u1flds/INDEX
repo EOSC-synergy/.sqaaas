@@ -16,7 +16,7 @@ check6        Check of the programs for the plaquette sums of the
 
 check7        Check of the program set_u1_bstap().
 
-check8        Renurmalization the noncompact U(1) field.
+check8        Renormalization the noncompact U(1) field.
 
 All programs accept the option -bc <type> that allows the type of boundary
 condition to be chosen. When the option is not set, open boundary conditions

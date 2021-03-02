@@ -286,8 +286,8 @@ int main(int argc,char *argv[])
 {
    int my_rank,bc,cs,nsize,ie,gg,ir;
    double phi[2],phi_prime[2];
-   su3_dble *udb,**usv;
-   double *adb,**asv;
+   su3_dble *udb=NULL,**usv=NULL;
+   double *adb=NULL,**asv=NULL;
    char loc_dir[NAME_SIZE],cnfg[NAME_SIZE];
    FILE *flog=NULL,*fin=NULL;
    int cnfg_type;

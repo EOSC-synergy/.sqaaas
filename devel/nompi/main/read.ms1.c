@@ -518,12 +518,12 @@ static void print_plot(char *fin)
    fprintf(fout,"#  nc");
 
    for (irw=0;irw<nrw;irw++)
-      fprintf(fout,"       W[%d] ",irw);
+      fprintf(fout,"                 W[%d] ",irw);
 
    if (nrw==1)
       fprintf(fout,"\n");
    else
-      fprintf(fout,"       W[all]\n");
+      fprintf(fout,"                 W[all]\n");
 
    fprintf(fout,"#\n");
 
@@ -532,12 +532,12 @@ static void print_plot(char *fin)
       fprintf(fout," %5d  ",first+ims*step);
 
       for (irw=0;irw<nrw;irw++)
-         fprintf(fout,"  %.4e",avrw[irw][0][ims]);
+         fprintf(fout,"  %.14e",avrw[irw][0][ims]);
 
       if (nrw==1)
          fprintf(fout,"\n");
       else
-         fprintf(fout,"  %.4e\n",avtot[ims]);
+         fprintf(fout,"  %.14e\n",avtot[ims]);
    }
 
    fclose(fout);

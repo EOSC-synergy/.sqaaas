@@ -231,10 +231,8 @@ static double check_cstar_ad(void)
 
 int main(int argc,char *argv[])
 {
-   su3_dble *udb;
-   double *adb;
    int my_rank,bc,nsize,ie,cnfg_type,cs,gg,itest;
-   long long int ir,n0,n1,n2,n3,ix,globvol;
+   long long int ir=0,n0,n1,n2,n3,ix,globvol;
    stdint_t l[4];
    double phi[2],phi_prime[2],eps;
    double su3plaq0=0.0,su3plaq1=0.0,su3plaq2=0.0,u1plaq0=0.0,u1plaq1=0.0,u1plaq2=0.0;
@@ -309,13 +307,13 @@ int main(int argc,char *argv[])
    su3plaq0=u1plaq0=0.0;
    if ((gauge()&1)!=0)
    {
-      udb=udfld();
+      udfld();
       random_ud();
       su3plaq0=avg_su3_plaq();
    }
    if ((gauge()&2)!=0)
    {
-      adb=adfld();
+      adfld();
       random_ad();
       u1plaq0=avg_u1_plaq();
    }

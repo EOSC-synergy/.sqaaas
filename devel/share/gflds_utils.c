@@ -632,3 +632,77 @@ void transform_gflds(void)
    if((gauge()&2)!=0)
       transform_ad();
 }
+
+
+
+static void cstar_su3_dble(int vol,su3_dble* u)
+{
+  su3_dble *um; 
+
+  um=u+vol;
+  for (;u<um;u++)
+  {    
+     (*u).c11.im *= -1.0;
+     (*u).c12.im *= -1.0;
+     (*u).c13.im *= -1.0;
+     (*u).c21.im *= -1.0;
+     (*u).c22.im *= -1.0;
+     (*u).c23.im *= -1.0;
+     (*u).c31.im *= -1.0;
+     (*u).c32.im *= -1.0;
+     (*u).c33.im *= -1.0;
+  }
+}
+
+
+static void cstar_double(int vol,double* ad)
+{
+  double *am; 
+
+  am=ad+vol;
+  for (;ad<am;ad++)  (*ad) *= -1.0;
+}
+
+
+void orbi_cpy_g(void)
+{
+   int mirror, tag;
+   MPI_Status stat;
+   double *g1x;
+   su3_dble *g3x;
+   
+   if(bc_cstar()>0)
+   {
+      
+      if((gauge()&1)!=0)
+      {
+         g3x=g3tr();
+         mirror=get_mirror_rank();
+         tag=mpi_tag();
+         if(cpr[1]<NPROC1/2) {
+            MPI_Send(g3x,18*VOLUME,MPI_DOUBLE,mirror,tag,MPI_COMM_WORLD);
+         } else {
+            MPI_Recv(g3x,18*VOLUME,MPI_DOUBLE,mirror,tag,MPI_COMM_WORLD,&stat);
+            cstar_su3_dble(VOLUME,g3x);
+         }
+         if (BNDRY>0)
+            pack_and_send_g3buf();
+      }
+      
+      if((gauge()&2)!=0)
+      {
+         g1x=g1tr();
+         mirror=get_mirror_rank();
+         tag=mpi_tag();
+         if(cpr[1]<NPROC1/2) {
+            MPI_Send(g1x,VOLUME,MPI_DOUBLE,mirror,tag,MPI_COMM_WORLD);
+         } else {
+            MPI_Recv(g1x,VOLUME,MPI_DOUBLE,mirror,tag,MPI_COMM_WORLD,&stat);
+            cstar_double(VOLUME,g1x);
+         }
+         if (BNDRY>0)
+            pack_and_send_g1buf();
+      }
+      
+   }
+}

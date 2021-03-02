@@ -185,11 +185,11 @@ static void read_file(char *fin)
          }
       }
 
-      for (in=0;in<=nn;in++)
+      for (pl=0;pl<6;pl++)
       {
-         for (t=0;t<tmax;t++)
+         for (in=0;in<=nn;in++)
          {
-            for (pl=0;pl<6;pl++)
+            for (t=0;t<tmax;t++)
             {
                adat[id].Fsl[pl][in][t]=(*p);
                p++;

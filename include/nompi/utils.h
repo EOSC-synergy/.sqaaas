@@ -16,7 +16,7 @@
 #include <limits.h>
 #include <float.h>
 
-#define NAME_SIZE 128
+#define NAME_SIZE 1024
 
 #if ((DBL_MANT_DIG!=53)||(DBL_MIN_EXP!=-1021)||(DBL_MAX_EXP!=1024))
 #error : Machine is not compliant with the IEEE-754 standard

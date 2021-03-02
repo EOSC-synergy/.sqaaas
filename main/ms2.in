@@ -12,57 +12,92 @@ first        1
 last         2
 step         1
 
-[Gauge group]
-gauge        SU(3)xU(1)
-
 [Boundary conditions]
-type         open-SF
-cstar        1
-su3phi       0.12 -0.56
-u1phi        1.43
+type         periodic
+cstar        3
 
-[Dirac operator]
+[Field parameters]
+gauge        SU(3)xU(1)
+nfl          3
+
+[Flavour 0]
+qhat         4
+kappa        0.135560
+su3csw       2.18859
+u1csw        1.0
+
+[Flavour 1]
 qhat         -2
-kappa        0.128
-su3csw       1.234
-u1csw        -0.66667
-cF           0.95
-cF'          0.90
+kappa        0.134617
+su3csw       2.18859
+u1csw        1.0
+
+[Flavour 2]
+qhat         4
+kappa        0.129583
+su3csw       2.18859
+u1csw        1.0
+
 
 [Power method]
-np_ra        20
-np_rb        100
+np_ra        15 30
+np_rb        30 60
+
 
 [Solver 0]
 solver       DFL_SAP_GCR
-nkv          16
+nkv          24
 isolv        1
 nmr          4
 ncy          5
-nmx          128
+nmx          10000
 idfl         0
-res          1.0e-8
+res          1.0e-10
+
+[Solver 1]
+solver       DFL_SAP_GCR
+nkv          24
+isolv        1
+nmr          4
+ncy          5
+nmx          10000
+idfl         1
+res          1.0e-10
+
+[Solver 2]
+solver       CGNE
+nmx          10000
+res          1.0e-10
+
 
 [SAP]
-bs           8 4 4 4
+bs           4 4 4 4
 
 [Deflation subspace]
 bs           4 4 4 4
-Ns           28
+Ns           20
 
 [Deflation subspace generation 0]
+mu           0.001
+qhat         4
+kappa        0.135560
+su3csw       2.18859
+u1csw        1.0
+ninv         9
+nmr          4
+ncy          4
+
+[Deflation subspace generation 1]
+mu           0.001
 qhat         -2
-kappa        0.13635
-mu           0.005
-su3csw       1.234
-u1csw        0.89
-cF           0.95
-cF'          0.90
-ninv         10
+kappa        0.134617
+su3csw       2.18859
+u1csw        1.0
+ninv         9
 nmr          4
 ncy          4
 
 [Deflation projection]
-nkv          24
+nkv          16
 nmx          512
 res          1.0e-2

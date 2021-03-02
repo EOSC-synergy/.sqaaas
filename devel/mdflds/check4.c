@@ -375,7 +375,7 @@ static void Gop(double *mdf,int flag)
          }
       }
    }
-   else if((bc==0)&&(cpr[0]==NPROC0-1))
+   if((bc==0)&&(cpr[0]==NPROC0-1))
    {
       for(ix=VOLUME/2;ix<VOLUME;ix++)
       {

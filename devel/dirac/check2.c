@@ -109,7 +109,7 @@ static spinor mul_gamma(int mu,spinor s)
 
 int main(int argc,char *argv[])
 {
-   int my_rank,bc,cf,q;
+   int my_rank,bc,cs,cf,q;
    int n,i,ix,nu,x0,x1,x2,x3;
    int np[4],bo[4];
    float ran[4];
@@ -143,13 +143,19 @@ int main(int argc,char *argv[])
 
       if (bc!=0)
          error_root(sscanf(argv[bc+1],"%d",&bc)!=1,1,"main [check2.c]",
-                    "Syntax: check2 [-bc <type>] [-gg <gauge>] [-q <echarge>]");
+                    "Syntax: check2 [-bc <type>] [-cs <cstar>] [-gg <gauge>] [-q <echarge>]");
+
+      cs=find_opt(argc,argv,"-cs");
+
+      if (cs!=0)
+         error_root(sscanf(argv[cs+1],"%d",&cs)!=1,1,"main [check2.c]",
+                    "Syntax: check2 [-bc <type>] [-cs <cstar>] [-gg <gauge>] [-q <echarge>]");
 
       cf=find_opt(argc,argv,"-gg");
 
       if (cf!=0)
          error_root(sscanf(argv[cf+1],"%d",&cf)!=1,1,"main [check2.c]",
-                  "Syntax: check2 [-bc <type>] [-gg <gauge>] [-q <echarge>]");
+                  "Syntax: check2 [-bc <type>] [-cs <cstar>] [-gg <gauge>] [-q <echarge>]");
       else
          cf=1;
 
@@ -158,7 +164,7 @@ int main(int argc,char *argv[])
       if (q!=0)
       {
          error_root(sscanf(argv[q+1],"%d",&q)!=1,1,"main [check2.c]",
-                  "Syntax: check2 [-bc <type>] [-gg <gauge>] [-q <echarge>]");
+                  "Syntax: check2 [-bc <type>] [-cs <cstar>] [-gg <gauge>] [-q <echarge>]");
       }
       else
          q=-3;
@@ -171,11 +177,12 @@ int main(int argc,char *argv[])
    if(gauge()==1) q=0;
 
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
+   MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
    phi[0]=0.0;
    phi[1]=0.0;
    phi_prime[0]=0.0;
    phi_prime[1]=0.0;
-   set_bc_parms(bc,0,phi,phi_prime,0.0,0.0);
+   set_bc_parms(bc,cs,phi,phi_prime,0.0,0.0);
    print_bc_parms();
 
    start_ranlux(0,12345);
@@ -229,8 +236,14 @@ int main(int argc,char *argv[])
       else
          p[0]=(float)(np[0])*pi/(float)(NPROC0*L0);
       p[1]=(float)(np[1])*2.0f*pi/(float)(NPROC1*L1);
-      p[2]=(float)(np[2])*2.0f*pi/(float)(NPROC2*L2);
-      p[3]=(float)(np[3])*2.0f*pi/(float)(NPROC3*L3);
+      if((bc_cstar()<2)||(np[1]%2==0))
+         p[2]=(double)(np[2])*2.0*pi/(double)(NPROC2*L2);
+      else
+         p[2]=(double)(2*np[2]+1)*pi/(double)(NPROC2*L2);
+      if((bc_cstar()<3)||(np[1]%2==0))
+         p[3]=(double)(np[3])*2.0*pi/(double)(NPROC3*L3);
+      else
+         p[3]=(double)(2*np[3]+1)*pi/(double)(NPROC3*L3);
 
       random_s(1,&rs,1.0f);
 

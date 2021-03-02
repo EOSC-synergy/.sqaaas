@@ -41,6 +41,7 @@ int main(int argc,char *argv[])
    int my_rank,t,bc,cs,size;
    double su3phi[2],su3phi_prime[2];
    double u1phi,u1phi_prime;
+   double qel;
    complex_dble *u1d,*u1db,*u1dm;
    su3_dble *ud;
    double u1plaq,u3plaq,u1sl[N0],u3sl[N0];
@@ -88,6 +89,10 @@ int main(int argc,char *argv[])
    u1phi_prime=-1.827;
    set_bc_parms(bc,cs,su3phi,su3phi_prime,u1phi,u1phi_prime);
    print_bc_parms();
+
+   qel=1.111;
+   set_u1lat_parms(0,4.348,1.0/qel,0.0,7.0,0.0,0.0,0);
+   print_lat_parms();
 
    start_ranlux(0,12345);
    geometry();
@@ -164,7 +169,7 @@ int main(int argc,char *argv[])
    dmax=0.0;
    for (t=0;t<N0;t++)
    {
-      d=fabs(u1sl[t]-u3sl[t]/3.);
+      d=fabs(2.*qel*qel*u1sl[t]-u3sl[t]/3.);
       if (d>dmax)
          dmax=d;
    }
@@ -175,7 +180,7 @@ int main(int argc,char *argv[])
       printf("Consistency between u1_plaq_action_slices and plaq_action_slices, dev = %.2e\n",dmax_all);
    }
    
-   dmax=fabs(u1plaq-u3plaq/3.);
+   dmax=fabs(2.*qel*qel*u1plaq-u3plaq/3.);
    dmax_all=dmax;
 
    if (my_rank==0)

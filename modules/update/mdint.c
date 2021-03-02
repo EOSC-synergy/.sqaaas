@@ -61,8 +61,8 @@
 #define N3 (NPROC3*L3)
 
 static int nsm;
-static double rtau,dtau;
-
+static int dflmax=0;
+static double dtau,*rtau=NULL;
 
 static void chk_mode_regen(int isp,int *status)
 {
@@ -569,11 +569,30 @@ static void update_ad(double eps)
 static void start_dfl_upd(void)
 {
    dfl_upd_parms_t dup;
+   int idfl;
+   dflst_t status;
 
    dup=dfl_upd_parms();
    dtau=dup.dtau;
    nsm=dup.nsm;
-   rtau=0.0;
+
+   dflmax=0;
+   while(1)
+   {
+      status=dfl_gen_parms(dflmax).status;
+      if(status==DFL_OUTOFRANGE) break;
+      dflmax++;
+   }
+   
+   if(dflmax>0)
+   {
+      rtau=malloc(dflmax*sizeof(double));
+      error_root(rtau==NULL,1,"start_dfl_upd [mdint.c]",
+                 "Unable to allocate auxiliary array");
+      
+      for(idfl=0;idfl<dflmax;idfl++)
+         rtau[idfl]=0.0;
+   }
 }
 
 
@@ -582,11 +601,11 @@ static void dfl_upd(int isp)
    int status[2];
    solver_parms_t sp;
 
-   if ((nsm>0)&&(rtau>dtau))
-   {
-      sp=solver_parms(isp);
+   sp=solver_parms(isp);
 
-      if (sp.solver==DFL_SAP_GCR)
+   if (sp.solver==DFL_SAP_GCR)
+   {
+      if ((nsm>0)&&(rtau[sp.idfl]>dtau))
       {
          dfl_update2(sp.idfl,nsm,status);
          error_root((status[1]<0)||((status[1]==0)&&(status[0]<0)),1,
@@ -598,7 +617,7 @@ static void dfl_upd(int isp)
          else
             add2counter("modes",2+3*sp.idfl,status+1);
 
-         rtau=0.0;
+         rtau[sp.idfl]=0.0;
       }
    }
 }
@@ -608,7 +627,7 @@ static void dfl_upd(int isp)
 void run_mdint(void)
 {
    int my_rank,nop;
-   int iop,status[6],isym;
+   int iop,status[6],isym,idfl;
    double *mu,eps,nlk,nrm;
    mdflds_t *mdfs;
    mdstep_t *s,*sm;
@@ -701,30 +720,30 @@ void run_mdint(void)
 
          if((gauge()&1)!=0)
          {
-            update_su3mom(isym);
             nrm=norm_square_alg(4*VOLUME,1,(*mdfs).su3frc);
             nrm=sqrt(nrm/nlk);
+            update_su3mom(isym);
 
             if (my_rank==0)
             {
                if (fp.force==FRG_SU3)
-                  printf("SU(3) Force FRG_SU3:          ");
+                  printf("SU(3) Force %2d FRG_SU3:          ",iop);
                else if (fp.force==FRF_TM1)
-                  printf("SU(3) Force FRF_TM1:          ");
+                  printf("SU(3) Force %2d FRF_TM1:          ",iop);
                else if (fp.force==FRF_TM1_EO)
-                  printf("SU(3) Force FRF_TM1_EO:       ");
+                  printf("SU(3) Force %2d FRF_TM1_EO:       ",iop);
                else if (fp.force==FRF_TM1_EO_SDET)
-                  printf("SU(3) Force FRF_TM1_EO_SDET:  ");
+                  printf("SU(3) Force %2d FRF_TM1_EO_SDET:  ",iop);
                else if (fp.force==FRF_TM2)
-                  printf("SU(3) Force FRF_TM2:          ");
+                  printf("SU(3) Force %2d FRF_TM2:          ",iop);
                else if (fp.force==FRF_TM2_EO)
-                  printf("SU(3) Force FRF_TM2_EO:       ");
+                  printf("SU(3) Force %2d FRF_TM2_EO:       ",iop);
                else if (fp.force==FRF_RAT)
-                  printf("SU(3) Force FRF_RAT:          ");
+                  printf("SU(3) Force %2d FRF_RAT:          ",iop);
                else if (fp.force==FRF_RAT_SDET)
-                  printf("SU(3) Force FRF_RAT_SDET:     ");
+                  printf("SU(3) Force %2d FRF_RAT_SDET:     ",iop);
                else if (fp.force==FRG_U1)
-                  printf("SU(3) Force FRG_U1:         ");
+                  printf("SU(3) Force %2d FRG_U1:           ",iop);
 
                printf("nrm = %.2e, eps = % .2e, nrm*|eps| = %.2e, "
                       "time = %.2e sec\n",nrm/fabs(eps),eps,nrm,wt2-wt1);
@@ -740,23 +759,23 @@ void run_mdint(void)
             if (my_rank==0)
             {
                if (fp.force==FRG_SU3)
-                  printf("U(1) Force FRG_SU3:          ");
+                  printf("U(1) Force %2d FRG_SU3:          ",iop);
                else if (fp.force==FRF_TM1)
-                  printf("U(1) Force FRF_TM1:          ");
+                  printf("U(1) Force %2d FRF_TM1:          ",iop);
                else if (fp.force==FRF_TM1_EO)
-                  printf("U(1) Force FRF_TM1_EO:       ");
+                  printf("U(1) Force %2d FRF_TM1_EO:       ",iop);
                else if (fp.force==FRF_TM1_EO_SDET)
-                  printf("U(1) Force FRF_TM1_EO_SDET:  ");
+                  printf("U(1) Force %2d FRF_TM1_EO_SDET:  ",iop);
                else if (fp.force==FRF_TM2)
-                  printf("U(1) Force FRF_TM2:          ");
+                  printf("U(1) Force %2d FRF_TM2:          ",iop);
                else if (fp.force==FRF_TM2_EO)
-                  printf("U(1) Force FRF_TM2_EO:       ");
+                  printf("U(1) Force %2d FRF_TM2_EO:       ",iop);
                else if (fp.force==FRF_RAT)
-                  printf("U(1) Force FRF_RAT:          ");
+                  printf("U(1) Force %2d FRF_RAT:          ",iop);
                else if (fp.force==FRF_RAT_SDET)
-                  printf("U(1) Force FRF_RAT_SDET:     ");
+                  printf("U(1) Force %2d FRF_RAT_SDET:     ",iop);
                else if (fp.force==FRG_U1)
-                  printf("U(1) Force FRG_U1:         ");
+                  printf("U(1) Force %2d FRG_U1:           ",iop);
 
                printf("nrm = %.2e, eps = % .2e, nrm*|eps| = %.2e, "
                       "time = %.2e sec\n",nrm/fabs(eps),eps,nrm,wt2-wt1);
@@ -769,7 +788,8 @@ void run_mdint(void)
          su3mdt+=eps;
          dt=su3mdt-mdtime();
          step_mdtime(dt);
-         rtau+=dt;
+         for(idfl=0;idfl<dflmax;idfl++)
+            rtau[idfl]+=dt;
       }
       else if (iop==U1UPDATE)
       {
@@ -777,7 +797,8 @@ void run_mdint(void)
          u1mdt+=eps;
          dt=u1mdt-mdtime();
          step_mdtime(dt);
-         rtau+=dt;
+         for(idfl=0;idfl<dflmax;idfl++)
+            rtau[idfl]+=dt;
       }
    }
 }
@@ -787,7 +808,7 @@ void run_mdint(void)
 void run_mdint(void)
 {
    int nop;
-   int iop,status[6];
+   int iop,status[6],idfl;
    int isym1,isym3;
    double *mu,eps;
    mdstep_t *s,*sm;
@@ -867,7 +888,8 @@ void run_mdint(void)
          su3mdt+=eps;
          dt=su3mdt-mdtime();
          step_mdtime(dt);
-         rtau+=dt;
+         for(idfl=0;idfl<dflmax;idfl++)
+            rtau[idfl]+=dt;
       }
       else if (iop==U1UPDATE)
       {
@@ -876,7 +898,8 @@ void run_mdint(void)
          u1mdt+=eps;
          dt=u1mdt-mdtime();
          step_mdtime(dt);
-         rtau+=dt;
+         for(idfl=0;idfl<dflmax;idfl++)
+            rtau[idfl]+=dt;
       }
       else
       {

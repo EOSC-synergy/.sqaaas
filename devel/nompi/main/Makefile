@@ -19,7 +19,7 @@ all: rmxeq mkdep mkxeq
 
 # main programs and required modules
 
-MAIN = read.iso1 read.qcd1 read.ms1 read.ms3 read.ms5 read.ms6
+MAIN = read.iso1 read.qcd1 read.ms1 read.ms3 read.ms5
 
 EXTRAS = stat
 

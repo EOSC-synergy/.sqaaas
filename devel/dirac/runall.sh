@@ -6,7 +6,8 @@ NAME=dirac
 
 ALL="1 2 3 4 5 6 7 8 9"
 WITHBC="1 2 3 4 5 6 7 8 9"
-WITHCF="1 2 3 4 5 6 7 8 9"
+WITHGG="1 2 3 4 5 6 7 8 9"
+WITHCS="1 2 3 4 5 6 7 8 9"
 
 
 if [ $# -ne 1 ] ; then
@@ -51,36 +52,69 @@ cd `dirname $0`
 
 for CN in $ALL ; do
    bc[$CN]=0
-   cf[$CN]=0
+   gg[$CN]=0
+   cs[$CN]=0
 done
 
 for CN in $WITHBC ; do
    bc[$CN]=1
 done
 
-for CN in $WITHCF ; do
-   cf[$CN]=1
+for CN in $WITHGG ; do
+   gg[$CN]=1
+done
+
+for CN in $WITHCS ; do
+   cs[$CN]=1
 done
 
 for CN in $ALL ; do
-   if [ ${bc[$CN]} -eq 1 ] && [ ${cf[$CN]} -eq 1 ] ; then
+   if [ ${bc[$CN]} -eq 1 ] && [ ${gg[$CN]} -eq 1 ] && [ ${cs[$CN]} -eq 1 ] ; then
       for BC in 0 1 2 3 ; do
-         for FL in 1 2 3 ; do
-            $MPIRUN -np ${NPROC} ./check${CN} -bc ${BC} -gg ${FL}
-            mv check${CN}.log ${LDIR}/check${CN}-bc${BC}-gg${FL}-np${NPROC}.log
+         for GG in 1 2 3 ; do
+            for CS in 0 1 2 3 ; do
+               $MPIRUN -np ${NPROC} ./check${CN} -bc ${BC} -gg ${GG} -cs ${CS}
+               mv check${CN}.log ${LDIR}/check${CN}-bc${BC}-gg${GG}-cs${CS}-np${NPROC}.log
+            done
          done
       done
-   elif [ ${bc[$CN]} -eq 1 ] && [ ${cf[$CN]} -eq 0 ] ; then
+   elif [ ${bc[$CN]} -eq 1 ] && [ ${gg[$CN]} -eq 0 ] && [ ${cs[$CN]} -eq 1 ] ; then
+      for BC in 0 1 2 3 ; do
+         for CS in 0 1 2 3 ; do
+            $MPIRUN -np ${NPROC} ./check${CN} -bc ${BC} -cs ${CS}
+            mv check${CN}.log ${LDIR}/check${CN}-bc${BC}-cs${CS}-np${NPROC}.log
+         done
+      done
+   elif [ ${bc[$CN]} -eq 0 ] && [ ${gg[$CN]} -eq 1 ] && [ ${cs[$CN]} -eq 1 ] ; then
+      for GG in 1 2 3 ; do
+         for CS in 0 1 2 3 ; do
+            $MPIRUN -np ${NPROC} ./check${CN} -gg ${GG} -cs ${CS}
+            mv check${CN}.log ${LDIR}/check${CN}-gg${GG}-cs${CS}-np${NPROC}.log
+         done
+      done
+   elif [ ${bc[$CN]} -eq 0 ] && [ ${gg[$CN]} -eq 0 ] && [ ${cs[$CN]} -eq 1 ] ; then
+      for CS in 0 1 2 3 ; do
+         $MPIRUN -np ${NPROC} ./check${CN} -cs ${CS}
+         mv check${CN}.log ${LDIR}/check${CN}-cs${CS}-np${NPROC}.log
+      done
+   elif [ ${bc[$CN]} -eq 1 ] && [ ${gg[$CN]} -eq 1 ] && [ ${cs[$CN]} -eq 0 ] ; then
+      for BC in 0 1 2 3 ; do
+         for GG in 1 2 3 ; do
+            $MPIRUN -np ${NPROC} ./check${CN} -bc ${BC} -gg ${GG}
+            mv check${CN}.log ${LDIR}/check${CN}-bc${BC}-gg${GG}-np${NPROC}.log
+         done
+      done
+   elif [ ${bc[$CN]} -eq 1 ] && [ ${gg[$CN]} -eq 0 ] && [ ${cs[$CN]} -eq 0 ] ; then
       for BC in 0 1 2 3 ; do
          $MPIRUN -np ${NPROC} ./check${CN} -bc ${BC}
          mv check${CN}.log ${LDIR}/check${CN}-bc${BC}-np${NPROC}.log
       done
-   elif [ ${bc[$CN]} -eq 0 ] && [ ${cf[$CN]} -eq 1 ] ; then
-      for FL in 1 2 3 ; do
-         $MPIRUN -np ${NPROC} ./check${CN} -gg ${FL}
-         mv check${CN}.log ${LDIR}/check${CN}-gg${FL}-np${NPROC}.log
+   elif [ ${bc[$CN]} -eq 0 ] && [ ${gg[$CN]} -eq 1 ] && [ ${cs[$CN]} -eq 0 ] ; then
+      for GG in 1 2 3 ; do
+         $MPIRUN -np ${NPROC} ./check${CN} -gg ${GG}
+         mv check${CN}.log ${LDIR}/check${CN}-gg${GG}-np${NPROC}.log
       done
-   elif [ ${bc[$CN]} -eq 0 ] && [ ${cf[$CN]} -eq 0 ] ; then
+   elif [ ${bc[$CN]} -eq 0 ] && [ ${gg[$CN]} -eq 0 ] && [ ${cs[$CN]} -eq 0 ] ; then
       $MPIRUN -np ${NPROC} ./check${CN}
       mv check${CN}.log ${LDIR}/check${CN}-np${NPROC}.log
    fi

@@ -143,7 +143,7 @@ extern double dfl_sap_gcr2_rcp(int idfl,int nkv,int nmx,double res,double mu,
 #define sap_gcr sap_gcr_rcp
 #define dfl_sap_gcr2 dfl_sap_gcr2_rcp
 
-double get_rwrat_precition_limit(void)
+double get_rwrat_precision_limit(void)
 {
    return PRECISION_LIMIT;
 }
@@ -230,8 +230,8 @@ static void apply_Rk(int np,int isp,double *mu,double *rmu,
          sap_gcr(sp.nkv,sp.nmx,sp.res,-mu[k],rsd[0],rsd[1],stat+1);
 
          error_root((stat[0]<0)||(stat[1]<0),1,"apply_Rk [rwrat.c]",
-                    "SAP_GCR solver failed (isp=%d, status=%d;%d)",
-                    isp,stat[0],stat[1]);
+                    "SAP_GCR solver failed (isp=%d, mu=%e, status=%d;%d)",
+                    isp,mu[k],stat[0],stat[1]);
 
          status[0]+=stat[0];
          status[0]+=stat[1];
@@ -264,8 +264,8 @@ static void apply_Rk(int np,int isp,double *mu,double *rmu,
 
          error_root((stat[0]<0)||(stat[1]<0)||(stat[3]<0)||(stat[4]<0),1,
                     "apply_Rk [rwrat.c]","DFL_SAP_GCR solver failed (isp=%d, "
-                    "status=%d,%d,%d;%d,%d,%d)",isp,stat[0],stat[1],
-                    stat[2],stat[3],stat[4],stat[5]);
+                    "mu=%e, status=%d,%d,%d;%d,%d,%d)",isp,mu[k],stat[0],
+                    stat[1],stat[2],stat[3],stat[4],stat[5]);
 
          for (l=0;l<3;l++)
          {
@@ -327,32 +327,102 @@ static void apply_R(int n,int *np,int *isp,ratfct_t *rf,
 }
 
 
+
+/*******************************************************************************
+psi = A (1 + sum_k S(k)) eta
+*******************************************************************************/
+static void apply_S(int n,int *np,int *isp,ratfct_t *rf,
+                      spinor_dble *eta,spinor_dble *psi,int **status)
+{
+   int k,l,stat[3];
+   double nu0,*mu,*rmu,*smu,*mem;
+   solver_parms_t sp;
+
+   nu0=(*rf).nu[0];
+   mu=(*rf).mu;
+   rmu=(*rf).rmu;
+   
+   mem=malloc(sizeof(double)*(*rf).np);
+   error(mem==NULL,1,"apply_Q2R [rwrat.c]",
+         "Unable to allocate auxiliary array");
+
+   smu=mem;
+   for (k=0;k<(*rf).np;k++)
+   {
+      smu[k]=rmu[k]*mu[k]*mu[k]/(mu[k]*mu[k]-nu0*nu0);
+   }
+   
+   assign_sd2sd(VOLUME/2,eta,psi);
+
+   for (k=0;k<n;k++)
+   {
+      apply_Rk(np[k],isp[k],mu,smu,eta,psi,stat);
+      sp=solver_parms(isp[k]);
+
+      if (sp.solver==DFL_SAP_GCR)
+      {
+         for (l=0;l<2;l++)
+            status[k][l]+=stat[l];
+
+         status[k][2]+=(stat[2]!=0);
+      }
+      else
+         status[k][0]+=stat[0];
+
+      mu+=np[k];
+      smu+=np[k];
+   }
+
+   scale_dble(VOLUME/2,(*rf).A,psi);
+   
+   free(mem);
+}
+
+
 /*******************************************************************************
 Q = g5 Dwhat
-psi = [R^(2b) Q^(2a) - 1] eta
+psi = [R^v Q^(2u) - 1] eta
 *******************************************************************************/
-static void apply_Z(double mu0,int n,int *np,int *isp,int a,int b,ratfct_t *rf,
+static void apply_Z(int n,int *np,int *isp,int u,int v,ratfct_t *rf,
                     spinor_dble *eta,spinor_dble *psi,int **status)
 {
    int k;
    spinor_dble **wsd;
+   double nu0;
 
+   nu0=(*rf).nu[0];
    wsd=reserve_wsd(1);
 
    assign_sd2sd(VOLUME/2,eta,psi);
    
-   for (k=0;k<b;k++)
+   for (k=0;k<(v-u)/2;k++)
    {
       apply_R(n,np,isp,rf,psi,wsd[0],status);
       apply_R(n,np,isp,rf,wsd[0],psi,status);
    }
+   if((v-u)%2==1)
+   {
+      apply_R(n,np,isp,rf,psi,wsd[0],status);
+      assign_sd2sd(VOLUME/2,wsd[0],psi);
+   }
+
+   for (k=0;k<u/2;k++)
+   {
+      apply_S(n,np,isp,rf,psi,wsd[0],status);
+      apply_S(n,np,isp,rf,wsd[0],psi,status);
+   }
+   if(u%2==1)
+   {
+      apply_S(n,np,isp,rf,psi,wsd[0],status);
+      assign_sd2sd(VOLUME/2,wsd[0],psi);
+   }
 
    sw_term(ODD_PTS);
-   for (k=0;k<a;k++)
+   for (k=0;k<u;k++)
    {
-      Dwhat_dble(mu0,psi,wsd[0]);
+      Dwhat_dble(nu0,psi,wsd[0]);
       mulg5_dble(VOLUME/2,wsd[0]);
-      Dwhat_dble(-mu0,wsd[0],psi);
+      Dwhat_dble(-nu0,wsd[0],psi);
       mulg5_dble(VOLUME/2,psi);
    }
 
@@ -415,7 +485,7 @@ static void avg_stat(int nz,int n,int *isp,int **status)
 
 double rwrat(int irp,int n,int *np,int *isp,double *sqn,int **status)
 {
-   int k,l,ie,irat[3],a,b;
+   int k,l,ie,irat[3],u,v;
    double lnr,delta,r[2],max[6];
    spinor_dble **wsd;
    ratfct_t rf;
@@ -428,19 +498,13 @@ double rwrat(int irp,int n,int *np,int *isp,double *sqn,int **status)
    rp=rat_parms(irp);
    error_root((rp.degree==0)||(n<1),1,"rwrat [rwrat.c]",
               "Undefined rational function or improper choice of n");
-   error_root((rp.power[0]>=0)||(rp.power[1]<=0),1,"rwrat [rwrat.c]",
+   error_root((rp.power[0]>=0)||(rp.power[1]<=0)||(-rp.power[0]>=rp.power[1]),1,"rwrat [rwrat.c]",
               "The requested power is not supported");
+   error_root((rp.mu0!=0.0),1,"rwrat [rwrat.c]",
+              "The RWRAT reweighting factor requires mu=0");
 
-   if ((rp.power[1]%2)==0)
-   {
-      a=-rp.power[0];
-      b=rp.power[1]/2;
-   }
-   else
-   {
-      a=-2*rp.power[0];
-      b=rp.power[1];
-   }
+   u=-rp.power[0];
+   v=rp.power[1];
    
    check_global_intarray("rwrat [rwrat.c]",n,np);
    check_global_intarray("rwrat [rwrat.c]",n,isp);
@@ -467,7 +531,7 @@ double rwrat(int irp,int n,int *np,int *isp,double *sqn,int **status)
    rf=ratfct(irat);
    delta=rf.delta;
 
-   cfs[0]=-1.0/(2.0*b);
+   cfs[0]=-1.0/v;
    cfs[1]=cfs[0]*(cfs[0]-1.0)/2.0;
    cfs[2]=cfs[1]*(cfs[0]-2.0)/3.0;
    cfs[3]=cfs[2]*(cfs[0]-3.0)/4.0;
@@ -478,21 +542,21 @@ double rwrat(int irp,int n,int *np,int *isp,double *sqn,int **status)
    (*sqn)=set_eta(wsd[0]);
 
    max[0]=(*sqn);
-   max[1]=-cfs[0]*2.0*b*delta*max[0];
-   max[2]=-max[1]*(cfs[0]-1.0)/2.0*2.0*b*delta;
-   max[3]=-max[2]*(cfs[0]-2.0)/3.0*2.0*b*delta;
-   max[4]=-max[3]*(cfs[0]-3.0)/4.0*2.0*b*delta;
-   max[5]=-max[4]*(cfs[0]-4.0)/5.0*2.0*b*delta;
+   max[1]=-cfs[0]*v*delta*max[0];
+   max[2]=-max[1]*(cfs[0]-1.0)/2.0*v*delta;
+   max[3]=-max[2]*(cfs[0]-2.0)/3.0*v*delta;
+   max[4]=-max[3]*(cfs[0]-3.0)/4.0*v*delta;
+   max[5]=-max[4]*(cfs[0]-4.0)/5.0*v*delta;
 
    k=1;
-   apply_Z(rp.mu0,n,np,isp,a,b,&rf,wsd[0],wsd[1],status);
+   apply_Z(n,np,isp,u,v,&rf,wsd[0],wsd[1],status);
    r[0]=cfs[0]*spinor_prod_re_dble(VOLUME/2,1,wsd[0],wsd[1]);
    r[1]=cfs[1]*norm_square_dble(VOLUME/2,1,wsd[1]);
    lnr=r[0]+r[1];
 
 #ifdef RWRAT_DBG
-   message("[rwrat]: irp = %d, delta = %.1e, n = %d, a = %d, b = %d, precision limit = %.1e\n",
-           irp,delta,n,a,b,PRECISION_LIMIT);
+   message("[rwrat]: irp = %d, delta = %.1e, n = %d, u = %d, v = %d, precision limit = %.1e\n",
+           irp,delta,n,u,v,PRECISION_LIMIT);
    message("[rwrat]: c1 = %.4e, c2 = %.4e, c3 = %.4e, c4 = %.4e, c5 = %.4e\n",
            cfs[0],cfs[1],cfs[2],cfs[3],cfs[4]);
    message("[rwrat]: <Z^0> ~ %.4e, |c1 <Z^1>| < %.4e, |c2 <Z^2>| < %.4e, |c3 <Z^3>| < %.4e, |c4 <Z^4>| < %.4e, -c5 <Z^5> < %.4e\n",
@@ -504,7 +568,7 @@ double rwrat(int irp,int n,int *np,int *isp,double *sqn,int **status)
    if (max[3]>PRECISION_LIMIT)
    {
       k=2;
-      apply_Z(rp.mu0,n,np,isp,a,b,&rf,wsd[1],wsd[0],status);
+      apply_Z(n,np,isp,u,v,&rf,wsd[1],wsd[0],status);
       r[0]=cfs[2]*spinor_prod_re_dble(VOLUME/2,1,wsd[1],wsd[0]);
       r[1]=cfs[3]*norm_square_dble(VOLUME/2,1,wsd[0]);
       lnr+=r[0]+r[1];

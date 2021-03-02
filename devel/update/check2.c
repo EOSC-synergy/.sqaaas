@@ -75,21 +75,20 @@ static void read_flds_bc_lat_parms(void)
 }
 
 
-static void read_hmc_parms(void)
+static void read_actions(void)
 {
-   int nact,*iact;
-   int npf,nmu,nlv,facc;
+   int i,k,l,nact,*iact;
+   int npf,nlv,nmu,facc;
    double tau,*mu;
+   action_parms_t ap;
+   rat_parms_t rp;
 
-   facc=0;
    if (my_rank==0)
    {
       find_section("HMC parameters");
-      if ((gauge()&2)!=0)
-         read_line("facc","%d",&facc);
+      read_line("facc","%d",&facc);
       nact=count_tokens("actions");
       read_line("npf","%d",&npf);
-      nmu=count_tokens("mu");
       read_line("nlv","%d",&nlv);
       read_line("tau","%lf",&tau);
    }
@@ -97,14 +96,13 @@ static void read_hmc_parms(void)
    MPI_Bcast(&facc,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&nact,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&npf,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&nmu,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&nlv,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&tau,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
    if (nact>0)
    {
       iact=malloc(nact*sizeof(*iact));
-      error(iact==NULL,1,"read_hmc_parms [check2.c]",
+      error(iact==NULL,1,"read_actions [check2.c]",
             "Unable to allocate temporary array");
       if (my_rank==0)
          read_iprms("actions",nact,iact);
@@ -113,13 +111,54 @@ static void read_hmc_parms(void)
    else
       iact=NULL;
 
+   nmu=0;
+
+   for (i=0;i<nact;i++)
+   {
+      k=iact[i];
+      ap=action_parms(k);
+
+      if (ap.action==ACTIONS)
+         read_action_parms(k);
+
+      ap=action_parms(k);
+
+      if ((ap.action==ACF_RAT)||(ap.action==ACF_RAT_SDET))
+      {
+         l=ap.irat[0];
+         rp=rat_parms(l);
+
+         if (rp.degree==0)
+            read_rat_parms(l);
+      }
+      else if ((nmu==0)&&((ap.action==ACF_TM1)||
+                          (ap.action==ACF_TM1_EO)||
+                          (ap.action==ACF_TM1_EO_SDET)||
+                          (ap.action==ACF_TM2)||
+                          (ap.action==ACF_TM2_EO)))
+      {
+         if (my_rank==0)
+         {
+            find_section("HMC parameters");
+            nmu=count_tokens("mu");
+         }
+
+         MPI_Bcast(&nmu,1,MPI_INT,0,MPI_COMM_WORLD);
+      }
+   }
+
    if (nmu>0)
    {
       mu=malloc(nmu*sizeof(*mu));
-      error(mu==NULL,1,"read_hmc_parms [check2.c]",
+      error(mu==NULL,1,"read_actions [check2.c]",
             "Unable to allocate temporary array");
+
       if (my_rank==0)
+      {
+         find_section("HMC parameters");
          read_dprms("mu",nmu,mu);
+      }
+
       MPI_Bcast(mu,nmu,MPI_DOUBLE,0,MPI_COMM_WORLD);
    }
    else
@@ -168,39 +207,6 @@ static void read_integrator(void)
             if (rp.degree==0)
                read_rat_parms(l);
          }
-      }
-   }
-}
-
-
-static void read_actions(void)
-{
-   int i,k,l,nact,*iact;
-   hmc_parms_t hmc;
-   action_parms_t ap;
-   rat_parms_t rp;
-
-   hmc=hmc_parms();
-   nact=hmc.nact;
-   iact=hmc.iact;
-
-   for (i=0;i<nact;i++)
-   {
-      k=iact[i];
-      ap=action_parms(k);
-
-      if (ap.action==ACTIONS)
-         read_action_parms(k);
-
-      ap=action_parms(k);
-
-      if ((ap.action==ACF_RAT)||(ap.action==ACF_RAT_SDET))
-      {
-         l=ap.irat[0];
-         rp=rat_parms(l);
-
-         if (rp.degree==0)
-            read_rat_parms(l);
       }
    }
 }
@@ -754,7 +760,6 @@ int main(int argc,char *argv[])
    MPI_Bcast(&step,1,MPI_INT,0,MPI_COMM_WORLD);
 
    read_flds_bc_lat_parms();
-   read_hmc_parms();
    read_actions();
    read_integrator();
    read_solvers();

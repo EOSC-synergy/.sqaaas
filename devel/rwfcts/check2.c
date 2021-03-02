@@ -243,16 +243,15 @@ static void read_rw_factors(void)
 }
 
 
-static void read_solvers(void)
+static void read_solvers(int *isap, int *idfl)
 {
    int bs[4]={4,4,4,4};
    int nfct,ifct,isp;
-   int isap,idfl;
    rw_parms_t rwp;
    solver_parms_t sp;
 
-   isap=0;
-   idfl=0;
+   (*isap)=0;
+   (*idfl)=0;
 
    rwp=rw_parms(0);
    nfct=rwp.nfct;
@@ -268,16 +267,16 @@ static void read_solvers(void)
          sp=solver_parms(isp);
 
          if (sp.solver==SAP_GCR)
-            isap=1;
+            (*isap)=1;
          else if (sp.solver==DFL_SAP_GCR)
          {
-            isap=1;
-            idfl=1;
+            (*isap)=1;
+            (*idfl)=1;
          }
       }
    }
 
-   if (isap)
+   if (*isap)
       set_sap_parms(bs,1,4,5);
 }
 
@@ -310,7 +309,7 @@ double calc_lnr(int np1,int np2,double sqn)
 int main(int argc,char *argv[])
 {
    int level,seed;
-   int isap,idfl,ifct;
+   int isap=0,idfl=0,ifct;
    int nwsd;
    int isrc,np1,np2;
    int status[3];
@@ -353,7 +352,7 @@ int main(int argc,char *argv[])
    set_flds_parms(1,0);
 
    read_rw_factors();
-   read_solvers();
+   read_solvers(&isap,&idfl);
 
    if (my_rank==0)
    {

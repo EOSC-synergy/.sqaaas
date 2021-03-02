@@ -11,7 +11,7 @@
 *
 * Computation of the spectral range of the hermitian Dirac operator.
 *
-* Syntax: ms2 -i <input file> [-noexp]
+* Syntax: ms2 -i <input file> [-noexp] [-a]
 *
 * For usage instructions see the file README.ms2.
 *
@@ -52,17 +52,16 @@
    if ((n)<(m)) \
       (n)=(m)
 
-static int my_rank,noexp,endian;
-static int first,last,step,np_ra,np_rb;
+static int my_rank,noexp,endian,append;
+static int first,last,step;
+static int n_np_ra,n_np_rb;
+static int *np_ra,*np_rb;
 static int *rlxs_state=NULL,*rlxd_state=NULL;
-static double ar[256];
 
 static char log_dir[NAME_SIZE],loc_dir[NAME_SIZE],cnfg_dir[NAME_SIZE];
 static char log_file[NAME_SIZE],log_save[NAME_SIZE],end_file[NAME_SIZE];
 static char cnfg_file[NAME_SIZE],nbase[NAME_SIZE];
 static FILE *fin=NULL,*flog=NULL;
-
-dirac_parms_t dp;
 
 
 static void read_dirs(void)
@@ -128,13 +127,12 @@ static void setup_files(void)
 
 static void read_flds_bc_lat_parms(void)
 {
-   int gg,bc,cs,qhat;
-   double m0,kappa,su3csw,u1csw,cF,cF_prime,th1,th2,th3;
+   int gg,nfl;
    char line[NAME_SIZE];
 
    if (my_rank==0)
    {
-      find_section("Gauge group");
+      find_section("Field parameters");
       read_line("gauge","%s",line);
 
       gg=0;
@@ -145,85 +143,65 @@ static void read_flds_bc_lat_parms(void)
       else if (strcmp(line,"SU(3)xU(1)")==0)
          gg=3;
       else
-         error_root(1,1,"read_flds_bc_lat_parms [ms2.c]",
+         error_root(1,1,"read_flds_bc_lat_parms [ms1.c]",
                     "Unknown gauge group %s",line);
+      read_line("nfl","%d",&nfl);
    }
    MPI_Bcast(&gg,1,MPI_INT,0,MPI_COMM_WORLD);
+   MPI_Bcast(&nfl,1,MPI_INT,0,MPI_COMM_WORLD);
 
-   set_flds_parms(gg,0);
+   set_flds_parms(gg,nfl);
    read_bc_parms();
-   
-   bc=bc_type();
-   cs=bc_cstar();
-
-   qhat=0;
-   su3csw=u1csw=0.0;
-   cF=cF_prime=0.0;
-   th1=th2=th3=0.0;
-   
-   if (my_rank==0)
-   {
-      find_section("Dirac operator");
-      read_line("kappa","%lf",&kappa);
-      if (gg==1)
-      {
-         read_line("su3csw","%lf",&su3csw);
-      }
-      else if (gg==2)
-      {
-         read_line("qhat","%d",&qhat);
-         read_line("u1csw","%lf",&u1csw);
-      }
-      else if (gg==3)
-      {
-         read_line("qhat","%d",&qhat);         
-         read_line("su3csw","%lf",&su3csw);
-         read_line("u1csw","%lf",&u1csw);
-      }
-      if (bc!=3) read_line("cF","%lf",&cF);
-      if (bc==2) read_line("cF'","%lf",&cF_prime);
-      if (cs==0) read_line("theta","%lf %lf %lf",&th1,&th2,&th3);
-   }
-   
-   MPI_Bcast(&qhat,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&kappa,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&su3csw,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&u1csw,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&cF,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&cF_prime,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&th1,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&th2,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-   MPI_Bcast(&th3,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-
-   m0=DBL_MAX;
-   if (kappa!=0.0)
-   m0=1.0/(2.0*kappa)-4.0;
-   
-   dp=set_dirac_parms9(qhat,m0,su3csw,u1csw,cF,cF_prime,th1,th2,th3);
+   read_qlat_parms();
 }
 
 
-static void read_solver(void)
+static void read_solvers(void)
 {
+   int nfl,ifl,isp;
+   int isap,idfl;
    solver_parms_t sp;
 
-   read_solver_parms(0);
-   sp=solver_parms(0);
+   nfl=flds_parms().nfl;
+   isap=0;
+   idfl=0;
 
-   if ((sp.solver==SAP_GCR)||(sp.solver==DFL_SAP_GCR))
+   for (ifl=0;ifl<nfl;ifl++)
+   {
+      isp=ifl;
+      sp=solver_parms(isp);
+
+      read_solver_parms(isp);
+      sp=solver_parms(isp);
+
+      if (sp.solver==SAP_GCR)
+         isap=1;
+      else if (sp.solver==DFL_SAP_GCR)
+      {
+         isap=1;
+         idfl=1;
+
+         if (dfl_gen_parms(sp.idfl).status!=DFL_DEF)
+            read_dfl_parms(sp.idfl);
+      }
+   }
+
+   if (isap)
       read_sap_parms();
 
-   if (sp.solver==DFL_SAP_GCR)
-   {
+   if (idfl)
       read_dfl_parms(-1);
-      read_dfl_parms(sp.idfl);
-   }
+}
+
+
+int intcmp (const void *a, const void *b) {
+   return (*(int*)a - *(int*)b);
 }
 
 
 static void read_infile(int argc,char *argv[])
 {
-   int ifile;
+   int ifile,k;
 
    if (my_rank==0)
    {
@@ -233,12 +211,13 @@ static void read_infile(int argc,char *argv[])
       endian=endianness();
 
       error_root((ifile==0)||(ifile==(argc-1)),1,"read_infile [ms2.c]",
-                 "Syntax: ms2 -i <input file> [-noexp]");
+                 "Syntax: ms2 -i <input file> [-noexp] [-a]");
 
       error_root(endian==UNKNOWN_ENDIAN,1,"read_infile [ms2.c]",
                  "Machine has unknown endianness");
 
       noexp=find_opt(argc,argv,"-noexp");
+      append=find_opt(argc,argv,"-a");
 
       fin=freopen(argv[ifile+1],"r",stdin);
       error_root(fin==NULL,1,"read_infile [ms2.c]",
@@ -246,6 +225,7 @@ static void read_infile(int argc,char *argv[])
    }
 
    MPI_Bcast(&endian,1,MPI_INT,0,MPI_COMM_WORLD);
+   MPI_Bcast(&append,1,MPI_INT,0,MPI_COMM_WORLD);
    MPI_Bcast(&noexp,1,MPI_INT,0,MPI_COMM_WORLD);
 
    read_dirs();
@@ -255,15 +235,46 @@ static void read_infile(int argc,char *argv[])
    if (my_rank==0)
    {
       find_section("Power method");
-      read_line("np_ra","%d",&np_ra);
-      read_line("np_rb","%d",&np_rb);
-      error_root((np_ra<1)||(np_rb<1),1,"read_infile [ms2.c]",
-                 "Power method iteration numbers must be at least 1");
+      n_np_ra=count_tokens("np_ra");
+      n_np_rb=count_tokens("np_rb");
+      error_root((n_np_ra<1),1,"read_infile [ms2.c]",
+                 "np_ra token empty or absent");
+      error_root((n_np_rb<1),1,"read_infile [ms2.c]",
+                 "np_rb token empty or absent");
    }
 
-   MPI_Bcast(&np_ra,1,MPI_INT,0,MPI_COMM_WORLD);
-   MPI_Bcast(&np_rb,1,MPI_INT,0,MPI_COMM_WORLD);
-   read_solver();
+   MPI_Bcast(&n_np_ra,1,MPI_INT,0,MPI_COMM_WORLD);
+   MPI_Bcast(&n_np_rb,1,MPI_INT,0,MPI_COMM_WORLD);
+
+   np_ra=malloc(sizeof(int)*n_np_ra);
+   np_rb=malloc(sizeof(int)*n_np_rb);
+   error((np_ra==NULL)||(np_rb==NULL),1,"read_infile [ms2.c]",
+         "Unable to allocate np_ra or np_rb arrays");
+
+   if (my_rank==0)
+   {
+      read_iprms("np_ra",n_np_ra,np_ra);
+      read_iprms("np_rb",n_np_rb,np_rb);
+
+      for(k=0;k<n_np_ra;k++)
+      {
+         error_root((np_ra[k]<1),1,"read_infile [ms2.c]",
+                    "Power method iteration numbers must be positive integers");
+      }
+      for(k=0;k<n_np_rb;k++)
+      {
+         error_root((np_rb[k]<1),1,"read_infile [ms2.c]",
+                    "Power method iteration numbers must be positive integers");
+      }
+   }
+
+   MPI_Bcast(np_ra,n_np_ra,MPI_INT,0,MPI_COMM_WORLD);
+   MPI_Bcast(np_rb,n_np_rb,MPI_INT,0,MPI_COMM_WORLD);
+
+   qsort(np_ra,n_np_ra,sizeof(int),&intcmp);
+   qsort(np_rb,n_np_rb,sizeof(int),&intcmp);
+
+   read_solvers();
 
    if (my_rank==0)
       fclose(fin);
@@ -274,16 +285,19 @@ static void check_files(void)
 {
    if (my_rank==0)
    {
-      fin=fopen(log_file,"r");
-      error_root(fin!=NULL,1,"check_files [ms2.c]",
-                 "Attempt to overwrite old *.log file");
+      if(!append)
+      {
+         fin=fopen(log_file,"r");
+         error_root(fin!=NULL,1,"check_files [ms2.c]",
+                    "Attempt to overwrite old *.log file");
+      }
    }
 }
 
 
 static void print_info(void)
 {
-   int isap,idfl;
+   int isap,idfl,k;
    long ip;
 
    if (my_rank==0)
@@ -294,7 +308,7 @@ static void print_info(void)
       if (ip==0L)
          remove("STARTUP_ERROR");
 
-      flog=freopen(log_file,"w",stdout);
+      flog=freopen(log_file,"a",stdout);
       error_root(flog==NULL,1,"print_info [ms2.c]","Unable to open log file");
       printf("\n");
 
@@ -321,11 +335,16 @@ static void print_info(void)
 
       print_bc_parms();
       print_flds_parms();
-      print_dirac_parms();
+      print_lat_parms();
 
       printf("Power method:\n");
-      printf("np_ra = %d\n",np_ra);
-      printf("np_rb = %d\n\n",np_rb);
+      printf("np_ra =");
+      for(k=0;k<n_np_ra;k++)
+         printf(" %d",np_ra[k]);
+      printf("\nnp_rb =");
+      for(k=0;k<n_np_rb;k++)
+         printf(" %d",np_rb[k]);
+      printf("\n\n");
 
       print_solver_parms(&isap,&idfl);
 
@@ -358,7 +377,7 @@ static void dfl_wsize(int *nws,int *nwv,int *nwvd)
 
 static void wsize(int *nws,int *nwsd,int *nwv,int *nwvd)
 {
-   int nsd;
+   int nsd,ifl,nfl,isp;
    solver_parms_t sp;
 
    (*nws)=0;
@@ -366,43 +385,50 @@ static void wsize(int *nws,int *nwsd,int *nwv,int *nwvd)
    (*nwv)=0;
    (*nwvd)=0;
 
-   sp=solver_parms(0);
+   nfl=flds_parms().nfl;
+   for (ifl=0;ifl<nfl;ifl++)
+   {
+      isp=ifl;
+      sp=solver_parms(isp);
 
-   if (sp.solver==CGNE)
-   {
-      nsd=1;
-      MAX(*nws,5);
-      MAX(*nwsd,nsd+3);
+      if (sp.solver==CGNE)
+      {
+         nsd=1;
+         MAX(*nws,5);
+         MAX(*nwsd,nsd+3);
+      }
+      else if (sp.solver==SAP_GCR)
+      {
+         nsd=2;
+         MAX(*nws,2*sp.nkv+1);
+         MAX(*nwsd,nsd+2);
+      }
+      else if (sp.solver==DFL_SAP_GCR)
+      {
+         nsd=2;
+         MAX(*nws,2*sp.nkv+2);
+         MAX(*nwsd,nsd+4);
+         dfl_wsize(nws,nwv,nwvd);
+      }
+      else
+         error_root(1,1,"wsize [ms2.c]",
+                    "Unknown or unsupported solver");
    }
-   else if (sp.solver==SAP_GCR)
-   {
-      nsd=2;
-      MAX(*nws,2*sp.nkv+1);
-      MAX(*nwsd,nsd+2);
-   }
-   else if (sp.solver==DFL_SAP_GCR)
-   {
-      nsd=2;
-      MAX(*nws,2*sp.nkv+2);
-      MAX(*nwsd,nsd+4);
-      dfl_wsize(nws,nwv,nwvd);
-   }
-   else
-      error_root(1,1,"wsize [ms2.c]",
-                 "Unknown or unsupported solver");
 }
 
 
-static double power1(int *status)
+static void power1(double *ra,int ifl,int *status)
 {
-   int nsd,k,l,stat[6];
+   int nsd,j,k,l,stat[6];
    double r;
    spinor_dble **wsd;
+   dirac_parms_t dp;
    solver_parms_t sp;
    sap_parms_t sap;
 
+   dp=qlat_parms(ifl);
    set_dirac_parms1(&dp);
-   sp=solver_parms(0);
+   sp=solver_parms(ifl);
 
    if (sp.solver==CGNE)
    {
@@ -437,7 +463,8 @@ static double power1(int *status)
    bnd_sd2zero(EVEN_PTS,wsd[0]);
    r=normalize_dble(VOLUME/2,1,wsd[0]);
 
-   for (k=0;k<np_ra;k++)
+   j=0;
+   for (k=0;k<np_ra[n_np_ra-1];k++)
    {
       if (sp.solver==CGNE)
       {
@@ -496,20 +523,26 @@ static double power1(int *status)
       }
 
       r=normalize_dble(VOLUME/2,1,wsd[0]);
+
+      if(k+1==np_ra[j])
+      {
+         ra[j]=1.0/sqrt(r);
+         j++;
+      }
    }
 
    release_wsd();
-
-   return 1.0/sqrt(r);
 }
 
 
-static double power2(void)
+static void power2(double *rb,int ifl)
 {
-   int k;
+   int j,k;
    double r;
    spinor_dble **wsd;
+   dirac_parms_t dp;
 
+   dp=qlat_parms(ifl);
    set_dirac_parms1(&dp);
    sw_term(ODD_PTS);
 
@@ -518,7 +551,8 @@ static double power2(void)
    bnd_sd2zero(EVEN_PTS,wsd[0]);
    r=normalize_dble(VOLUME/2,1,wsd[0]);
 
-   for (k=0;k<np_rb;k++)
+   j=0;
+   for (k=0;k<np_rb[n_np_rb-1];k++)
    {
       Dwhat_dble(0.0,wsd[0],wsd[1]);
       mulg5_dble(VOLUME/2,wsd[1]);
@@ -526,11 +560,15 @@ static double power2(void)
       mulg5_dble(VOLUME/2,wsd[0]);
 
       r=normalize_dble(VOLUME/2,1,wsd[0]);
+
+      if(k+1==np_rb[j])
+      {
+         rb[j]=sqrt(r);
+         j++;
+      }
    }
 
    release_wsd();
-
-   return sqrt(r);
 }
 
 
@@ -565,7 +603,7 @@ static void restore_ranlux(void)
 static void check_endflag(int *iend)
 {
    FILE *fend=NULL;
-   
+
    if (my_rank==0)
    {
       fend=fopen(end_file,"r");
@@ -587,12 +625,10 @@ static void check_endflag(int *iend)
 
 int main(int argc,char *argv[])
 {
-   int nc,iend,status[3];
-   int nws,nwsd,nwv,nwvd,n,idfl;
+   int k,nc,iend,status[3];
+   int nws,nwsd,nwv,nwvd,idfl,nfl,ifl;
    int cnfg_type;
-   double ra,ramin,ramax,raavg;
-   double rb,rbmin,rbmax,rbavg;
-   double A,eps,delta,Ne,d1,d2;
+   double *ra,*rb;
    double wt1,wt2,wtavg;
    dfl_parms_t dfl;
    dflst_t dfl_status;
@@ -614,13 +650,10 @@ int main(int argc,char *argv[])
    alloc_wv(nwv);
    alloc_wvd(nwvd);
 
-   ramin=0.0;
-   ramax=0.0;
-   raavg=0.0;
-
-   rbmin=0.0;
-   rbmax=0.0;
-   rbavg=0.0;
+   ra=malloc(sizeof(double)*n_np_ra);
+   rb=malloc(sizeof(double)*n_np_rb);
+   error((ra==NULL)||(rb==NULL),1,"main [ms2.c]",
+         "Unable to allocate ra or rb arrays");
 
    iend=0;
    wtavg=0.0;
@@ -666,32 +699,31 @@ int main(int argc,char *argv[])
          }
       }
 
-      ra=power1(status);
-      rb=power2();
-
-      if (nc==first)
+      nfl=flds_parms().nfl;
+      for (ifl=0;ifl<nfl;ifl++)
       {
-         ramin=ra;
-         ramax=ra;
-         raavg=ra;
+         power1(ra,ifl,status);
+         power2(rb,ifl);
 
-         rbmin=rb;
-         rbmax=rb;
-         rbavg=rb;
-      }
-      else
-      {
-         if (ra<ramin)
-            ramin=ra;
-         if (ra>ramax)
-            ramax=ra;
-         raavg+=ra;
+         if (my_rank==0)
+         {
+            printf("nc= %6d   ifl= %3d   ra=",nc,ifl);
+            for(k=0;k<n_np_ra;k++)
+               printf(" %.6e",ra[k]);
+            printf("\n");
 
-         if (rb<rbmin)
-            rbmin=rb;
-         if (rb>rbmax)
-            rbmax=rb;
-         rbavg+=rb;
+            printf("nc= %6d   ifl= %3d   rb=",nc,ifl);
+            for(k=0;k<n_np_rb;k++)
+               printf(" %.6e",rb[k]);
+            printf("\n");
+
+            printf("nc= %6d   ifl= %3d   status= ",nc,ifl);
+            if (dfl.Ns)
+               printf("%d,%d,%d\n",
+                      status[0],status[1],status[2]);
+            else
+               printf("%d\n",status[0]);
+         }
       }
 
       MPI_Barrier(MPI_COMM_WORLD);
@@ -700,14 +732,6 @@ int main(int argc,char *argv[])
 
       if (my_rank==0)
       {
-         printf("ra = %.6e, rb = %.6e, ",ra,rb);
-
-         if (dfl.Ns)
-            printf("status = %d,%d,%d\n",
-                   status[0],status[1],status[2]);
-         else
-            printf("status = %d\n",status[0]);
-
          printf("Configuration no %d fully processed in %.2e sec ",
                 nc,wt2-wt1);
          printf("(average = %.2e sec)\n\n",
@@ -718,55 +742,6 @@ int main(int argc,char *argv[])
       }
 
       check_endflag(&iend);
-   }
-
-   if (my_rank==0)
-   {
-      last=nc-step;
-      nc=(last-first)/step+1;
-
-      printf("Summary\n");
-      printf("-------\n\n");
-
-      printf("Considered %d configurations in the range %d -> %d\n\n",
-             nc,first,last);
-
-      printf("The three figures quoted in each case are the minimal,\n");
-      printf("maximal and average values\n\n");
-
-      printf("Spectral gap ra    = %.6e, %.6e, %.6e\n",
-             ramin,ramax,raavg/(double)(nc));
-      printf("Spectral radius rb = %.6e, %.6e, %.6e\n\n",
-             rbmin,rbmax,rbavg/(double)(nc));
-
-      ra=0.90*ramin;
-      rb=1.03*rbmax;
-      eps=ra/rb;
-      eps=eps*eps;
-      Ne=0.5*(double)(NPROC0*L0-2)*(double)(NPROC1*NPROC2*NPROC3*L1*L2*L3);
-
-      printf("Zolotarev rational approximation:\n\n");
-
-      printf("n: number of poles\n");
-      printf("delta: approximation error\n");
-      printf("Ne: number of even lattice points\n");
-      printf("Suggested spectral range = [%.2e,%.2e]\n\n",ra,rb);
-
-      printf("     n      delta    12*Ne*delta     12*Ne*delta^2\n");
-
-      for (n=6;n<=128;n++)
-      {
-         zolotarev(n,eps,&A,ar,&delta);
-         d1=12.0*Ne*delta;
-         d2=d1*delta;
-
-         printf("   %3d     %.1e      %.1e         %.1e\n",n,delta,d1,d2);
-
-         if ((d1<1.0e-2)&&(d2<1.0e-4))
-            break;
-      }
-
-      printf("\n");
    }
 
    if (my_rank==0)

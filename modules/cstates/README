@@ -1,0 +1,83 @@
+
+********************************************************************************
+
+     Calculation of the U(1) gauge factors for electrically charged states
+
+********************************************************************************
+
+
+Files
+-----
+
+cfactor.c        Calculation of the gauge factors for electrically charged states
+
+ccoulomb.c       Calculation of the Coulomb U(1) gauge field A_mu^C(x)
+
+
+Include file
+------------
+
+The file cstates.h defines the prototypes for all externally accessible
+functions that are defined in the *.c files listed above.
+
+
+List of functions
+-----------------
+
+double* get_cfactor_phase(int coulomb,int mu)
+  Returns the pointer phi to the base address of a global real field
+  containing the phase Phi_mu(x), see the notes in cfactor.c. The real field is
+  organized in memory as a matter field so that phi[ix] is equal to Phi_mu(x)
+  with ix=ipt[x3+L3*x2+L2*L3*x1+L1*L2*L3*x0]. The argument mu>=1 must be a C*
+  spatial direction. If coulomb=1 the gauge field used in the calculation of
+  the phase contains the Coulomb term A_mu^C(x).
+
+void mul_cfactor(int iflag,int coulomb,int mu,spinor_dble *pk,spinor_dble *pl)
+   Multiplies the matter field pk[ix] for the gauge factor,
+      pl(x) = exp(i sign qhat Phi_mu(x)/2 ) pk(x),
+   and assigns the result to pl[ix]. For the definition of Phi_mu(x) see the
+   notes in cfactor.c. If iflag=0, sign=1.0 while sign=-1.0 if iflag=1.
+   The argument mu>=1 must be a C* spatial direction. If coulomb=1 the gauge
+   field used in the calculation of the phase contains the Coulomb term A_mu^C(x).
+   qhat is the electric charge in units of qel of the active flavour, i.e.
+   qhat=dirac_parms().qhat.
+
+void mul_cfactor_muaverage(int iflag,int coulomb,spinor_dble *pk,spinor_dble *pl)
+   Multiplies the field pk[ix] for the average of the gauge factors over the
+   C* spatial directions,
+      pl(x) = sum_{k is C*}{ exp(i sign qhat Phi_k(x)/2 ) } pk(x),
+   and assigns the result to pl[ix]. For the definition of Phi_mu(x) see the
+   notes in cfactor.c. If iflag=0, sign=1.0 while sign=-1.0 if iflag=1.
+   If coulomb=1 the gauge field used in the calculation of the phases contains
+   the Coulomb term A_mu^C(x). qhat is the electric charge in units of qel
+   of the active flavour, i.e. qhat=dirac_parms().qhat.
+
+void nabla_sq_dvec(double *s, double *r)
+  Applies the spatial laplacian to a the double matter field s[ix]
+  and assigns the result to r[ix],
+     r(x) = sum_{k=1,2,3}[ s(x+k) + s(x-k) -2 s(x) ]
+  The variables r and s, that cannot be equal, must point to memory spaces
+  of (VOLUME+BNDRY) double numbers.
+
+void div_sym_dvec(double *s1, double *s2, double *s3, double *r)
+  Applies the spatial symmetric divergence to the double matter fields
+  s1[ix], s2[ix], and s3[ix] and assigns the result to r[ix],
+     r(x) = sum_{k=1,2,3}[ s_k(x+k) + s_k(x-k) ]/2
+  The variables r and s1, s2 and s3 must point to memory spaces of
+  (VOLUME+BNDRY) double numbers. None of the variables s1, s2, s3 can be
+  equal to the result variable r.
+
+int inv_nabla_sq(double *out, double *in)
+  Applies the inverse spatial laplacian to the double matter field in[ix]
+  and assigns the result to out[ix],
+     out(x) = 1/nabla_sq in(x)
+  by using the CG algorithm. The CG iteration is stopped when the relative
+  error is smaller than 10^(-8), and it throws an error if this target is
+  not achievable. The function returns an upper bound for the relative
+  residue.
+
+double* get_coulomb_amu(void)
+  Returns the pointer amuc to the base address of a global real field that
+  contains the Coulomb A_mu^C(x), see the notes in ccoulomb.c. The real field
+  is organized in memory as a matter field so that amuc[ix] is equal to
+  A_mu^C(x) with ix=ipt[x3+L3*x2+L2*L3*x1+L1*L2*L3*x0].

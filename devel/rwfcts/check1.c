@@ -50,7 +50,7 @@ static int my_rank;
 #error This program must be compiled with the REWEIGHT_CHECK_PROGRAMS macro
 #endif
 
-extern double get_rwrat_precition_limit(void);
+extern double get_rwrat_precision_limit(void);
 
 static complex_dble dhat;
 
@@ -229,12 +229,11 @@ static void read_solvers(void)
 {
    int bs[4]={4,4,4,4};
    int nfct,ifct,isp;
-   int isap,idfl;
+   int isap;
    rw_parms_t rwp;
    solver_parms_t sp;
 
    isap=0;
-   idfl=0;
 
    rwp=rw_parms(0);
    nfct=rwp.nfct;
@@ -252,10 +251,7 @@ static void read_solvers(void)
          if (sp.solver==SAP_GCR)
             isap=1;
          else if (sp.solver==DFL_SAP_GCR)
-         {
             isap=1;
-            idfl=1;
-         }
       }
    }
 
@@ -400,7 +396,7 @@ int main(int argc,char *argv[])
       printf("\n========================================"
              "========================================\n\n"
              "Maximum deviation (expected < %.2e) = %.2e\n\n",
-             get_rwrat_precition_limit(),dmax);
+             get_rwrat_precision_limit(),dmax);
       fclose(flog);
    }
 

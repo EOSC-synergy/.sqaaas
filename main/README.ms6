@@ -17,11 +17,18 @@ CP(y0,x0)   = 1/(N1*N2*N3) sum_{vec x, vec y} <P(y0,vec y) P^dag(x0,vec x)>,
 
 where
 
-P(x)   = psi1bar(x) gamma_5 psi2(x),
-A_mu(x)= psi1bar(x) gamma_5 gamma_mu psi2(x),
+P(x)   = D(x) psi1bar(x) gamma_5 psi2(x),
+A_mu(x)= D(x) psi1bar(x) gamma_5 gamma_mu psi2(x),
 
-with psi1 and psi2 the quark fields of two different flavours having the same 
-electric charge.
+with psi1 and psi2 the quark fields of two different flavours, and D(x) are
+the dressing factors needed to make P and A_mu gauge invariant also in case
+in which they interpolate charged states. These dressing factors are described
+in arXiv:1509.01636, section 3. Notice that, if the two flavours have the same
+charge then the operators P and A_mu are neutral and D=1. Two-point functions
+of charged operators can be calculated only with C* boundary conditions.
+
+A list of flavours can be defined in the input file. The program calculated the
+above correlators for any pair of flavours from the list.
 
 
 COMMAND-LINE OPTIONS
@@ -41,6 +48,13 @@ through an input file. The options are
 -a               This option specifies that the run is a continuation of
                  a previous run. All output data are appended to the
                  previous output files.
+
+-norng           Continuation runs normally start from the saved state
+                 of the random number generators. This option specifies
+                 that the traditional initialization of the generators is
+                 to be used (see section RANDOM NUMBER GENERATOR below).
+                 NOTE: starting from the saved state is not possible if
+                 the process grid sizes NPROC0,..,NPROC3 are changed.
 
 
 INPUT PARAMETERS
@@ -70,8 +84,9 @@ step         1                     # Configuration separation (last-first must
 level        0                     # Ranlux level
 seed         73099                 # Ranlux seed
 
-[Gauge group]
+[Field parameters]
 gauge        SU(3)xU(1)            # Gauge group: SU(3), U(1), SU(3)xU(1)
+nfl          2                     # Number of quark flavours
 
 [Boundary conditions]
 type         SF                    # Type of boundary condition:
@@ -94,17 +109,9 @@ u1phi        0.43                  # Boundary values of the U(1) gauge field
 u1phi'       -1.32                 # Boundary values of the U(1) gauge field
                                    # at time NPROC0*L0
 
-[Correlators]
-nfl          2                     # Number of flavours having different
-                                   # parameters: nfl=1,2.
-                                   # nfl=1 means that the two quarks have
-                                   # the same parameters and differ only for
-                                   # the flavour label; in this case a single
-                                   # flavour section must be specified
-
-[Flavour 0]
+[Flavour 0]                        # One of these section for each
+                                   # non-degenerate quark flavour
 kappa        0.121                 # Hopping parameter of the flavour
-mu           0.0                   # Twisted mass of the flavour
 qhat         -2                    # Electric charge in units of the elementary
                                    # electric charge used to generate the
                                    # imported configuration
@@ -136,9 +143,15 @@ x0           1                     # Time at which the random source fields
 nsrc         3                     # Number of U(1) random source fields
                                    # to be generated per gauge configuration
 
+[Dressing factor]
+type         string                # Possible values: string or coulomb.
+                                   # This section is read only if the two
+                                   # flavours have different electric charges.
 
-Then follows a description of the solver for the Dirac equation to be used (see
-doc/parms.pdf). The supported solvers are CGNE,  SAP_GCR and DFL_SAP_GCR.
+Then follows a description of the solvers for the Dirac equation to be used (see
+doc/parms.pdf). [Solver 0] is used to solve the Dirac equation for [Flavour 0],
+[Solver 1] is used to solve the Dirac equation for [Flavour 1], and so on. The
+supported solvers are CGNE, SAP_GCR and DFL_SAP_GCR.
 
 Setting the source time x0 to 0 or NPROC0*L0-1 is not permitted if the chosen
 boundary conditions require the quark fields to vanish there. Superfluous
@@ -175,6 +188,9 @@ The program writes the results of the computations to the files
   <run name>.ms6.par   Parameter data file
   <run name>.ms6.par~  Backup parameter data file
 
+  <run name>.rng       Exported state of the random number generators
+  <run name>.rng~      Backup random number generator state file
+
 in the directories log_dir (log file) and dat_dir (data files). The parameter
 file is created at the beginning of the run and remains unchanged after that.
 The backup log and data files are updated each time a configuration is fully
@@ -200,10 +216,8 @@ SOLVER PERFORMANCE
 
 The program prints the time required for the solution of the Dirac equation to
 the log file. When selecting the solver, one should take into account that the
-CGNE solver tends to be very slow at small quark masses. In the case of the
-GCR solvers, the performance may be poor when the twisted quark mass mu is
-larger than, say, 0.1 and much larger than the ordinary quark mass. The use of
-the deflated solver is recommended if both masses are small.
+CGNE solver tends to be very slow at small quark masses. The use of the deflated
+solver is recommended if the mass is small.
 
 The processing times per gauge field configuration quoted in the log file
 include the time required for the I/O operations.
@@ -234,37 +248,40 @@ contained in the header structure
 static struct
 {
    int tmax,x0,nsrc;
-   int nfl,qhat[2];
-   double kappa[2],mu[2];
-   double su3csw[2],u1csw[2];
-   double cF[2],cF_prime[2];
-   double th1[2],th2[2],th3[2];
+   int nfl;
+   dirac_parms_t dp[MAXNFL];
+   int coulomb;
 } file_head;
 
-where tmax=NPROC0*L0 and if the two flavours have identical parameters (nfl=1), 
-the parameters are written only once. See the function write_file_head() in the 
-program file ms6.c for further details.
+See the function write_file_head() in the  program file ms6.c for further
+details.
 
-After the header data, the data file contains a sequence of data structures
+After the header data, the data file contains a sequence of the non-trivial part
+of the folloing data structure
 
 static struct
 {
    int nc;
-   double *P,*A0,*A1,*A2,*A3;
+   double P[MAXNFL][MAXNFL][N0];
+   double A0[MAXNFL][MAXNFL][N0];
+   double A1[MAXNFL][MAXNFL][N0];
+   double A2[MAXNFL][MAXNFL][N0];
+   double A3[MAXNFL][MAXNFL][N0];
 } data;
 
-labeled by the configuration number nc. The average over the number of stochastic
-sources per configurations (nsrc) of the correlators are stored into the
-arrays as follows
+labeled by the configuration number nc. The average over the number of
+stochastic sources per configurations (nsrc) of the correlators built with
+flavours ifl and jfl are stored into the arrays as follows
 
-P[y0]  = Re{ CP(y0,x0) }     (y0=0,...,tmax-1)
-A0[y0] = Re{ CA_0(y0,x0) }   
-A1[y0] = Im{ CA_1(y0,x0) }   
-A2[y0] = Im{ CA_2(y0,x0) }   
-A3[y0] = Im{ CA_3(y0,x0) }   
+ P[ifl][jfl][y0] = Re{ CP(y0,x0) }     (y0=0,...,tmax-1)
+A0[ifl][jfl][y0] = Re{ CA_0(y0,x0) }   
+A1[ifl][jfl][y0] = Im{ CA_1(y0,x0) }   
+A2[ifl][jfl][y0] = Im{ CA_2(y0,x0) }   
+A3[ifl][jfl][y0] = Im{ CA_3(y0,x0) }   
 
-and written to the file. See the function write_data() in the program file
-ms6.c for further details.
+Only the entries with 0<=ifl<jfl<nfl contain non-trivial data and are written to
+the file. See the function write_data() in the program file ms6.c for further
+details.
 
 
 SAFETY MEASURES AND ERROR REPORTING
@@ -286,7 +303,7 @@ the program, with an informative message being written either to the log file
 or the file STARTUP_ERROR in the program directory (if the error occurs before
 the log file is opened).
 
-It should be noted that filenames may not be longer than 127 characters. The
+It should be noted that filenames may not be longer than 1023 characters. The
 program checks at an early stage whether this is the case or not. Longer
 filenames can be accommodated by setting the macro NAME_SIZE in the header
 file global.h to a larger value.

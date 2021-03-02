@@ -62,7 +62,7 @@ static void blk_sd2zero(int ic,spinor_dble *sd)
 
 int main(int argc,char *argv[])
 {
-   int my_rank,bc,cf,q;
+   int my_rank,bc,cs,cf,q;
    int nb,isw,nbh,ic,itm;
    int bs[4],n,nm,vol,volh,ie;
    double phi[2],phi_prime[2];
@@ -99,13 +99,19 @@ int main(int argc,char *argv[])
 
       if (bc!=0)
          error_root(sscanf(argv[bc+1],"%d",&bc)!=1,1,"main [check8.c]",
-                    "Syntax: check8 [-bc <type>] [-gg <gauge>] [-q <echarge>]");
+                    "Syntax: check8 [-bc <type>] [-cs <cstar>] [-gg <gauge>] [-q <echarge>]");
+
+      cs=find_opt(argc,argv,"-cs");
+
+      if (cs!=0)
+         error_root(sscanf(argv[cs+1],"%d",&cs)!=1,1,"main [check8.c]",
+                    "Syntax: check8 [-bc <type>] [-cs <cstar>] [-gg <gauge>] [-q <echarge>]");
 
       cf=find_opt(argc,argv,"-gg");
 
       if (cf!=0)
          error_root(sscanf(argv[cf+1],"%d",&cf)!=1,1,"main [check8.c]",
-                  "Syntax: check8 [-bc <type>] [-gg <gauge>] [-q <echarge>]");
+                  "Syntax: check8 [-bc <type>] [-cs <cstar>] [-gg <gauge>] [-q <echarge>]");
       else
          cf=1;
 
@@ -114,7 +120,7 @@ int main(int argc,char *argv[])
       if (q!=0)
       {
          error_root(sscanf(argv[q+1],"%d",&q)!=1,1,"main [check8.c]",
-                  "Syntax: check8 [-bc <type>] [-gg <gauge>] [-q <echarge>]");
+                  "Syntax: check8 [-bc <type>] [-cs <cstar>] [-gg <gauge>] [-q <echarge>]");
       }
       else
          q=-3;
@@ -127,12 +133,14 @@ int main(int argc,char *argv[])
    if(gauge()==1) q=0;
 
    MPI_Bcast(bs,4,MPI_INT,0,MPI_COMM_WORLD);
+
    MPI_Bcast(&bc,1,MPI_INT,0,MPI_COMM_WORLD);
+   MPI_Bcast(&cs,1,MPI_INT,0,MPI_COMM_WORLD);
    phi[0]=0.123;
    phi[1]=-0.534;
    phi_prime[0]=0.912;
    phi_prime[1]=0.078;
-   set_bc_parms(bc,0,phi,phi_prime,0.573,-1.827);
+   set_bc_parms(bc,cs,phi,phi_prime,0.573,-1.827);
    print_bc_parms();
 
    start_ranlux(0,1234);

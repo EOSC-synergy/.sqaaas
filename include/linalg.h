@@ -50,13 +50,13 @@ extern void swap_alg(int vol,su3_alg_dble *X,su3_alg_dble *Y);
 extern void muladd_assign_alg(int vol,double r,su3_alg_dble *X,su3_alg_dble *Y);
 
 /* DALG_C */
-void random_dvec(int vol,double *X);
-double norm_square_dvec(int vol,int icom,double *X);
-double scalar_prod_dvec(int vol,int icom,double *X,double *Y);
-void set_dvec2zero(int vol,double *X);
-void assign_dvec2dvec(int vol,double *X,double *Y);
-void swap_dvec(int vol,double *X,double *Y);
-void muladd_assign_dvec(int vol,double r,double *X,double *Y);
+extern void random_dvec(int vol,double *X);
+extern double norm_square_dvec(int vol,int icom,double *X);
+extern double scalar_prod_dvec(int vol,int icom,double *X,double *Y);
+extern void set_dvec2zero(int vol,double *X);
+extern void assign_dvec2dvec(int vol,double *X,double *Y);
+extern void swap_dvec(int vol,double *X,double *Y);
+extern void muladd_assign_dvec(int vol,double r,double *X,double *Y);
 
 /* SALG_C */
 extern complex spinor_prod(int vol,int icom,spinor *s,spinor *r);

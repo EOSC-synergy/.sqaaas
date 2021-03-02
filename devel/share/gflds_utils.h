@@ -22,6 +22,7 @@ EXTERN int shift_gflds(int *s);
 EXTERN su3_dble *g3tr(void);
 EXTERN double *g1tr(void);
 EXTERN void random_g(void);
+EXTERN void orbi_cpy_g(void);
 EXTERN void transform_gflds(void);
 
 

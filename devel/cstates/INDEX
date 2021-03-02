@@ -1,0 +1,25 @@
+
+Computation of the U(1) gauge factor for electrically charged states.
+
+check1         Check of the cfactor for a particular choice of the U(1) field.
+
+check2         Gauge covariance of mul_cfactor().
+
+check2b        Gauge covariance with orbifold constraint of mul_cfactor().
+
+check3         nabla_k A_k=0 for the Coulomb U(1) gauge field A^C_mu.
+
+check4         Action of nabla_sq_dvec(), div_sym_dvec() and inv_nabla_sq_dvec() 
+               on plane waves.
+
+check5         Check of the inversion program inv_nabla_sq().
+
+check6         Gauge invariance of the CA_mu(y0,x0) and CP(y0,x0) correlators.
+
+All programs (except check6 that has an input file) accept the option -bc <type> 
+that allows the type of boundary condition to be chosen. When the option is not
+set, open boundary conditions are assumed.
+
+The programs check1, check1b, check2, check2b and check3 must be run with the 
+option -cs < cstar >=1 > in order to chose the number of spatial directions with
+C*  boundary conditions. 

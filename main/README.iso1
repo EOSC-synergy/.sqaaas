@@ -539,7 +539,7 @@ before the log file is opened).
 
 On the other hand, the following should be kept in mind:
 
-- Filenames may not be longer than 1024 characters. The program
+- Filenames may not be longer than 1023 characters. The program
   checks at an early stage whether this is the case or not. Longer
   filenames can be accommodated by setting the macro NAME_SIZE in
   the global.h header file to a larger value.

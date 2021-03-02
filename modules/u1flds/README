@@ -118,8 +118,9 @@ double u1_plaq_wsum_dble(int icom)
 double u1_plaq_action_slices(double *asl)
   Computes the time-slice sums asl[x0] of the tree-level O(a)-improved
   plaquette action density of the double-precision U(1) gauge field. The
-  factor 1/u1g0^2 is omitted and the time x0 runs from 0 to NPROC0*L0-1.
-  The program returns the total action.
+  factor 1/e0^2 is omitted and the time x0 runs from 0 to NPROC0*L0-1.
+  Notice that this definition includes a 1/(2*qel^2) factor. The program
+  returns the total action.
 
 void u1xu1(complex_dble *u,complex_dble *v,complex_dble *w)
   Computes w=u*v assuming that w is different from u.

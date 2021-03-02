@@ -31,6 +31,7 @@
 
 \newcommand{\Rmu}{R}
 \newcommand{\R}{\tilde{R}}
+\renewcommand{\S}{\tilde{S}}
 
 
 
@@ -435,6 +436,7 @@ where $u$ and $v$ are natural numbers. The reweighting factor can be represented
 where the operator $Z$ is defined as
 \begin{gather}
    Z = \hat{Q}^{2u} \R^v - 1 \ .
+   \label{eq:zeta}
 \end{gather}
 The determinant in eq.~\eqref{eq:Wrat2} is estimated stochastically
 \begin{gather}
@@ -483,6 +485,35 @@ These fluctuations are guaranteed to be small if, for instance, $12 N_\text{e} \
 
 When the stronger constraint $12 N_\text{e} \delta \le 10^{−2}$ is satisfied, the reweighting factor $W_\text{rat}$ deviates from 1 by at most 1\%. Larger approximation errors can however be tolerated in practice as long as the fluctuations of $W_\text{rat}$ remain small.
 
+In prectice, the calculation of $Z$ via eq.~\eqref{eq:zeta} is numerically
+unstable for $v$ larger than 2. The following equivalent formula turns out to be
+stable and is used in the code (for $v>u>0$):
+%
+\begin{gather}
+   Z = (\hat{Q}^2+\nu_1^2)^{v-u} \R^u \S^{v-u} - 1 \ .
+   \label{eq:zeta-stable}
+\end{gather}
+%
+where we have defined the rational function of degree $[n,n]$
+%
+\begin{gather}
+   \S = \frac{\hat{Q}^2}{\hat{Q}^2+\nu_1^2} \R \ .
+\end{gather}
+%
+Both rational functions are represented as partial fractions, i.e.
+%
+\begin{gather}
+   \R = A \left\{ 1 + \sum_{k=1}^n \frac{\tilde{\rho}_k}{\hat{Q}^2+\mu_k^2} \right\}
+   \ , \qquad
+   \S = A \left\{ 1 + \sum_{k=1}^n \frac{\tilde{\sigma}_k}{\hat{Q}^2+\mu_k^2} \right\}
+   \ .
+\end{gather}
+%
+In fact one easily finds that the following relation holds
+%
+\begin{gather}
+   \tilde{\sigma}_k = \frac{\tilde{\rho}_k \mu_k^2}{-\nu_1^2+\mu_k^2} \ .
+\end{gather}
 
 
 \subsection{Reweighting factor $W_\text{rtm}$}
