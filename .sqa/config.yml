@@ -1,0 +1,16 @@
+config:
+  credentials: []
+  project_repos:
+    github.com/EOSC-synergy/sqaaas-tooling:
+      branch: release/1.7.7
+      repo: https://github.com/EOSC-synergy/sqaaas-tooling
+environment:
+  JPL_DOCKERFORCEBUILD: enabled
+sqa_criteria:
+  QC.Acc:
+    repos:
+      this_repo:
+        commands:
+        - git rev-parse --is-inside-work-tree
+        container: qc.acc_scanty-corn-baboon
+timeout: 1800
